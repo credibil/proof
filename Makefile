@@ -8,7 +8,7 @@ export AZURE_ION_SOLUTION_URL := $(value AZURE_ION_SOLUTION_URL)
 export AZURE_ION_RESOLUTION_URL := $(value AZURE_ION_RESOLUTION_URL)
 export RUST_LOG := $(value RUST_LOG)
 
-.PHONY: build clean test test-kv test-e2e docs style lint dev egion
+.PHONY: build clean test test-kv test-e2e docs style lint
 
 build:
 	@cargo build --release
@@ -21,10 +21,10 @@ test:
 	cargo nextest run --workspace --all-features --no-capture
 
 test-kv:
-	cargo nextest run --all-features --run-ignored ignored-only -E 'package(azure-kv)' --no-capture
+	cargo nextest run --all-features --run-ignored ignored-only -E 'package(vercre-azurekv)' --no-capture
 
-test-e2e:
-	cargo nextest run --all-features --run-ignored ignored-only -E 'package(test)' --no-capture
+# test-e2e:
+# 	cargo nextest run --all-features --run-ignored ignored-only -E 'package(test)' --no-capture
 
 docs: build
 	cargo doc --no-deps
@@ -35,9 +35,6 @@ style:
 lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
-dev:
-	cargo run
-
 # Run the did-ion example (examples/ion)
-ex-ion:
-	cargo run --bin ion
+# ex-ion:
+# 	cargo run --bin ion

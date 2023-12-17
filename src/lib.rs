@@ -1,13 +1,13 @@
-pub use didcore;
+pub use vercre_didcore;
 
 #[cfg(feature = "azure-kv")]
-pub use azure_kv;
+pub use vercre_azurekv;
 
 #[cfg(feature = "didion")]
-pub use didion;
+pub use vercre_didion;
 
 #[cfg(feature = "didkey")]
-pub use didkey;
+pub use vercre_didkey;
 
 #[cfg(feature = "didweb")]
-pub use didweb;
+pub use vercre_didweb;

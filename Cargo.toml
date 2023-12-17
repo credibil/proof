@@ -1,6 +1,6 @@
 [package]
-name = "did"
-version = "0.0.1"
+name = "vercre-did"
+version = "0.1.0"
 authors = ["Credibil"]
 description = """
 Decentralized Identifier (DID) utilities for Rust. See features for implemented DID methods and key
@@ -8,34 +8,34 @@ management or use core functionality to implement your own.
 """
 categories = ["decentralized identity", "privacy", "security", "verifiable credentials"]
 edition = "2021"
-license = "MIT"
-repository = "https://github.com/credibil/did"
+license = "MIT or Apache-2.0"
+repository = "https://github.com/vercre/vercre-did"
 
 [lib]
-name = "did"
+name = "vercre_did"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-azure-kv = { path = "azure_kv", optional = true }
-didcore = { path = "didcore" }
-didion = { path = "didion", optional = true }
-didkey = { path = "didkey", optional = true }
-didweb = { path = "didweb", optional = true }
+vercre-azurekv = { path = "vercre-azurekv", optional = true }
+vercre-didcore = { path = "vercre-didcore" }
+vercre-didion = { path = "vercre-didion", optional = true }
+vercre-didkey = { path = "vercre-didkey", optional = true }
+vercre-didweb = { path = "vercre-didweb", optional = true }
 
 [features]
-azure-kv = ["dep:azure-kv"] # Azure Key Vault as a key ring and signer
-didion = ["dep:didion"] # did:ion DID method
-didkey = ["dep:didkey"] # did:key DID method
-didweb = ["dep:didweb"] # did:web DID method
+azure-kv = ["dep:vercre-azurekv"] # Azure Key Vault as a key ring and signer
+didion = ["dep:vercre-didion"] # did:ion DID method
+didkey = ["dep:vercre-didkey"] # did:key DID method
+didweb = ["dep:vercre-didweb"] # did:web DID method
 
 [workspace]
 resolver = "2"
 members = [
-    "didcore",
-    "didion",
-    "didkey",
-    "didweb",
-    "azure_kv",
+    "vercre-azurekv",
+    "vercre-didcore",
+    "vercre-didion",
+    "vercre-didkey",
+    "vercre-didweb",
 ]
 
 [workspace.dependencies]

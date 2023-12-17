@@ -1,0 +1,18 @@
+[package]
+authors = ["Credibil"]
+categories = ["decentralized identity", "privacy", "security", "verifiable credentials"]
+description = "DID Web implementation in Rust"
+edition = "2021"
+license = "MIT or Apache-2.0"
+name = "vercre-didweb"
+repository = "https://github.com/vercre/vercre-did/vercre-didweb"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vercre-didcore = { version = "0.1.0", path = "../vercre-didcore" }
+reqwest = { version = "0.11.22", features = ["json"] }
+serde.workspace = true
+tracing.workspace = true
