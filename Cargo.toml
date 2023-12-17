@@ -1,0 +1,44 @@
+[package]
+name = "did"
+version = "0.0.1"
+authors = ["Credibil"]
+description = """
+Decentralized Identifier (DID) utilities for Rust. See features for implemented DID methods and key
+management or use core functionality to implement your own.
+"""
+categories = ["decentralized identity", "privacy", "security", "verifiable credentials"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/credibil/did"
+
+[lib]
+name = "did"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+azure-kv = { path = "azure_kv", optional = true }
+didcore = { path = "didcore" }
+didion = { path = "didion", optional = true }
+didkey = { path = "didkey", optional = true }
+didweb = { path = "didweb", optional = true }
+
+[features]
+azure-kv = ["dep:azure-kv"] # Azure Key Vault as a key ring and signer
+didion = ["dep:didion"] # did:ion DID method
+didkey = ["dep:didkey"] # did:key DID method
+didweb = ["dep:didweb"] # did:web DID method
+
+[workspace]
+resolver = "2"
+members = [
+    "didcore",
+    "didion",
+    "didkey",
+    "didweb",
+    "azure_kv",
+]
+
+[workspace.dependencies]
+serde = { version = "1.0.193", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1.0.108", default-features = false, features = ["alloc"] }
+tracing = "0.1.40"

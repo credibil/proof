@@ -1,0 +1,5 @@
+# https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
+max_width=100 #=100
+chain_width=100 #=60
+# unstable_features = true #=false
+# fn_params_layout = "Compressed" #="Vertical", "Tall"
