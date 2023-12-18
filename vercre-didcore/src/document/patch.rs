@@ -637,29 +637,7 @@ mod tests {
             .expect("building patch failed");
         doc.apply_patches(&[patch]);
 
-        let vm = doc
-            .verification_method
-            .clone()
-            .expect("expected document verification methods but got none");
-        assert_eq!(vm.len(), 1);
-        assert_eq!(vm[0].id, "key2");
-        let s = doc.service.clone().expect("expected document services but got none");
-        assert_eq!(s.len(), 1);
-        assert_eq!(s[0].id, "service2");
-        assert!(doc.assertion_method.is_none());
-        let auth =
-            doc.authentication.clone().expect("expected document authentication but got none");
-        assert_eq!(auth.len(), 1);
-        assert_eq!(
-            auth[0].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
-        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
-        assert_eq!(ka.len(), 1);
-        assert_eq!(
-            ka[0].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -687,37 +665,7 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
-
-        let vm = doc
-            .verification_method
-            .clone()
-            .expect("expected document verification methods but got none");
-        assert_eq!(vm.len(), 2);
-        assert_eq!(vm[1].id, "key2");
-        assert_eq!(
-            doc.service.clone().expect("expected document services but got none").len(),
-            1
-        );
-        let auth =
-            doc.authentication.clone().expect("expected document authentication but got none");
-        assert_eq!(auth.len(), 2);
-        assert_eq!(
-            auth[1].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
-        assert_eq!(
-            doc.assertion_method
-                .clone()
-                .expect("expected document assertion method but got none")
-                .len(),
-            1
-        );
-        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
-        assert_eq!(ka.len(), 1);
-        assert_eq!(
-            ka[0].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -761,32 +709,7 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch_add, patch_remove]);
-
-        assert_eq!(
-            doc.verification_method
-                .clone()
-                .expect("expected document verification methods but got none")
-                .len(),
-            1
-        );
-        assert_eq!(
-            doc.service.clone().expect("expected document services but got none").len(),
-            1
-        );
-        let auth =
-            doc.authentication.clone().expect("expected document authentication but got none");
-        assert_eq!(auth.len(), 1);
-        assert_eq!(
-            auth[0].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
-        assert!(doc.assertion_method.is_none());
-        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
-        assert_eq!(ka.len(), 1);
-        assert_eq!(
-            ka[0].key_id.clone().expect("expected key ID but got none"),
-            "key2"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -806,17 +729,7 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
-
-        assert_eq!(
-            doc.verification_method
-                .clone()
-                .expect("expected document verification methods but got none")
-                .len(),
-            1
-        );
-        let s = doc.service.clone().expect("expected document services but got none");
-        assert_eq!(s.len(), 2);
-        assert_eq!(s[1].id, "service2");
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -844,10 +757,6 @@ mod tests {
             .build()
             .expect("failed to build patch");
         doc.apply_patches(&[patch_add, patch_remove]);
-
-        assert_eq!(doc.verification_method.clone().expect("expected document verification methods but got none").len(), 1);
-        let s = doc.service.clone().expect("expected document services but got none");
-        assert_eq!(s.len(), 1);
-        assert_eq!(s[0].id, "service2");
+        insta::assert_yaml_snapshot!(doc);
     }
 }

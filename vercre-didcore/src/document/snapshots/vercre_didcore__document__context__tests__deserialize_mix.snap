@@ -1,0 +1,10 @@
+---
+source: vercre-didcore/src/document/context.rs
+assertion_line: 213
+expression: doc
+---
+"@context":
+  - "https://www.w3.org/ns/did/v1"
+  - "https://w3id.org/security/suites/jws-2020/v1"
+  - "@base": "https://example.com/keys/"
+

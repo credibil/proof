@@ -172,12 +172,7 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.context.len(), 1);
-        assert_eq!(
-            doc.context[0].url,
-            Some("https://www.w3.org/ns/did/v1".to_string())
-        );
-        assert!(doc.context[0].url_map.is_none());
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -190,17 +185,7 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.context.len(), 2);
-        assert_eq!(
-            doc.context[0].url,
-            Some("https://www.w3.org/ns/did/v1".to_string())
-        );
-        assert_eq!(
-            doc.context[1].url,
-            Some("https://w3id.org/security/suites/jws-2020/v1".to_string())
-        );
-        assert!(doc.context[0].url_map.is_none());
-        assert!(doc.context[1].url_map.is_none());
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -212,21 +197,7 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.context.len(), 1);
-        assert_eq!(doc.context[0].url, None);
-        assert_eq!(
-            doc.context[0].url_map.as_ref().expect("url map expected to be some").len(),
-            1
-        );
-        assert_eq!(
-            doc.context[0]
-                .url_map
-                .as_ref()
-                .expect("url map expected to be some")
-                .get("@base")
-                .expect("url map expected to have @base key"),
-            "https://example.com/keys/"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -239,31 +210,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.context.len(), 3);
-        assert_eq!(
-            doc.context[0].url,
-            Some("https://www.w3.org/ns/did/v1".to_string())
-        );
-        assert!(doc.context[0].url_map.is_none());
-        assert_eq!(
-            doc.context[1].url,
-            Some("https://w3id.org/security/suites/jws-2020/v1".to_string())
-        );
-        assert!(doc.context[1].url_map.is_none());
-        assert_eq!(doc.context[2].url, None);
-        assert_eq!(
-            doc.context[2].url_map.as_ref().expect("url map expected to be some").len(),
-            1
-        );
-        assert_eq!(
-            doc.context[2]
-                .url_map
-                .as_ref()
-                .expect("url map expected to be some")
-                .get("@base")
-                .expect("url map expected to have @base key"),
-            "https://example.com/keys/"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]

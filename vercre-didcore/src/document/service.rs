@@ -288,16 +288,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.service.len(), 1);
-        assert_eq!(doc.service[0].service_endpoint.len(), 1);
-        assert_eq!(
-            doc.service[0].service_endpoint[0]
-                .url
-                .as_ref()
-                .expect("expected url on service endpoint but got none"),
-            "https://openid.example.com/"
-        );
-        assert!(doc.service[0].service_endpoint[0].url_map.is_none());
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -312,13 +303,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.service.len(), 1);
-        assert_eq!(doc.service[0].service_endpoint.len(), 1);
-        let se = doc.service[0].service_endpoint[0].clone();
-        assert!(se.url.is_none());
-        let map = se.url_map.expect("expected url_map on service endpoint but got none");
-        assert!(map["origin"].len() == 1);
-        assert_eq!(map["origin"][0], "https://openid.example.com/");
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -333,20 +318,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.service.len(), 1);
-        assert_eq!(doc.service[0].service_endpoint.len(), 2);
-        let se = doc.service[0].service_endpoint[0].clone();
-        assert_eq!(
-            se.url.expect("expected url on service endpoint but got none"),
-            "https://openid.example.com/"
-        );
-        assert!(se.url_map.is_none());
-        let se = doc.service[0].service_endpoint[1].clone();
-        assert_eq!(
-            se.url.expect("expected url on service endpoint but got none"),
-            "https://auth.example.com/"
-        );
-        assert!(se.url_map.is_none());
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -364,20 +336,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.service.len(), 1);
-        assert_eq!(doc.service[0].service_endpoint.len(), 2);
-        let se = doc.service[0].service_endpoint[0].clone();
-        assert!(se.url.is_none());
-        assert_eq!(
-            se.url_map.expect("expected url map on service endpoint but got none")["origin"][0],
-            "https://openid.example.com/"
-        );
-        let se = doc.service[0].service_endpoint[1].clone();
-        assert!(se.url.is_none());
-        assert_eq!(
-            se.url_map.expect("expected url map on service endpoint but got none")["alt"][0],
-            "https://auth.example.com/"
-        );
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]
@@ -395,19 +354,7 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        assert_eq!(doc.service.len(), 1);
-        assert_eq!(doc.service[0].service_endpoint.len(), 2);
-        let se = doc.service[0].service_endpoint[0].clone();
-        assert_eq!(
-            se.url.as_ref().expect("expected url on service endpoint but got none"),
-            "https://openid.example.com/"
-        );
-        assert!(se.url_map.is_none());
-        let se = doc.service[0].service_endpoint[1].clone();
-        assert!(se.url.is_none());
-        let map = se.url_map.expect("expected url map on service endpoint but got none");
-        assert_eq!(map["alt"][0], "https://auth.example.com/");
-        assert_eq!(map["origin"][0], "https://openid.example.com/");
+        insta::assert_yaml_snapshot!(doc);
     }
 
     #[test]

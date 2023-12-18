@@ -1,0 +1,37 @@
+---
+source: vercre-didcore/src/document/patch.rs
+assertion_line: 668
+expression: doc
+---
+id: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"
+"@context": "https://www.w3.org/ns/did/v1"
+controller: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"
+verificationMethod:
+  - id: 371544b48d7d60d430c9c8b4af3745fa
+    type: EcdsaSecp256k1VerificationKey2019
+    controller: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"
+    publicKeyJwk:
+      kty: EC
+      crv: secp256k1
+      x: smmFWI4qLfWztIzwurLCvjjw7guNZvN99ai2oTXGUtc
+      y: rxp_kiiXHitxLHe545cePsF0y_Mdv_dy6zY4ov_0q9g
+  - id: key2
+    type: EcdsaSecp256k1VerificationKey2019
+    controller: "https://example.com"
+    publicKeyJwk:
+      kty: EC
+      crv: secp256k1
+      x: QJZEHYfuTyjhIywIPKW_VLj9KQHUjLYCZJXJaNo2JQ4
+      y: p_j1EtkaHqnuporRvK1Y0iyQ3orNmj5EzFVErdkGOFg
+authentication:
+  - 371544b48d7d60d430c9c8b4af3745fa
+  - key2
+assertionMethod:
+  - 371544b48d7d60d430c9c8b4af3745fa
+keyAgreement:
+  - key2
+service:
+  - id: service1
+    type: service1type
+    serviceEndpoint: "https://service1.example.com/"
+

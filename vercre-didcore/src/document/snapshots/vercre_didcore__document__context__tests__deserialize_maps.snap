@@ -1,0 +1,8 @@
+---
+source: vercre-didcore/src/document/context.rs
+assertion_line: 200
+expression: doc
+---
+"@context":
+  - "@base": "https://example.com/keys/"
+

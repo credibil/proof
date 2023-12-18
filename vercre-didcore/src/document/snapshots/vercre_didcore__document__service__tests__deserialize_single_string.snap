@@ -1,0 +1,10 @@
+---
+source: vercre-didcore/src/document/service.rs
+assertion_line: 291
+expression: doc
+---
+service:
+  - id: "did:example:123456789abcdefghi#openid"
+    type: OpenIdConnectVersion1.0Service
+    serviceEndpoint: "https://openid.example.com/"
+

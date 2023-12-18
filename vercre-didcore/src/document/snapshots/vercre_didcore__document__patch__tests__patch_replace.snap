@@ -1,0 +1,26 @@
+---
+source: vercre-didcore/src/document/patch.rs
+assertion_line: 640
+expression: doc
+---
+id: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"
+"@context": "https://www.w3.org/ns/did/v1"
+controller: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"
+verificationMethod:
+  - id: key2
+    type: EcdsaSecp256k1VerificationKey2019
+    controller: "https://example.com"
+    publicKeyJwk:
+      kty: EC
+      crv: secp256k1
+      x: QJZEHYfuTyjhIywIPKW_VLj9KQHUjLYCZJXJaNo2JQ4
+      y: p_j1EtkaHqnuporRvK1Y0iyQ3orNmj5EzFVErdkGOFg
+authentication:
+  - key2
+keyAgreement:
+  - key2
+service:
+  - id: service2
+    type: service2type
+    serviceEndpoint: "https://service2.example.com/"
+
