@@ -8,8 +8,8 @@ service:
     type: OpenIdConnectVersion1.0Service
     serviceEndpoint:
       - "https://openid.example.com/"
-      - alt:
-          - "https://auth.example.com/"
-        origin:
+      - origin:
           - "https://openid.example.com/"
+        alt:
+          - "https://auth.example.com/"
 

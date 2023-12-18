@@ -39,7 +39,7 @@ where
                 controller: self.controller.clone().unwrap_or_default(),
                 type_: algorithm.cryptosuite().to_string(),
                 public_key_jwk: Some(signing_key.clone()),
-                public_key_multibase: None,
+                ..Default::default()
             },
             purposes: Some(vec![
                 KeyPurpose::Authentication,

@@ -583,7 +583,7 @@ mod tests {
                 controller: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA".to_string(),
                 type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
                 public_key_jwk: Some(public_key()),
-                public_key_multibase: None,
+                ..Default::default()
             }]),
             authentication: Some(vec![VmRelationship {
                 key_id: Some("371544b48d7d60d430c9c8b4af3745fa".to_string()),
@@ -616,7 +616,7 @@ mod tests {
                         y: Some("p_j1EtkaHqnuporRvK1Y0iyQ3orNmj5EzFVErdkGOFg".to_string()),
                         ..Default::default()
                     }),
-                    public_key_multibase: None,
+                    ..Default::default()
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             }]),
@@ -656,7 +656,7 @@ mod tests {
                         y: Some("p_j1EtkaHqnuporRvK1Y0iyQ3orNmj5EzFVErdkGOFg".to_string()),
                         ..Default::default()
                     }),
-                    public_key_multibase: None,
+                    ..Default::default()
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })
@@ -694,7 +694,7 @@ mod tests {
                         y: Some("p_j1EtkaHqnuporRvK1Y0iyQ3orNmj5EzFVErdkGOFg".to_string()),
                         ..Default::default()
                     }),
-                    public_key_multibase: None,
+                    ..Default::default()
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })

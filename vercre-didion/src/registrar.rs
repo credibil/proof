@@ -31,7 +31,7 @@ where
                 controller: self.controller.clone().unwrap_or_default(),
                 type_: algorithm.cryptosuite().to_string(),
                 public_key_jwk: Some(signing_key.clone()),
-                public_key_multibase: None,
+                ..Default::default()
             },
             purposes: Some(vec![
                 KeyPurpose::Authentication,
@@ -342,8 +342,7 @@ mod test {
                     id: "keyId2".to_string(),
                     type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
                     public_key_jwk: Some(pk),
-                    public_key_multibase: None,
-                    controller: "".to_string(),
+                    ..Default::default()
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })

@@ -215,7 +215,7 @@ mod tests {
                 controller: "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA".to_string(),
                 type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
                 public_key_jwk: Some(public_key()),
-                public_key_multibase: None,
+                ..Default::default()
             }]),
             authentication: Some(vec![VmRelationship {
                 key_id: Some("371544b48d7d60d430c9c8b4af3745fa".to_string()),
@@ -291,7 +291,7 @@ mod tests {
                     public_key_multibase: Some(
                         "zAKJP3f7BD6W4iWEQ9jwndVTCBq8ua2Utt8EEjJ6Vxsf".to_string(),
                     ),
-                    public_key_jwk: None,
+                    ..Default::default()
                 }),
             }]),
             capability_invocation: Some(vec![VmRelationship {
@@ -304,7 +304,7 @@ mod tests {
                     public_key_multibase: Some(
                         "z4BWwfeqdp1obQptLLMvPNgBw48p7og1ie6Hf9p5nTpNN".to_string(),
                     ),
-                    public_key_jwk: None,
+                    ..Default::default()
                 }),
             }]),
             capability_delegation: Some(vec![VmRelationship {
@@ -317,7 +317,7 @@ mod tests {
                     public_key_multibase: Some(
                         "zHgo9PAmfeoxHG8Mn2XHXamxnnSwPpkyBHAMNF3VyXJCL".to_string(),
                     ),
-                    public_key_jwk: None,
+                    ..Default::default()
                 }),
             }]),
             assertion_method: Some(vec![VmRelationship {
@@ -330,7 +330,7 @@ mod tests {
                     public_key_multibase: Some(
                         "z5TVraf9itbKXrRvt2DSS95Gw4vqU3CHAdetoufdcKazA".to_string(),
                     ),
-                    public_key_jwk: None,
+                    ..Default::default()
                 }),
             }]),
             ..Default::default()
@@ -372,7 +372,7 @@ mod tests {
                     x: Some("VCpo2LMLhn6iWku8MKvSLg2ZAoC-nlOyPVQaO3FxVeQ".to_string()),
                     ..Default::default()
                 }),
-                public_key_multibase: None,
+                ..Default::default()
             }]),
             service: Some(vec![
                 Service {

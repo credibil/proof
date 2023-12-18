@@ -27,6 +27,9 @@ pub struct VerificationMethod {
     /// The public key material of the verification method, if applicable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_multibase: Option<String>,
+    /// Account ID for block-chain based public keys.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blockchain_account_id: Option<String>,
 }
 
 /// Key purpose type.
