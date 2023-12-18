@@ -17,7 +17,7 @@ where
         return serializer.serialize_none();
     }
 
-    let some_val = value.as_ref().unwrap();
+    let some_val = value.as_ref().expect("expected value but got none");
 
     // serialize single entry to object, otherwise as array
     if some_val.len() == 1 {
@@ -95,8 +95,7 @@ where
             E: de::Error,
         {
             if value.starts_with('[') {
-                // LATER: return error when array has single entry(?)
-                return Ok(Some(serde_json::from_str::<Vec<T>>(value).unwrap()));
+                return Ok(Some(serde_json::from_str::<Vec<T>>(value).unwrap_or_default()));
             }
 
             let Ok(res) = T::from_str(value) else {
@@ -173,18 +172,18 @@ mod tests {
         };
 
         // serialize
-        let test_json = serde_json::to_value(&test_data).unwrap();
-        assert_eq!(*test_json.get("string").unwrap(), json!("string"));
-        assert_eq!(*test_json.get("object").unwrap(), json!({"n": "object"}));
+        let test_json = serde_json::to_value(&test_data).expect("failed to serialize");
+        assert_eq!(*test_json.get("string").expect("expected value but got none"), json!("string"));
+        assert_eq!(*test_json.get("object").expect("expected value but got none"), json!({"n": "object"}));
         assert_eq!(
-            *test_json.get("object_array").unwrap(),
+            *test_json.get("object_array").expect("expected value but got none"),
             json!([{"n": "object1"}, {"n": "object2"}])
         );
-        assert_eq!(*test_json.get("array").unwrap(), json!(["item1", "item2"]),);
+        assert_eq!(*test_json.get("array").expect("expected value but got none"), json!(["item1", "item2"]),);
         assert_eq!(test_json.get("none"), None);
 
         // deserialize
-        let test_de: TestData = serde_json::from_value(test_json).unwrap();
+        let test_de: TestData = serde_json::from_value(test_json).expect("failed to deserialize");
         assert_eq!(test_de.string, test_data.string);
         assert_eq!(test_de.object, test_data.object);
         assert_eq!(test_de.object_array, test_data.object_array);

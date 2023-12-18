@@ -295,7 +295,8 @@ mod tests {
                 "recoverableDays": 90
             }
         });
-        let deserialized: KeyBundle = serde_json::from_value(serialized).unwrap();
+        let deserialized: KeyBundle =
+            serde_json::from_value(serialized).expect("failed to deserialize key bundle");
         assert_eq!(deserialized.attributes.enabled, Some(false));
     }
 
@@ -324,7 +325,8 @@ mod tests {
                 "recoverableDays": 90
             }
         });
-        let deserialized: DeletedKeyBundle = serde_json::from_value(serialized).unwrap();
+        let deserialized: DeletedKeyBundle =
+            serde_json::from_value(serialized).expect("failed to deserialize deleted key bundle");
         assert!(deserialized.deleted_date.is_some());
         assert_eq!(deserialized.key_bundle.key.key_type, "EC");
     }

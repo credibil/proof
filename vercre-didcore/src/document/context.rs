@@ -171,7 +171,7 @@ mod tests {
             "@context": "https://www.w3.org/ns/did/v1"
         }"#;
 
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.context.len(), 1);
         assert_eq!(
             doc.context[0].url,
@@ -189,7 +189,7 @@ mod tests {
             ]
         }"#;
 
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.context.len(), 2);
         assert_eq!(
             doc.context[0].url,
@@ -211,12 +211,20 @@ mod tests {
             ]
         }"#;
 
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.context.len(), 1);
         assert_eq!(doc.context[0].url, None);
-        assert_eq!(doc.context[0].url_map.as_ref().unwrap().len(), 1);
         assert_eq!(
-            doc.context[0].url_map.as_ref().unwrap().get("@base").unwrap(),
+            doc.context[0].url_map.as_ref().expect("url map expected to be some").len(),
+            1
+        );
+        assert_eq!(
+            doc.context[0]
+                .url_map
+                .as_ref()
+                .expect("url map expected to be some")
+                .get("@base")
+                .expect("url map expected to have @base key"),
             "https://example.com/keys/"
         );
     }
@@ -230,7 +238,7 @@ mod tests {
                 { "@base": "https://example.com/keys/" }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.context.len(), 3);
         assert_eq!(
             doc.context[0].url,
@@ -243,9 +251,17 @@ mod tests {
         );
         assert!(doc.context[1].url_map.is_none());
         assert_eq!(doc.context[2].url, None);
-        assert_eq!(doc.context[2].url_map.as_ref().unwrap().len(), 1);
         assert_eq!(
-            doc.context[2].url_map.as_ref().unwrap().get("@base").unwrap(),
+            doc.context[2].url_map.as_ref().expect("url map expected to be some").len(),
+            1
+        );
+        assert_eq!(
+            doc.context[2]
+                .url_map
+                .as_ref()
+                .expect("url map expected to be some")
+                .get("@base")
+                .expect("url map expected to have @base key"),
             "https://example.com/keys/"
         );
     }
@@ -260,8 +276,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(json, r#"{"@context":"https://www.w3.org/ns/did/v1"}"#);
     }
 
@@ -279,8 +295,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(
             json,
             r#"{"@context":[{"@base":"https://example.com/keys/"}]}"#
@@ -321,8 +337,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(
             json,
             r#"{"@context":["https://www.w3.org/ns/did/v1","https://w3id.org/security/suites/jws-2020/v1",{"@base":"https://example.com/keys/","other":"value"},{"api":"https://example.com/api/"}]}"#

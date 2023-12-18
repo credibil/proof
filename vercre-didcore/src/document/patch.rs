@@ -203,48 +203,48 @@ impl From<&DidDocument> for PatchDocument {
             services: doc.service.clone(),
             ..Default::default()
         };
-        if doc.verification_method.is_some() {
-            let mut public_keys = Vec::new();
-            for k in doc.verification_method.as_ref().unwrap().iter() {
-                let vmr = VmRelationship::from(k);
-                let vmp = VerificationMethodPatch {
-                    verification_method: k.clone(),
-                    ..Default::default()
-                };
-                let mut purposes = Vec::new();
-                if let Some(auth) = &doc.authentication {
-                    if auth.contains(&vmr) {
-                        purposes.push(KeyPurpose::Authentication);
-                    }
-                }
-                if let Some(assert) = &doc.assertion_method {
-                    if assert.contains(&vmr) {
-                        purposes.push(KeyPurpose::AssertionMethod);
-                    }
-                }
-                if let Some(key) = &doc.key_agreement {
-                    if key.contains(&vmr) {
-                        purposes.push(KeyPurpose::KeyAgreement);
-                    }
-                }
-                if let Some(cap) = &doc.capability_delegation {
-                    if cap.contains(&vmr) {
-                        purposes.push(KeyPurpose::CapabilityDelegation);
-                    }
-                }
-                if let Some(cap) = &doc.capability_invocation {
-                    if cap.contains(&vmr) {
-                        purposes.push(KeyPurpose::CapabilityInvocation);
-                    }
-                }
-                public_keys.push(vmp);
-            }
-            pdoc.public_keys = if public_keys.is_empty() {
-                None
-            } else {
-                Some(public_keys)
+        let mut public_keys = Vec::new();
+        for k in
+            doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new()).iter()
+        {
+            let vmr = VmRelationship::from(k);
+            let vmp = VerificationMethodPatch {
+                verification_method: k.clone(),
+                ..Default::default()
             };
+            let mut purposes = Vec::new();
+            if let Some(auth) = &doc.authentication {
+                if auth.contains(&vmr) {
+                    purposes.push(KeyPurpose::Authentication);
+                }
+            }
+            if let Some(assert) = &doc.assertion_method {
+                if assert.contains(&vmr) {
+                    purposes.push(KeyPurpose::AssertionMethod);
+                }
+            }
+            if let Some(key) = &doc.key_agreement {
+                if key.contains(&vmr) {
+                    purposes.push(KeyPurpose::KeyAgreement);
+                }
+            }
+            if let Some(cap) = &doc.capability_delegation {
+                if cap.contains(&vmr) {
+                    purposes.push(KeyPurpose::CapabilityDelegation);
+                }
+            }
+            if let Some(cap) = &doc.capability_invocation {
+                if cap.contains(&vmr) {
+                    purposes.push(KeyPurpose::CapabilityInvocation);
+                }
+            }
+            public_keys.push(vmp);
         }
+        pdoc.public_keys = if public_keys.is_empty() {
+            None
+        } else {
+            Some(public_keys)
+        };
         pdoc
     }
 }
@@ -630,23 +630,34 @@ mod tests {
             }]),
         };
 
-        let patch =
-            Patch::builder(PatchAction::Replace).document(&replacement).unwrap().build().unwrap();
+        let patch = Patch::builder(PatchAction::Replace)
+            .document(&replacement)
+            .expect("adding replacement document to patch builder failed")
+            .build()
+            .expect("building patch failed");
         doc.apply_patches(&[patch]);
 
-        assert_eq!(doc.verification_method.clone().unwrap().len(), 1);
-        assert_eq!(doc.verification_method.clone().unwrap()[0].id, "key2");
-        assert_eq!(doc.service.clone().unwrap().len(), 1);
-        assert_eq!(doc.service.clone().unwrap()[0].id, "service2");
+        let vm = doc
+            .verification_method
+            .clone()
+            .expect("expected document verification methods but got none");
+        assert_eq!(vm.len(), 1);
+        assert_eq!(vm[0].id, "key2");
+        let s = doc.service.clone().expect("expected document services but got none");
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].id, "service2");
         assert!(doc.assertion_method.is_none());
-        assert_eq!(doc.authentication.clone().unwrap().len(), 1);
+        let auth =
+            doc.authentication.clone().expect("expected document authentication but got none");
+        assert_eq!(auth.len(), 1);
         assert_eq!(
-            doc.authentication.clone().unwrap()[0].key_id.clone().unwrap(),
+            auth[0].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
-        assert_eq!(doc.key_agreement.clone().unwrap().len(), 1);
+        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
+        assert_eq!(ka.len(), 1);
         assert_eq!(
-            doc.key_agreement.clone().unwrap()[0].key_id.clone().unwrap(),
+            ka[0].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
     }
@@ -671,24 +682,40 @@ mod tests {
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })
-            .unwrap()
+            .expect("failed to add key to patch builder")
             .build()
-            .unwrap();
+            .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
 
-        assert_eq!(doc.verification_method.clone().unwrap().len(), 2);
-        assert_eq!(doc.verification_method.clone().unwrap()[1].id, "key2");
-        assert_eq!(doc.service.clone().unwrap().len(), 1);
-        assert_eq!(doc.authentication.clone().unwrap().len(), 2);
+        let vm = doc
+            .verification_method
+            .clone()
+            .expect("expected document verification methods but got none");
+        assert_eq!(vm.len(), 2);
+        assert_eq!(vm[1].id, "key2");
         assert_eq!(
-            doc.authentication.clone().unwrap()[1].key_id.clone().unwrap(),
+            doc.service.clone().expect("expected document services but got none").len(),
+            1
+        );
+        let auth =
+            doc.authentication.clone().expect("expected document authentication but got none");
+        assert_eq!(auth.len(), 2);
+        assert_eq!(
+            auth[1].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
-        assert_eq!(doc.assertion_method.clone().unwrap().len(), 1);
-        assert_eq!(doc.key_agreement.clone().unwrap().len(), 1);
         assert_eq!(
-            doc.key_agreement.clone().unwrap()[0].key_id.clone().unwrap(),
+            doc.assertion_method
+                .clone()
+                .expect("expected document assertion method but got none")
+                .len(),
+            1
+        );
+        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
+        assert_eq!(ka.len(), 1);
+        assert_eq!(
+            ka[0].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
     }
@@ -697,7 +724,12 @@ mod tests {
     fn patch_remove_key() {
         let mut doc = default_doc();
 
-        let key1 = doc.verification_method.clone().unwrap()[0].id.clone();
+        let key1 = doc
+            .verification_method
+            .clone()
+            .expect("expected document verification methods but got none")[0]
+            .id
+            .clone();
 
         // Add a second key and remove the first
 
@@ -718,26 +750,41 @@ mod tests {
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })
-            .unwrap()
+            .expect("failed to add key to patch builder")
             .build()
-            .unwrap();
+            .expect("failed to build patch");
 
-        let patch_remove =
-            Patch::builder(PatchAction::RemovePublicKeys).id(&key1).unwrap().build().unwrap();
+        let patch_remove = Patch::builder(PatchAction::RemovePublicKeys)
+            .id(&key1)
+            .expect("failed to add ID to patch builder")
+            .build()
+            .expect("failed to build patch");
 
         doc.apply_patches(&[patch_add, patch_remove]);
 
-        assert_eq!(doc.verification_method.clone().unwrap().len(), 1);
-        assert_eq!(doc.service.clone().unwrap().len(), 1);
-        assert_eq!(doc.authentication.clone().unwrap().len(), 1);
         assert_eq!(
-            doc.authentication.clone().unwrap()[0].key_id.clone().unwrap(),
+            doc.verification_method
+                .clone()
+                .expect("expected document verification methods but got none")
+                .len(),
+            1
+        );
+        assert_eq!(
+            doc.service.clone().expect("expected document services but got none").len(),
+            1
+        );
+        let auth =
+            doc.authentication.clone().expect("expected document authentication but got none");
+        assert_eq!(auth.len(), 1);
+        assert_eq!(
+            auth[0].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
         assert!(doc.assertion_method.is_none());
-        assert_eq!(doc.key_agreement.clone().unwrap().len(), 1);
+        let ka = doc.key_agreement.clone().expect("expected document key agreement but got none");
+        assert_eq!(ka.len(), 1);
         assert_eq!(
-            doc.key_agreement.clone().unwrap()[0].key_id.clone().unwrap(),
+            ka[0].key_id.clone().expect("expected key ID but got none"),
             "key2"
         );
     }
@@ -754,22 +801,30 @@ mod tests {
                     url_map: None,
                 }],
             })
-            .unwrap()
+            .expect("failed to add services to patch")
             .build()
-            .unwrap();
+            .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
 
-        assert_eq!(doc.verification_method.clone().unwrap().len(), 1);
-        assert_eq!(doc.service.clone().unwrap().len(), 2);
-        assert_eq!(doc.service.clone().unwrap()[1].id, "service2");
+        assert_eq!(
+            doc.verification_method
+                .clone()
+                .expect("expected document verification methods but got none")
+                .len(),
+            1
+        );
+        let s = doc.service.clone().expect("expected document services but got none");
+        assert_eq!(s.len(), 2);
+        assert_eq!(s[1].id, "service2");
     }
 
     #[test]
     fn patch_remove_service() {
         let mut doc = default_doc();
 
-        let svc = doc.service.clone().unwrap()[0].id.clone();
+        let svc =
+            doc.service.clone().expect("expected document services but got none")[0].id.clone();
 
         let patch_add = Patch::builder(PatchAction::AddServices)
             .service(&Service {
@@ -780,15 +835,19 @@ mod tests {
                     url_map: None,
                 }],
             })
-            .unwrap()
+            .expect("failed to add services to patch")
             .build()
-            .unwrap();
-        let patch_remove =
-            Patch::builder(PatchAction::RemoveServices).id(&svc).unwrap().build().unwrap();
+            .expect("failed to build patch");
+        let patch_remove = Patch::builder(PatchAction::RemoveServices)
+            .id(&svc)
+            .expect("failed to add id to patch")
+            .build()
+            .expect("failed to build patch");
         doc.apply_patches(&[patch_add, patch_remove]);
 
-        assert_eq!(doc.verification_method.clone().unwrap().len(), 1);
-        assert_eq!(doc.service.clone().unwrap().len(), 1);
-        assert_eq!(doc.service.clone().unwrap()[0].id, "service2");
+        assert_eq!(doc.verification_method.clone().expect("expected document verification methods but got none").len(), 1);
+        let s = doc.service.clone().expect("expected document services but got none");
+        assert_eq!(s.len(), 1);
+        assert_eq!(s[0].id, "service2");
     }
 }

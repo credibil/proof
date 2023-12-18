@@ -92,11 +92,11 @@ pub fn check_services(services: &[Service]) -> Result<()> {
 
         // Check all endpoint representations are valid URLs
         for ep in &s.service_endpoint {
-            if ep.url.is_some() {
-                let _ = url::Url::parse(&ep.url.clone().unwrap())?;
+            if let Some(url) = &ep.url {
+                let _ = url::Url::parse(url)?;
             }
-            if ep.url_map.is_some() {
-                for (_, v) in ep.url_map.clone().unwrap() {
+            if let Some(map) = &ep.url_map {
+                for (_, v) in map {
                     for url in v {
                         let _ = url::Url::parse(&url)?;
                     }
@@ -287,11 +287,14 @@ mod tests {
                 }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.service.len(), 1);
         assert_eq!(doc.service[0].service_endpoint.len(), 1);
         assert_eq!(
-            doc.service[0].service_endpoint[0].url.as_ref().unwrap(),
+            doc.service[0].service_endpoint[0]
+                .url
+                .as_ref()
+                .expect("expected url on service endpoint but got none"),
             "https://openid.example.com/"
         );
         assert!(doc.service[0].service_endpoint[0].url_map.is_none());
@@ -308,15 +311,14 @@ mod tests {
                 }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.service.len(), 1);
         assert_eq!(doc.service[0].service_endpoint.len(), 1);
-        assert!(doc.service[0].service_endpoint[0].url.is_none());
-        assert!(doc.service[0].service_endpoint[0].url_map.as_ref().unwrap()["origin"].len() == 1);
-        assert_eq!(
-            doc.service[0].service_endpoint[0].url_map.as_ref().unwrap()["origin"][0],
-            "https://openid.example.com/"
-        );
+        let se = doc.service[0].service_endpoint[0].clone();
+        assert!(se.url.is_none());
+        let map = se.url_map.expect("expected url_map on service endpoint but got none");
+        assert!(map["origin"].len() == 1);
+        assert_eq!(map["origin"][0], "https://openid.example.com/");
     }
 
     #[test]
@@ -330,19 +332,21 @@ mod tests {
                 }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.service.len(), 1);
         assert_eq!(doc.service[0].service_endpoint.len(), 2);
+        let se = doc.service[0].service_endpoint[0].clone();
         assert_eq!(
-            doc.service[0].service_endpoint[0].url.as_ref().unwrap(),
+            se.url.expect("expected url on service endpoint but got none"),
             "https://openid.example.com/"
         );
-        assert!(doc.service[0].service_endpoint[0].url_map.is_none());
+        assert!(se.url_map.is_none());
+        let se = doc.service[0].service_endpoint[1].clone();
         assert_eq!(
-            doc.service[0].service_endpoint[1].url.as_ref().unwrap(),
+            se.url.expect("expected url on service endpoint but got none"),
             "https://auth.example.com/"
         );
-        assert!(doc.service[0].service_endpoint[1].url_map.is_none());
+        assert!(se.url_map.is_none());
     }
 
     #[test]
@@ -359,17 +363,19 @@ mod tests {
                 }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.service.len(), 1);
         assert_eq!(doc.service[0].service_endpoint.len(), 2);
-        assert!(doc.service[0].service_endpoint[0].url.is_none());
+        let se = doc.service[0].service_endpoint[0].clone();
+        assert!(se.url.is_none());
         assert_eq!(
-            doc.service[0].service_endpoint[0].url_map.as_ref().unwrap()["origin"][0],
+            se.url_map.expect("expected url map on service endpoint but got none")["origin"][0],
             "https://openid.example.com/"
         );
-        assert!(doc.service[0].service_endpoint[1].url.is_none());
+        let se = doc.service[0].service_endpoint[1].clone();
+        assert!(se.url.is_none());
         assert_eq!(
-            doc.service[0].service_endpoint[1].url_map.as_ref().unwrap()["alt"][0],
+            se.url_map.expect("expected url map on service endpoint but got none")["alt"][0],
             "https://auth.example.com/"
         );
     }
@@ -388,23 +394,20 @@ mod tests {
                 }
             ]
         }"#;
-        let doc: Doc = serde_json::from_str(input).unwrap();
+        let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
         assert_eq!(doc.service.len(), 1);
         assert_eq!(doc.service[0].service_endpoint.len(), 2);
+        let se = doc.service[0].service_endpoint[0].clone();
         assert_eq!(
-            doc.service[0].service_endpoint[0].url.as_ref().unwrap(),
+            se.url.as_ref().expect("expected url on service endpoint but got none"),
             "https://openid.example.com/"
         );
-        assert!(doc.service[0].service_endpoint[0].url_map.is_none());
-        assert!(doc.service[0].service_endpoint[1].url.is_none());
-        assert_eq!(
-            doc.service[0].service_endpoint[1].url_map.as_ref().unwrap()["alt"][0],
-            "https://auth.example.com/"
-        );
-        assert_eq!(
-            doc.service[0].service_endpoint[1].url_map.as_ref().unwrap()["origin"][0],
-            "https://openid.example.com/"
-        );
+        assert!(se.url_map.is_none());
+        let se = doc.service[0].service_endpoint[1].clone();
+        assert!(se.url.is_none());
+        let map = se.url_map.expect("expected url map on service endpoint but got none");
+        assert_eq!(map["alt"][0], "https://auth.example.com/");
+        assert_eq!(map["origin"][0], "https://openid.example.com/");
     }
 
     #[test]
@@ -421,8 +424,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(
             json,
             r#"{"service":[{"id":"did:example:123456789abcdefghi#openid","serviceEndpoint":"https://openid.example.com/","type":"OpenIdConnectVersion1.0Service"}]}"#
@@ -446,8 +449,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(
             json,
             r#"{"service":[{"id":"did:example:123456789abcdefghi#openid","serviceEndpoint":{"origin":["https://openid.example.com/"]},"type":"OpenIdConnectVersion1.0Service"}]}"#
@@ -477,8 +480,8 @@ mod tests {
         };
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let json = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let json = String::from_utf8(buf).expect("failed to convert bytes to string");
         assert_eq!(
             json,
             r#"{"service":[{"id":"did:example:123456789abcdefghi#openid","serviceEndpoint":["https://openid.example.com/",{"alt":["https://auth.example.com/"]}],"type":"OpenIdConnectVersion1.0Service"}]}"#

@@ -74,8 +74,8 @@ mod tests {
     fn multi_hash_ok() {
         let data = b"Hello, world!";
 
-        let mhash = multi_hash(data).unwrap();
-        let wrapped = Multihash::<64>::from_bytes(&mhash).unwrap();
+        let mhash = multi_hash(data).expect("failed to create multi-hash");
+        let wrapped = Multihash::<64>::from_bytes(&mhash).expect("failed to wrap multi-hash");
 
         let mut sha = Sha256::new();
         sha.update(data);
@@ -94,10 +94,10 @@ mod tests {
             msg: "Hello, world!".to_string(),
         };
 
-        let hash = hash_data(&data).unwrap();
-        let decoded = Base64UrlUnpadded::decode_vec(&hash).unwrap();
+        let hash = hash_data(&data).expect("failed to create multi-hash");
+        let decoded = Base64UrlUnpadded::decode_vec(&hash).expect("failed to decode hash");
 
-        let wrapped = Multihash::<64>::from_bytes(&decoded).unwrap();
+        let wrapped = Multihash::<64>::from_bytes(&decoded).expect("failed to wrap multi-hash");
         assert_eq!(wrapped.code(), SHA2_256);
     }
 

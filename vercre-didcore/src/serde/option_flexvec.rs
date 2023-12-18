@@ -16,7 +16,7 @@ where
         return serializer.serialize_none();
     }
 
-    let some_val = value.as_ref().unwrap();
+    let some_val = value.as_ref().expect("expected value but got none");
 
     let mut seq = serializer.serialize_seq(Some(some_val.len()))?;
     for e in some_val {
@@ -132,16 +132,19 @@ mod tests {
         };
 
         // serialize
-        let test_json = serde_json::to_value(&test_data).unwrap();
+        let test_json = serde_json::to_value(&test_data).expect("failed to serialize");
         assert_eq!(
-            *test_json.get("object_array").unwrap(),
+            *test_json.get("object_array").expect("expected value but got none"),
             json!([{"n": "object1"}, {"n": "object2"}])
         );
-        assert_eq!(*test_json.get("array").unwrap(), json!(["item1", "item2"]),);
+        assert_eq!(
+            *test_json.get("array").expect("expected value but got none"),
+            json!(["item1", "item2"]),
+        );
         assert_eq!(test_json.get("none"), None);
 
         // deserialize
-        let test_de: TestData = serde_json::from_value(test_json).unwrap();
+        let test_de: TestData = serde_json::from_value(test_json).expect("failed to deserialize");
         assert_eq!(test_de.object_array, test_data.object_array);
         assert_eq!(test_de.array, test_data.array);
         assert_eq!(test_de.none, test_data.none);

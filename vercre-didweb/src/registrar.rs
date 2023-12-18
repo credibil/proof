@@ -49,9 +49,9 @@ where
         let patch_key = Patch::builder(PatchAction::AddPublicKeys).public_key(&vm)?.build()?;
         doc.apply_patches(&[patch_key]);
 
-        if services.is_some() {
+        if let Some(svcs) = services {
             let mut patch_service_builder = Patch::builder(PatchAction::AddServices);
-            for s in services.unwrap() {
+            for s in svcs.iter() {
                 patch_service_builder.service(s)?;
             }
             let patch_service = patch_service_builder.build()?;

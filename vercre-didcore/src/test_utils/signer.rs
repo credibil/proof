@@ -57,15 +57,16 @@ impl Signer for TestSigner {
         _op: KeyOperation,
         _alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
-        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).unwrap();
+        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);
         let mut payload = [hdr_64.as_bytes(), b".", msg_64.as_bytes()].concat();
         let digest: [u8; 32] = Sha256::digest(&payload).into();
 
         let sign_key = SignKey::new();
-        let d_b = Base64UrlUnpadded::decode_vec(&sign_key.d).unwrap();
-        let key: SigningKey<Secp256k1> = SigningKey::from_slice(&d_b).unwrap();
+        let d_b = Base64UrlUnpadded::decode_vec(&sign_key.d).expect("failed to decode");
+        let key: SigningKey<Secp256k1> =
+            SigningKey::from_slice(&d_b).expect("failed to create key");
         let sig: Signature<Secp256k1> = key.sign(&digest);
         let encoded_sig = Base64UrlUnpadded::encode_string(&sig.to_bytes());
 
@@ -75,7 +76,7 @@ impl Signer for TestSigner {
     }
 
     async fn verify(&self, msg: &[u8], signature: &[u8], _vm: Option<&str>) -> Result<()> {
-        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).unwrap();
+        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);
         let payload = [hdr_64.as_bytes(), b".", msg_64.as_bytes()].concat();
@@ -131,7 +132,7 @@ mod tests {
         let msg = b"hello world";
 
         // package and sign
-        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).unwrap();
+        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);
         let mut payload = [hdr_64.as_bytes(), b".", msg_64.as_bytes()].concat();
@@ -152,17 +153,18 @@ mod tests {
         payload.extend(b".");
         payload.extend(encoded_sig.as_bytes());
 
-        let data = String::from_utf8(payload).unwrap();
+        let data = String::from_utf8(payload).expect("failed to convert bytes to string");
         println!("data: {}", data);
 
         // unpackage and verify
-        let parts = data.rsplit_once('.').unwrap();
+        let parts = data.rsplit_once('.').expect("expected two parts but got none");
         let payload = parts.0.as_bytes();
         let digest: [u8; 32] = Sha256::digest(payload).into();
 
         let encoded_sig = parts.1;
-        let decoded_sig = Base64UrlUnpadded::decode_vec(encoded_sig).unwrap();
-        let raw_sig = Signature::<k256::Secp256k1>::from_slice(&decoded_sig).unwrap();
+        let decoded_sig = Base64UrlUnpadded::decode_vec(encoded_sig).expect("failed to decode");
+        let raw_sig = Signature::<k256::Secp256k1>::from_slice(&decoded_sig)
+            .expect("failed to create signature");
 
         let vk = sign_key.verifying_key();
         assert!(vk.verify(&digest, &raw_sig).is_ok());
@@ -172,10 +174,10 @@ mod tests {
     async fn sign_then_verify() {
         let msg = b"hello world";
         let signer = TestSigner {};
-        let (signed, _) = signer.try_sign(msg, None).await.unwrap();
+        let (signed, _) = signer.try_sign(msg, None).await.expect("failed to sign");
         let parts = signed.split(|s| *s == b'.').collect::<Vec<&[u8]>>();
         assert_eq!(parts.len(), 3);
         let sig = parts[2];
-        signer.verify(msg, sig, None).await.unwrap();
+        signer.verify(msg, sig, None).await.expect("failed to verify");
     }
 }

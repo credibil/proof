@@ -253,8 +253,8 @@ mod tests {
         let doc = default_doc();
         let mut buf = Vec::new();
         let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
-        doc.serialize(&mut ser).unwrap();
-        let s = String::from_utf8(buf).unwrap();
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let s = String::from_utf8(buf).expect("failed to convert bytes to string");
         insta::assert_yaml_snapshot!(s);
     }
 
@@ -262,8 +262,8 @@ mod tests {
     fn deserialize_embedded_keys() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/did_doc_embedded_keys.json");
-        let file = File::open(d.as_path()).unwrap();
-        let doc: DidDocument = serde_json::from_reader(file).unwrap();
+        let file = File::open(d.as_path()).expect("failed to open test file");
+        let doc: DidDocument = serde_json::from_reader(file).expect("failed to deserialize");
         insta::assert_yaml_snapshot!(doc);
     }
 
@@ -335,7 +335,7 @@ mod tests {
             }]),
             ..Default::default()
         };
-        let s = serde_json::to_string(&doc).unwrap();
+        let s = serde_json::to_string(&doc).expect("failed to serialize");
         insta::assert_yaml_snapshot!(s);
     }
 
@@ -343,8 +343,8 @@ mod tests {
     fn deserialized_referenced_keys() {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("testdata/did_doc_keys_services.json");
-        let file = File::open(d.as_path()).unwrap();
-        let doc: DidDocument = serde_json::from_reader(file).unwrap();
+        let file = File::open(d.as_path()).expect("failed to open test file");
+        let doc: DidDocument = serde_json::from_reader(file).expect("failed to deserialize");
         insta::assert_yaml_snapshot!(doc);
     }
 
@@ -403,16 +403,20 @@ mod tests {
             ]),
             ..Default::default()
         };
-        let s = serde_json::to_string(&doc).unwrap();
+        let s = serde_json::to_string(&doc).expect("failed to serialize");
         insta::assert_yaml_snapshot!(s);
     }
 
     #[test]
     fn get_key() {
         let doc = default_doc();
-        let key = doc.get_key(KeyPurpose::Authentication).unwrap();
+        let key = doc
+            .get_key(KeyPurpose::Authentication)
+            .expect("failed to extract expected authentication key");
         assert_eq!(key.id, "371544b48d7d60d430c9c8b4af3745fa");
-        let key = doc.get_key(KeyPurpose::AssertionMethod).unwrap();
+        let key = doc
+            .get_key(KeyPurpose::AssertionMethod)
+            .expect("failed to extract expected assertion method key");
         assert_eq!(
             key.controller,
             "did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA"

@@ -101,15 +101,9 @@ impl PartialEq for VmRelationship {
         if self.key_id.is_some() && other.key_id.is_some() {
             return self.key_id == other.key_id;
         }
-        if self.verification_method.is_some() && other.verification_method.is_some() {
-            let me = self.verification_method.clone().unwrap();
-            let them = other.verification_method.clone().unwrap();
-            if me.type_ == them.type_
-                && me.controller == them.controller
-                && me.public_key_jwk == them.public_key_jwk
-                && me.public_key_multibase == them.public_key_multibase
-            {
-                return true;
+        if let Some(me) = &self.verification_method {
+            if let Some(them) = &other.verification_method {
+                return me == them;
             }
         }
         false

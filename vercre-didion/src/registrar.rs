@@ -1,3 +1,5 @@
+use olpc_cjson::CanonicalFormatter;
+use serde::Serialize;
 use vercre_didcore::{
     error::Err,
     hash::{check_hash, hash_commitment, hash_data, rand_hex},
@@ -5,8 +7,6 @@ use vercre_didcore::{
     PatchAction, PatchDocument, Registrar, Result, Service, Signer, VerificationMethod,
     VerificationMethodPatch,
 };
-use olpc_cjson::CanonicalFormatter;
-use serde::Serialize;
 
 use crate::ion::{Delta, IonRegistrar, Request};
 
@@ -41,9 +41,9 @@ where
         let patch_key = Patch::builder(PatchAction::AddPublicKeys).public_key(&vm)?.build()?;
         doc.apply_patches(&[patch_key]);
 
-        if services.is_some() {
+        if let Some(svcs) = services {
             let mut patch_service_builder = Patch::builder(PatchAction::AddServices);
-            for s in services.unwrap() {
+            for s in svcs.iter() {
                 patch_service_builder.service(s)?;
             }
             let patch_service = patch_service_builder.build()?;
@@ -291,9 +291,9 @@ mod test {
 
     fn test_registrar() -> IonRegistrar<TestKeyRingSigner> {
         IonRegistrar::new(
-            &std::env::var("AZURE_ION_CHALLENGE_URL").unwrap(),
-            &std::env::var("AZURE_ION_SOLUTION_URL").unwrap(),
-            &std::env::var("AZURE_ION_RESOLUTION_URL").unwrap(),
+            &std::env::var("AZURE_ION_CHALLENGE_URL").expect("AZURE_ION_CHALLENGE_URL not set"),
+            &std::env::var("AZURE_ION_SOLUTION_URL").expect("AZURE_ION_SOLUTION_URL not set"),
+            &std::env::var("AZURE_ION_RESOLUTION_URL").expect("AZURE_ION_RESOLUTION_URL not set"),
             TestKeyRingSigner::default(),
             false,
             None,
@@ -314,13 +314,13 @@ mod test {
             }],
         }];
 
-        let doc = reg.create(Some(&service)).await.unwrap();
+        let doc = reg.create(Some(&service)).await.expect("failed to create DID document");
 
         // The create process will include a random verification method ID so we will get a new
         // DID every time because the suffix data will be different. So we just do some basic
         // format testing here and rely on unit tests deeper in the process.
         assert!(doc.id.starts_with("did:ion:"));
-        let (_, suffix) = doc.id.rsplit_once(':').unwrap();
+        let (_, suffix) = doc.id.rsplit_once(':').expect("no suffix");
         assert_eq!(suffix.len(), 46);
         assert!(doc.verification_method.is_some_and(|vm| vm.len() == 1));
         assert!(doc.service.is_some_and(|s| s.len() == 1));
@@ -347,9 +347,9 @@ mod test {
                 },
                 purposes: Some(vec![KeyPurpose::Authentication, KeyPurpose::KeyAgreement]),
             })
-            .unwrap()
+            .expect("failed to add public key to patch")
             .build()
-            .unwrap();
+            .expect("failed to build patch");
 
         let reg = test_registrar();
         let doc = reg
@@ -362,7 +362,7 @@ mod test {
                 }],
             }]))
             .await
-            .unwrap();
+            .expect("failed to create DID document");
 
         let updated_doc = match reg.update(&doc, &[patch]).await {
             Ok(r) => r,
@@ -377,8 +377,11 @@ mod test {
         assert!(updated_doc.authentication.clone().is_some_and(|a| a.len() == 2));
         assert!(updated_doc.key_agreement.clone().is_some_and(|a| a.len() == 1));
 
-        let patch =
-            Patch::builder(PatchAction::RemovePublicKeys).id("keyId2").unwrap().build().unwrap();
+        let patch = Patch::builder(PatchAction::RemovePublicKeys)
+            .id("keyId2")
+            .expect("failed to add id to patch")
+            .build()
+            .expect("failed to build patch");
         let updated_doc2 = match reg.update(&updated_doc, &[patch]).await {
             Ok(r) => r,
             Err(e) => panic!("Update request error: {}", e),
@@ -398,9 +401,9 @@ mod test {
                     url_map: None,
                 }],
             })
-            .unwrap()
+            .expect("failed to add service to patch")
             .build()
-            .unwrap();
+            .expect("failed to build patch");
         let updated_doc3 = match reg.update(&updated_doc2, &[patch]).await {
             Ok(r) => r,
             Err(e) => panic!("Update request error: {}", e),
@@ -409,8 +412,11 @@ mod test {
         assert_eq!(updated_doc3.id, doc.id);
         assert!(updated_doc3.service.clone().is_some_and(|s| s.len() == 2));
 
-        let patch =
-            Patch::builder(PatchAction::RemoveServices).id("service2Id").unwrap().build().unwrap();
+        let patch = Patch::builder(PatchAction::RemoveServices)
+            .id("service2Id")
+            .expect("failed to add ID to patch")
+            .build()
+            .expect("failed to build patch");
         let updated_doc4 = match reg.update(&updated_doc3, &[patch]).await {
             Ok(r) => r,
             Err(e) => panic!("Update request error: {}", e),
@@ -433,7 +439,7 @@ mod test {
                 }],
             }]))
             .await
-            .unwrap();
+            .expect("failed to create DID document");
 
         let mut doc2 = reg
             .create(Some(&[Service {
@@ -445,7 +451,7 @@ mod test {
                 }],
             }]))
             .await
-            .unwrap();
+            .expect("failed to create DID document");
         doc2.id = doc.id.clone();
 
         match reg.recover(&doc2).await {

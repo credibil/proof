@@ -100,6 +100,6 @@ mod tests {
     async fn get_token() {
         let token = AccessToken::get_token().await;
         assert!(token.is_ok());
-        println!("{}", token.unwrap().as_str());
+        println!("{}", token.expect("failed to retrieve access token").as_str());
     }
 }

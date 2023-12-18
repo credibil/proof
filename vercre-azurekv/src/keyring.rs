@@ -1,6 +1,6 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
-use vercre_didcore::{error::Err, tracerr, Jwk, KeyOperation, KeyRing, Result};
 use std::sync::{Arc, Mutex};
+use vercre_didcore::{error::Err, tracerr, Jwk, KeyOperation, KeyRing, Result};
 
 use crate::client::KeyVaultClient;
 use crate::key_bundle::JsonWebKey;
@@ -81,13 +81,19 @@ impl KeyRing for AzureKeyRing {
     async fn commit(&self) -> Result<()> {
         // activate each key in the key buffer
         let keys = {
-            let kb = self.key_buffer.lock().unwrap();
+            let kb = self
+                .key_buffer
+                .lock()
+                .expect("lock on key buffer mutex poisoned due to panic in another thread");
             kb.clone()
         };
         for key_name in keys.iter() {
             self.client.activate_key(key_name).await?;
         }
-        let mut kb = self.key_buffer.lock().unwrap();
+        let mut kb = self
+            .key_buffer
+            .lock()
+            .expect("lock on key buffer mutex poisoned due to panic in another thread");
         kb.clear();
         Ok(())
     }
@@ -108,7 +114,10 @@ impl AzureKeyRing {
                     let key_bundle = self.client.create_key(&key_name, active).await?;
 
                     // Add the key name to the key buffer
-                    let mut kb = self.key_buffer.lock().unwrap();
+                    let mut kb = self
+                        .key_buffer
+                        .lock()
+                        .expect("lock on key buffer mutex poisoned due to panic in another thread");
                     kb.push(key_name.clone());
 
                     // Return the key
@@ -190,12 +199,14 @@ mod tests {
         };
 
         let key_buffer = {
-            let kb = kr.key_buffer.lock().unwrap();
+            let kb = kr
+                .key_buffer
+                .lock()
+                .expect("lock on key buffer mutex poisoned due to panic in another thread");
             kb.clone()
         };
         assert!(key_buffer.contains(&key_name));
-        let active_key = kr.active_key(op.clone()).await;
-        assert!(active_key.is_ok());
+        let active_key = kr.active_key(op.clone()).await.expect("active key should be Ok");
 
         // pause to allow Azure Key Vault to create another version with different time stamp since
         // resolution is only to the second
@@ -206,16 +217,17 @@ mod tests {
         assert!(next_key.is_ok());
 
         // calling active_key after next_key should result in the same key version (idempotency)
-        let active_key2 = kr.active_key(op.clone()).await;
-        assert!(active_key2.is_ok());
-        let active_key = active_key.unwrap();
-        let active_key2 = active_key2.unwrap();
+        let active_key2 =
+            kr.active_key(op.clone()).await.expect("expected active key should be Ok");
         assert_eq!(active_key.x, active_key2.x);
         assert_eq!(active_key.y, active_key2.y);
 
         // clean up
         for key_name in key_buffer.iter() {
-            kr.client.delete_key(key_name).await.unwrap();
+            kr.client
+                .delete_key(key_name)
+                .await
+                .expect("key should have been deleted without error");
         }
     }
 
@@ -226,13 +238,11 @@ mod tests {
         let op = KeyOperation::Update;
 
         // create new key
-        let next = kr.next_key(op.clone()).await;
-        assert!(next.is_ok());
-        let next = next.unwrap();
+        let next = kr.next_key(op.clone()).await.expect("failed to get next update key");
 
         // should be tracking 1 created key
         let key_buffer = {
-            let kb = kr.key_buffer.lock().unwrap();
+            let kb = kr.key_buffer.lock().expect("lock on key buffer mutex poisoned");
             kb.clone()
         };
         assert_eq!(key_buffer.len(), 1);
@@ -252,15 +262,13 @@ mod tests {
         assert_eq!(next.crv, Some("secp256k1".to_string()));
 
         // another call to next_key should return the same key
-        let next2 = kr.next_key(op.clone()).await;
-        assert!(next2.is_ok());
-        let next2 = next2.unwrap();
+        let next2 = kr.next_key(op.clone()).await.expect("failed to get next expected update key");
         assert_eq!(next.x, next2.x);
         assert_eq!(next.y, next2.y);
 
         // clean up
         for key_name in key_buffer.iter() {
-            kr.client.delete_key(key_name).await.unwrap();
+            kr.client.delete_key(key_name).await.expect("failed to delete key");
         }
     }
 
@@ -272,8 +280,7 @@ mod tests {
         // create a new key
         let op = KeyOperation::Update;
         let key_name = kr.key_name(op.clone());
-        let next = kr.next_key(op.clone()).await;
-        let next = next.unwrap();
+        let next = kr.next_key(op.clone()).await.expect("failed to get next update key");
 
         // key should not be active
         match kr.active_key(op.clone()).await {
@@ -287,7 +294,7 @@ mod tests {
 
         // expect one key that can be committed
         let key_buffer = {
-            let kb = kr.key_buffer.lock().unwrap();
+            let kb = kr.key_buffer.lock().expect("lock on key buffer mutex poisoned");
             kb.clone()
         };
         assert_eq!(key_buffer.len(), 1);
@@ -298,21 +305,19 @@ mod tests {
 
         // expect no keys for committment
         let key_buffer = {
-            let kb = kr.key_buffer.lock().unwrap();
+            let kb = kr.key_buffer.lock().expect("lock on key buffer mutex poisoned");
             kb.clone()
         };
         assert_eq!(key_buffer.len(), 0);
 
         // key should be active
-        let active2 = kr.active_key(op.clone()).await;
-        assert!(active2.is_ok());
-        let active2 = active2.unwrap();
+        let active2 = kr.active_key(op.clone()).await.expect("failed to get next update key");
 
         // next key and currently active key should have the same version
         assert_eq!(next.x, active2.x);
         assert_eq!(next.y, active2.y);
 
         // clean up
-        kr.client.delete_key(&key_name).await.unwrap();
+        kr.client.delete_key(&key_name).await.expect("failed to delete key");
     }
 }

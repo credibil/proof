@@ -124,13 +124,12 @@ impl Signer for AzureSigner {
         verification_method: Option<&str>,
     ) -> Result<()> {
         // get the public key using the URL expressed by the verification method parameter.
-        if verification_method.is_none() {
+        let Some(vm) = verification_method else {
             tracerr!(
                 Err::FailedSignatureVerification,
                 "No verification method provided"
             );
-        }
-        let vm = verification_method.unwrap();
+        };
         Url::parse(vm)?;
         let parts = vm.split('/').collect::<Vec<&str>>();
         if parts.len() < 2 {
@@ -257,6 +256,6 @@ mod tests {
         };
 
         // clean up
-        s.keyring.client.delete_key(&key_name).await.unwrap();
+        s.keyring.client.delete_key(&key_name).await.expect("failed to delete key");
     }
 }

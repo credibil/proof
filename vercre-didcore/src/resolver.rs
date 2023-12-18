@@ -8,8 +8,7 @@ use crate::{
         DidDocument,
     },
     error::Err,
-    tracerr,
-    Result,
+    tracerr, Result,
 };
 
 /// Metadata associated with a DID resolution response.
@@ -126,9 +125,7 @@ pub trait Resolver {
         let res = self.resolve(did).await?;
         match res.did_document {
             None => tracerr!(Err::NotFound, "DID not found"),
-            Some(doc) => {
-                doc.get_key(purpose)
-            }
+            Some(doc) => doc.get_key(purpose),
         }
     }
 }
@@ -143,8 +140,8 @@ mod tests {
     fn deserialize_resolution() {
         let mut r = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         r.push("testdata/resolved_doc.json");
-        let file = File::open(r.as_path()).unwrap();
-        let res: Resolution = serde_json::from_reader(file).unwrap();
+        let file = File::open(r.as_path()).expect("failed to open test file");
+        let res: Resolution = serde_json::from_reader(file).expect("failed to deserialize");
         insta::assert_yaml_snapshot!(res);
     }
 }
