@@ -172,7 +172,9 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -185,7 +187,9 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -197,7 +201,9 @@ mod tests {
         }"#;
 
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -210,7 +216,9 @@ mod tests {
             ]
         }"#;
         let doc: Doc = serde_json::from_str(input).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        })
     }
 
     #[test]

@@ -1,7 +1,7 @@
 ---
 source: vercre-didcore/src/document/mod.rs
-assertion_line: 407
+assertion_line: 423
 expression: s
 ---
-"{\"id\":\"did:example:123\",\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"verificationMethod\":[{\"id\":\"did:example:123#key-0\",\"type\":\"JsonWebKey2020\",\"controller\":\"did:example:123\",\"publicKeyJwk\":{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"x\":\"VCpo2LMLhn6iWku8MKvSLg2ZAoC-nlOyPVQaO3FxVeQ\"}}],\"service\":[{\"id\":\"did:example:123#vcs\",\"type\":\"VerifiableCredentialService\",\"serviceEndpoint\":\"https://example.com/vc/\"},{\"id\":\"did:example:123#wibble\",\"type\":\"WibbleService\",\"serviceEndpoint\":[\"https://example.com/wibbleThing/\",{\"mappyThing\":[\"https://example.com/mappyThing/\"]}]}]}"
+"{\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/suites/ed25519-2020/v1\"],\"id\":\"did:example:123\",\"service\":[{\"id\":\"did:example:123#vcs\",\"serviceEndpoint\":\"https://example.com/vc/\",\"type\":\"VerifiableCredentialService\"},{\"id\":\"did:example:123#wibble\",\"serviceEndpoint\":[\"https://example.com/wibbleThing/\",{\"mappyThing\":[\"https://example.com/mappyThing/\"]}],\"type\":\"WibbleService\"}],\"verificationMethod\":[{\"controller\":\"did:example:123\",\"id\":\"did:example:123#key-0\",\"publicKeyJwk\":{\"crv\":\"Ed25519\",\"kty\":\"OKP\",\"x\":\"VCpo2LMLhn6iWku8MKvSLg2ZAoC-nlOyPVQaO3FxVeQ\"},\"type\":\"JsonWebKey2020\"}]}"
 

@@ -335,7 +335,7 @@ impl PatchBuilder {
             );
         }
         // Check the key ID looks OK
-        self.check_id(&key.verification_method.id)?;
+        self.check_key_id(&key.verification_method.id)?;
         // Check the purposes don't contain duplicates
         if let Some(purposes) = &key.purposes {
             let mut purpose_map = HashMap::new();
@@ -362,7 +362,7 @@ impl PatchBuilder {
 
     /// Adds an ID to the patch. This is only valid for remove keys or remove services actions.
     pub fn id(&mut self, id: &str) -> Result<&PatchBuilder> {
-        self.check_id(id)?;
+        self.check_key_id(id)?;
         if self.action != PatchAction::RemovePublicKeys
             && self.action != PatchAction::RemoveServices
         {
@@ -453,12 +453,8 @@ impl PatchBuilder {
     }
 
     // Check an ID is the correct length and a valid base64url characters or key ID part delimiters.
-    // This is *not* a full check for a valid DID URL.
-    // TODO: Find or build a DID URL checker.
-    fn check_id(&self, id: &str) -> Result<()> {
-        // if id.len() > 50 {
-        //     tracerr!(Err::InvalidPatch, "ID exceeds limit of 50: {}", id.len());
-        // }
+    // This is *not* a full check for a valid DID URL since a key ID can be a path fragment.
+    fn check_key_id(&self, id: &str) -> Result<()> {
         let re = Regex::new(r"^[a-zA-Z0-9_\-\?#:/=&\+%]*$")?;
         if !re.is_match(id) {
             tracerr!(
@@ -637,7 +633,9 @@ mod tests {
             .expect("building patch failed");
         doc.apply_patches(&[patch]);
 
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!( {sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -665,7 +663,9 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!( {sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -709,7 +709,9 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch_add, patch_remove]);
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!( {sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -729,7 +731,9 @@ mod tests {
             .expect("failed to build patch");
 
         doc.apply_patches(&[patch]);
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!( {sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 
     #[test]
@@ -757,6 +761,8 @@ mod tests {
             .build()
             .expect("failed to build patch");
         doc.apply_patches(&[patch_add, patch_remove]);
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!( {sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
     }
 }

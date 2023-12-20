@@ -264,7 +264,12 @@ mod tests {
         d.push("testdata/did_doc_embedded_keys.json");
         let file = File::open(d.as_path()).expect("failed to open test file");
         let doc: DidDocument = serde_json::from_reader(file).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!(
+            { sort_maps => true },
+            {
+                insta::assert_yaml_snapshot!(doc);
+            }
+        );
     }
 
     #[test]
@@ -335,7 +340,10 @@ mod tests {
             }]),
             ..Default::default()
         };
-        let s = serde_json::to_string(&doc).expect("failed to serialize");
+        let mut buf = Vec::new();
+        let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let s = String::from_utf8(buf).expect("failed to convert bytes to string");
         insta::assert_yaml_snapshot!(s);
     }
 
@@ -345,7 +353,12 @@ mod tests {
         d.push("testdata/did_doc_keys_services.json");
         let file = File::open(d.as_path()).expect("failed to open test file");
         let doc: DidDocument = serde_json::from_reader(file).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(doc);
+        insta::with_settings!(
+            { sort_maps => true },
+            {
+                insta::assert_yaml_snapshot!(doc);
+            }
+        );
     }
 
     #[test]
@@ -403,7 +416,10 @@ mod tests {
             ]),
             ..Default::default()
         };
-        let s = serde_json::to_string(&doc).expect("failed to serialize");
+        let mut buf = Vec::new();
+        let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
+        doc.serialize(&mut ser).expect("failed to serialize");
+        let s = String::from_utf8(buf).expect("failed to convert bytes to string");
         insta::assert_yaml_snapshot!(s);
     }
 

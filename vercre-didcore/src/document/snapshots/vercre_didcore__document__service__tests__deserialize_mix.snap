@@ -1,6 +1,6 @@
 ---
 source: vercre-didcore/src/document/service.rs
-assertion_line: 357
+assertion_line: 366
 expression: doc
 ---
 service:
@@ -8,8 +8,8 @@ service:
     type: OpenIdConnectVersion1.0Service
     serviceEndpoint:
       - "https://openid.example.com/"
-      - origin:
-          - "https://openid.example.com/"
-        alt:
+      - alt:
           - "https://auth.example.com/"
+        origin:
+          - "https://openid.example.com/"
 

@@ -142,6 +142,8 @@ mod tests {
         r.push("testdata/resolved_doc.json");
         let file = File::open(r.as_path()).expect("failed to open test file");
         let res: Resolution = serde_json::from_reader(file).expect("failed to deserialize");
-        insta::assert_yaml_snapshot!(res);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(res);
+        });
     }
 }
