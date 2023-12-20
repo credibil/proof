@@ -96,9 +96,9 @@ pub fn check_services(services: &[Service]) -> Result<()> {
                 let _ = url::Url::parse(url)?;
             }
             if let Some(map) = &ep.url_map {
-                for (_, v) in map {
+                for v in map.values() {
                     for url in v {
-                        let _ = url::Url::parse(&url)?;
+                        let _ = url::Url::parse(url)?;
                     }
                 }
             }

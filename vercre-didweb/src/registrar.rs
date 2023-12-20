@@ -28,11 +28,13 @@ where
             Err(e) => tracerr!(e, "Signing key error"),
         };
 
-        let mut doc = DidDocument::default();
-        doc.context = vec![Context {
-            url: Some(DID_CONTEXT.to_string()),
+        let mut doc = DidDocument {
+            context: vec![Context {
+                url: Some(DID_CONTEXT.to_string()),
+                ..Default::default()
+            }],
             ..Default::default()
-        }];
+        };
         let vm = VerificationMethodPatch {
             verification_method: VerificationMethod {
                 id: rand_hex(8),

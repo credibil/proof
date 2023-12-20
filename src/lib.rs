@@ -1,4 +1,4 @@
-pub use vercre_didcore;
+pub use vercre_didcore::{test_utils, DidDocument, Patch, Registrar, Resolver, Service};
 
 #[cfg(feature = "azure-kv")]
 pub use vercre_azurekv;
@@ -10,4 +10,4 @@ pub use vercre_didion;
 pub use vercre_didkey;
 
 #[cfg(feature = "didweb")]
-pub use vercre_didweb;
+pub use vercre_didweb::web::WebRegistrar;

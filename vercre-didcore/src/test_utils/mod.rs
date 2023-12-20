@@ -15,6 +15,17 @@ pub struct TestKeyRingSigner {
     pub signer: signer::TestSigner,
 }
 
+/// Construction implementation.
+impl TestKeyRingSigner {
+    /// Create a new keyring and signer.
+    pub fn new() -> Self {
+        Self {
+            keyring: keyring::TestKeyRing{},
+            signer: signer::TestSigner{},
+        }
+    }
+}
+
 #[allow(async_fn_in_trait)]
 impl KeyRing for TestKeyRingSigner {
     async fn active_key(&self, op: KeyOperation) -> Result<Jwk> {

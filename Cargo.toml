@@ -36,6 +36,7 @@ members = [
     "vercre-didion",
     "vercre-didkey",
     "vercre-didweb",
+    "examples/web",
 ]
 
 [workspace.dependencies]

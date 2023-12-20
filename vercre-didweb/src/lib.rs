@@ -4,4 +4,3 @@
 pub mod registrar;
 pub mod resolver;
 pub mod web;
-

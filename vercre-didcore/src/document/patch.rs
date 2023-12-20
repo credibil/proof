@@ -138,7 +138,7 @@ impl DidDocument {
 }
 
 /// Types of patches (updates) that can be applied to a DID document.
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum PatchAction {
     /// Create a new DID document or replace an entire DID document.
     #[default]
@@ -185,7 +185,7 @@ impl PartialEq for PatchAction {
 impl Eq for PatchAction {}
 
 /// DID document patch for creation or replacement of keys and services.
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PatchDocument {
     /// Public keys to add or remove.
@@ -250,7 +250,7 @@ impl From<&DidDocument> for PatchDocument {
 }
 
 /// Patch information for updating a DID.
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Patch {
     /// The type of patch to apply.

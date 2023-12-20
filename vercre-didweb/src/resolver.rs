@@ -28,13 +28,13 @@ where
             return Ok(error_response("invalidDid"));
         }
 
-        let has_path = did.matches(":").count() > 2;
+        let has_path = did.matches(':').count() > 2;
         let mut path = "https://".to_owned()
-            + &did.trim_start_matches("did:web:").to_string().replace(":", "/").replace("%3A", ":");
+            + &did.trim_start_matches("did:web:").to_string().replace(':', "/").replace("%3A", ":");
         if has_path {
-            path = path + "/did.json";
+            path += "/did.json";
         } else {
-            path = path + "/.well-known/did.json";
+            path += "/.well-known/did.json";
         } 
         let url = match Url::parse(&path) {
             Ok(u) => u,
