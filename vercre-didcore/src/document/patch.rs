@@ -204,9 +204,7 @@ impl From<&DidDocument> for Document {
             ..Default::default()
         };
         let mut public_keys = Vec::new();
-        for k in
-            doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new())
-        {
+        for k in doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new()) {
             let relationship = VmRelationship::from(k);
             let vmp = VmWithPurpose {
                 verification_method: k.clone(),
@@ -364,9 +362,7 @@ impl Builder {
     /// Adds an ID to the patch. This is only valid for remove keys or remove services actions.
     pub fn id(&mut self, id: &str) -> Result<&Builder> {
         Builder::check_key_id(id)?;
-        if self.action != Action::RemovePublicKeys
-            && self.action != Action::RemoveServices
-        {
+        if self.action != Action::RemovePublicKeys && self.action != Action::RemoveServices {
             tracerr!(
                 Err::InvalidPatch,
                 "An ID can only be added to a remove-public-keys or remove-services patch"

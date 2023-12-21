@@ -40,9 +40,9 @@ impl AzureKeyRing {
     /// # Arguments
     ///
     /// * `op` - The key operation to delete.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `Err::RequestError` - A problem occurred calling the Azure Key Vault API.
     /// * `Err::InvalidConfig` - The Azure Key Vault URL or credentials are not configured.
     /// * `Err::AuthError` - A problem occurred authenticating with Azure Key Vault.
@@ -154,7 +154,7 @@ pub(crate) fn az_to_jwk(az_key: JsonWebKey) -> Result<Jwk> {
         // LATER: Add support for other curves.
         tracerr!(Err::InvalidKey, "unsupported curve.")
     };
-    let x = if let Some(x) =  az_key.x {
+    let x = if let Some(x) = az_key.x {
         Base64UrlUnpadded::encode_string(&x)
     } else {
         tracerr!(Err::InvalidKey, "Missing x coordinate.")
@@ -228,8 +228,7 @@ mod tests {
         assert!(next_key.is_ok());
 
         // calling active_key after next_key should result in the same key version (idempotency)
-        let active_key2 =
-            kr.active_key(&op).await.expect("expected active key should be Ok");
+        let active_key2 = kr.active_key(&op).await.expect("expected active key should be Ok");
         assert_eq!(active_key.x, active_key2.x);
         assert_eq!(active_key.y, active_key2.y);
 

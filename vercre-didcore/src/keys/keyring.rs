@@ -41,8 +41,6 @@ pub trait KeyRing {
     /// store and make them current. A no-op default is provided if your implementation does not
     /// need a commit.
     async fn commit(&self) -> Result<()> {
-        async move {
-            Ok(())
-        }.await
+        async move { Ok(()) }.await
     }
 }

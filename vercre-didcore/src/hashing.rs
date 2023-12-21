@@ -14,17 +14,17 @@ const SHA2_256: u64 = 0x12;
 /// Transforms the provided data into a base64-encoded multihash. It creates canonical JSON,
 /// multi-hashes it using SHA256, and then base64-encodes the result.
 /// See [JSON Canonicalization Scheme (JCS)](https://identity.foundation/JCS/) for details.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `data` - The data to hash.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A base64-encoded multi-hash of the data.
-/// 
+///
 /// # Errors
-/// 
+///
 /// * Serialization error if the data cannot be serialized.
 /// * Multi-hash error if the data cannot be hashed.
 pub fn hash_data(data: &impl Serialize) -> Result<String> {
@@ -37,17 +37,17 @@ pub fn hash_data(data: &impl Serialize) -> Result<String> {
 
 /// Hash the public key by hashing the canoncial JSON representation and then multi-hashing the
 /// hash.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `data` - The public key data to hash.
-/// 
+///
 /// # Returns
-/// 
+///
 /// A base64-encoded multi-hash of the public key.
-/// 
+///
 /// # Errors
-/// 
+///
 /// * Serialization error if the public key cannot be serialized.
 /// * Multi-hash error if the public key cannot be hashed.
 pub fn hash_commitment(data: &impl Serialize) -> Result<String> {
@@ -74,17 +74,17 @@ fn multi_hash(data: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Check the provided string is a valid multi-hash.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `hash` - The hash to check.
-/// 
+///
 /// # Returns
-/// 
+///
 /// An `Ok` result if the hash is valid, otherwise an `Err` result.
-/// 
+///
 /// # Errors
-/// 
+///
 /// * `InvalidHash` - The hash is not a valid multi-hash.
 pub fn check(hash: &str) -> Result<()> {
     let decoded = Base64UrlUnpadded::decode_vec(hash)?;

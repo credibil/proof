@@ -72,9 +72,9 @@ impl Serialize for Endpoint {
 }
 
 /// Check the services in a set conform to format constraints.
-/// 
+///
 /// # Errors
-/// 
+///
 /// - [`Err::InvalidInput`] if a service ID is duplicated
 /// - [`Err::InvalidFormat`] if a service type exceeds the limit of 30 characters
 /// - URL parsing error if a service endpoint is not a valid URL
@@ -121,7 +121,7 @@ pub(super) mod endpoint_serialization {
     use std::marker::PhantomData;
     use std::str::FromStr;
 
-    use super::{Result, Endpoint};
+    use super::{Endpoint, Result};
 
     pub(crate) fn serialize<S>(value: &[Endpoint], serializer: S) -> Result<S::Ok, S::Error>
     where

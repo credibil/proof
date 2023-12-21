@@ -107,19 +107,19 @@ impl DidDocument {
     }
 
     /// Get a key from the document by purpose. If the key is not found, returns an error.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `purpose` - The purpose of the key to retrieve. Must map to one of the supported
     /// verifaction method references.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A verification method referred to by the verification method reference for the given
     /// purpose.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `Err::KeyNotFound` - If no key is found for the given purpose.
     pub fn get_key(&self, purpose: KeyPurpose) -> Result<VerificationMethod> {
         let mut vm = Option::<VerificationMethod>::None;

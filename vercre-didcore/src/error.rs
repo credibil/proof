@@ -158,17 +158,17 @@ where
     E: std::error::Error + Send + Sync + 'static,
 {
     /// Adds context to the error.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `context` - The context to add to the error.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Original return object or error with context appended.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * Original error with context appended.
     fn context<C>(self, context: C) -> Result<T, Error>
     where

@@ -76,9 +76,9 @@ impl KeyVault {
     /// # Arguments
     ///
     /// * `vault_url` - URL of the Azure Key Vault.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// If the HTTP client cannot be created.
     pub fn new(vault_url: &str) -> Self {
         let mut headers = reqwest::header::HeaderMap::new();
@@ -106,9 +106,9 @@ impl KeyVault {
     /// # Returns
     ///
     /// The [`super::key_bundle::KeyBundle`] created.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * URL parsing error if constructing URL from configuration and key name fails.
     /// * `Err::RequestError` if the request to the underlying API fails.
     /// * `Err::DeserializationError` if the response from the underlying API cannot be
@@ -141,9 +141,9 @@ impl KeyVault {
     /// # Arguments
     ///
     /// * `key_name` - Name of the key to activate.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * URL parsing error if constructing URL from configuration and key name fails.
     /// * `Err::RequestError` if the request to the underlying API fails.
     /// * `Err::DeserializationError` if the response from the underlying API cannot be
@@ -181,9 +181,9 @@ impl KeyVault {
     ///
     /// The [`super::key_bundle::KeyBundle`] requested. If there is no such key, an error is
     /// returned.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * URL parsing error if constructing URL from configuration and key name fails.
     /// * `Err::RequestError` if the request to the underlying API fails.
     /// * `Err::DeserializationError` if the response from the underlying API cannot be
@@ -216,9 +216,9 @@ impl KeyVault {
     /// # Returns
     ///
     /// The [`super::key_bundle::KeyBundle`] requested. If there is no such key, an error is returned.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * URL parsing error if constructing URL from configuration and key name fails.
     /// * `Err::RequestError` if the request to the underlying API fails.
     /// * `Err::DeserializationError` if the response from the underlying API cannot be
@@ -260,9 +260,9 @@ impl KeyVault {
     /// # Returns
     ///
     /// The [`super::key_bundle::KeyBundle`] removed. If there is no such key, an error is returned.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * URL parsing error if constructing URL from configuration and key name fails.
     /// * `Err::RequestError` if the request to the underlying API fails.
     /// * `Err::DeserializationError` if the response from the underlying API cannot be

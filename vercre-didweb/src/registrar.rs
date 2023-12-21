@@ -1,7 +1,7 @@
 use vercre_didcore::{
-    error::Err, hashing::rand_hex, tracerr, Context, DidDocument, KeyOperation, KeyPurpose, KeyRing,
-    Patch, Action, Registrar, Result, Service, Signer, VerificationMethod,
-    VmWithPurpose, DID_CONTEXT,
+    error::Err, hashing::rand_hex, tracerr, Action, Context, DidDocument, KeyOperation, KeyPurpose,
+    KeyRing, Patch, Registrar, Result, Service, Signer, VerificationMethod, VmWithPurpose,
+    DID_CONTEXT,
 };
 
 use crate::web::Registrar as WebRegistrar;

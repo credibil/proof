@@ -160,11 +160,11 @@ where
     K: KeyRing + Signer,
 {
     /// Constructor.
-/// 
-/// # Panics
-/// 
-/// Panics if the HTTP client cannot be created.
-pub fn new(
+    ///
+    /// # Panics
+    ///
+    /// Panics if the HTTP client cannot be created.
+    pub fn new(
         challenge_url: &str,
         solution_url: &str,
         resolution_url: &str,

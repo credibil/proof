@@ -44,13 +44,13 @@ pub struct Jwk {
 impl Jwk {
     /// Attempt to match the public key parameters to one of the algorithm types supported by the
     /// Credibil framework.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The algorithm type implied by the key structure.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `Err::InvalidKey` - The key structure cannot be interpreted to a supported format.
     pub fn infer_algorithm(&self) -> Result<Algorithm> {
         match (self.kty.clone(), self.crv.clone()) {
@@ -62,24 +62,27 @@ impl Jwk {
 
     /// Check that the structure of the provided public key is valid for one of the specified
     /// signing schemes and return the algorithm type.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `schemes` - List of signing schemes to check against.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The algorithm type implied by the key structure.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `Err::InvalidKey` - The key structure is invalid.
     /// * `Err::UnsupportedAlgorithm` - The algorithm inferred from the key structure is not
     /// included in the set of algorithms to check against.
     pub fn check(&self, schemes: &[Algorithm]) -> Result<Algorithm> {
         let scheme = self.infer_algorithm()?;
         if !schemes.contains(&scheme) {
-            tracerr!(Err::UnsupportedAlgorithm, "Unsupported signing algorithm on key");
+            tracerr!(
+                Err::UnsupportedAlgorithm,
+                "Unsupported signing algorithm on key"
+            );
         }
         match scheme {
             Algorithm::Secp256k1 => {

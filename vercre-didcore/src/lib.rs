@@ -15,8 +15,8 @@ pub mod test_utils;
 
 pub use document::{
     context::{Context, DID_CONTEXT},
-    patch::{Patch, Action, Document, VmWithPurpose},
-    service::{check_services, Service, Endpoint},
+    patch::{Action, Document, Patch, VmWithPurpose},
+    service::{check_services, Endpoint, Service},
     verification_method::{KeyPurpose, VerificationMethod},
     DidDocument,
 };
