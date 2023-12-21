@@ -10,6 +10,6 @@ mod key_bundle;
 mod keyring;
 mod signer;
 
-pub use client::KeyVaultClient;
+pub use client::KeyVault;
 pub use keyring::AzureKeyRing;
 pub use signer::AzureSigner;

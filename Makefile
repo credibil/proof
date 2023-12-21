@@ -33,7 +33,7 @@ style:
 	cargo fmt --all -- --check
 
 lint:
-	cargo clippy --all-targets --all-features -- -D warnings
+	cargo clippy --all-targets --all-features -- -D warnings -Dclippy::pedantic
 
 # Run the did-ion example (examples/ion)
 # ex-ion:

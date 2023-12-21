@@ -2,14 +2,14 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use std::sync::{Arc, Mutex};
 use vercre_didcore::{error::Err, tracerr, Jwk, KeyOperation, KeyRing, Result};
 
-use crate::client::KeyVaultClient;
+use crate::client::KeyVault;
 use crate::key_bundle::JsonWebKey;
 
 /// Azure Key Vault key ring.
 #[derive(Clone)]
 pub struct AzureKeyRing {
     // Azure key vault client.
-    pub(crate) client: KeyVaultClient,
+    pub(crate) client: KeyVault,
     // In-memory storage of key names before commits.
     key_buffer: Arc<Mutex<Vec<String>>>,
     // Namespace for keys in this key ring. This is used to differentiate keys in the same Azure
@@ -26,7 +26,8 @@ impl AzureKeyRing {
     /// * `client` - Azure Key Vault client. Uses environment variables for credentials.
     /// * `namespace` - If multiple sets of keys can be stored in the same backing store, use a
     /// namespace to differentiate this key ring from adjacent ones. (eg. multi-tenancy)
-    pub fn new(client: KeyVaultClient, namespace: Option<String>) -> Self {
+    #[must_use]
+    pub fn new(client: KeyVault, namespace: Option<String>) -> Self {
         Self {
             client,
             key_buffer: Arc::new(Mutex::new(Vec::new())),
@@ -39,7 +40,13 @@ impl AzureKeyRing {
     /// # Arguments
     ///
     /// * `op` - The key operation to delete.
-    pub async fn delete_key(&self, op: KeyOperation) -> Result<()> {
+    /// 
+    /// # Errors
+    /// 
+    /// * `Err::RequestError` - A problem occurred calling the Azure Key Vault API.
+    /// * `Err::InvalidConfig` - The Azure Key Vault URL or credentials are not configured.
+    /// * `Err::AuthError` - A problem occurred authenticating with Azure Key Vault.
+    pub async fn delete_key(&self, op: &KeyOperation) -> Result<()> {
         let key_name = self.key_name(op);
         match self.client.delete_key(&key_name).await {
             Ok(_) => Ok(()),
@@ -53,8 +60,8 @@ impl AzureKeyRing {
 impl KeyRing for AzureKeyRing {
     /// Get the currently active public key for the specified key operation. If there is no such key
     /// attempt to find the most recent previous version.
-    async fn active_key(&self, op: KeyOperation) -> Result<Jwk> {
-        let key_name = self.key_name(op.clone());
+    async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
+        let key_name = self.key_name(op);
 
         // Get key from Azure Key Vault
         let key = self.client.get_key(&key_name, None).await?;
@@ -71,7 +78,7 @@ impl KeyRing for AzureKeyRing {
     }
 
     /// Create or get the next version of the key for the specified operation.
-    async fn next_key(&self, op: KeyOperation) -> Result<Jwk> {
+    async fn next_key(&self, op: &KeyOperation) -> Result<Jwk> {
         // Create the key in Azure Key Vault or get the key if it already exists and the latest
         // version is disabled
         self.create_key(op, false).await
@@ -87,7 +94,7 @@ impl KeyRing for AzureKeyRing {
                 .expect("lock on key buffer mutex poisoned due to panic in another thread");
             kb.clone()
         };
-        for key_name in keys.iter() {
+        for key_name in &keys {
             self.client.activate_key(key_name).await?;
         }
         let mut kb = self
@@ -102,8 +109,8 @@ impl KeyRing for AzureKeyRing {
 impl AzureKeyRing {
     // Creates a new key with the specified operation and active status. If the key already exists,
     // return the key without changing the active status.
-    pub(crate) async fn create_key(&self, op: KeyOperation, active: bool) -> Result<Jwk> {
-        let key_name = self.key_name(op.clone());
+    pub(crate) async fn create_key(&self, op: &KeyOperation, active: bool) -> Result<Jwk> {
+        let key_name = self.key_name(op);
 
         // Check if the key already exists
         match self.client.get_key(&key_name, None).await {
@@ -131,27 +138,31 @@ impl AzureKeyRing {
 
     /// Constructs a conventional name for a key in the key store. Key names should be unique by
     /// operation and (optional) namespace.
-    pub fn key_name(&self, op: KeyOperation) -> String {
+    #[must_use]
+    pub fn key_name(&self, op: &KeyOperation) -> String {
         match &self.namespace {
-            Some(ns) => format!("vc-{}-{}", op, ns),
-            None => format!("vc-{}", op),
+            Some(ns) => format!("vc-{op}-{ns}"),
+            None => format!("vc-{op}"),
         }
     }
 }
 
 pub(crate) fn az_to_jwk(az_key: JsonWebKey) -> Result<Jwk> {
-    let crv = match az_key.curve_name.unwrap_or_default().as_str() {
-        "P-256K" => "secp256k1",
+    let crv = if az_key.curve_name.unwrap_or_default().as_str() == "P-256K" {
+        "secp256k1"
+    } else {
         // LATER: Add support for other curves.
-        _ => tracerr!(Err::InvalidKey, "unsupported curve."),
+        tracerr!(Err::InvalidKey, "unsupported curve.")
     };
-    let x = match az_key.x {
-        Some(x) => Base64UrlUnpadded::encode_string(&x),
-        None => tracerr!(Err::InvalidKey, "Missing x coordinate."),
+    let x = if let Some(x) =  az_key.x {
+        Base64UrlUnpadded::encode_string(&x)
+    } else {
+        tracerr!(Err::InvalidKey, "Missing x coordinate.")
     };
-    let y = match az_key.y {
-        Some(y) => Base64UrlUnpadded::encode_string(&y),
-        None => tracerr!(Err::InvalidKey, "Missing y coordinate."),
+    let y = if let Some(y) = az_key.y {
+        Base64UrlUnpadded::encode_string(&y)
+    } else {
+        tracerr!(Err::InvalidKey, "Missing y coordinate.")
     };
     Ok(Jwk {
         kty: az_key.key_type,
@@ -169,7 +180,7 @@ mod tests {
     fn test_key_ring() -> AzureKeyRing {
         let url = std::env::var("AZURE_KEY_VAULT").expect("AZURE_KEY_VAULT env var not set");
         let namespace = format!("test-{}", uuid::Uuid::new_v4());
-        AzureKeyRing::new(KeyVaultClient::new(url.as_str()), Some(namespace))
+        AzureKeyRing::new(KeyVault::new(url.as_str()), Some(namespace))
     }
 
     #[tokio::test]
@@ -178,10 +189,10 @@ mod tests {
         let kr = test_key_ring();
 
         let op = KeyOperation::Update;
-        let key_name = kr.key_name(op.clone());
+        let key_name = kr.key_name(&op);
 
         // initially there should be no active key
-        match kr.active_key(op.clone()).await {
+        match kr.active_key(&op).await {
             Ok(_) => panic!("Expected key not found error from active_key"),
             Err(e) => {
                 if !e.is(Err::KeyNotFound) {
@@ -191,7 +202,7 @@ mod tests {
         };
 
         // create an active key, add it to the key buffer, and check it is returned without error
-        let _new_key = match kr.create_key(op.clone(), true).await {
+        let _new_key = match kr.create_key(&op, true).await {
             Ok(key) => key,
             Err(e) => {
                 panic!("Error creating key: {}", e);
@@ -206,19 +217,19 @@ mod tests {
             kb.clone()
         };
         assert!(key_buffer.contains(&key_name));
-        let active_key = kr.active_key(op.clone()).await.expect("active key should be Ok");
+        let active_key = kr.active_key(&op).await.expect("active key should be Ok");
 
         // pause to allow Azure Key Vault to create another version with different time stamp since
         // resolution is only to the second
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         // create a next key, add it to the key buffer, and check it is returned without error
-        let next_key = kr.next_key(op.clone()).await;
+        let next_key = kr.next_key(&op).await;
         assert!(next_key.is_ok());
 
         // calling active_key after next_key should result in the same key version (idempotency)
         let active_key2 =
-            kr.active_key(op.clone()).await.expect("expected active key should be Ok");
+            kr.active_key(&op).await.expect("expected active key should be Ok");
         assert_eq!(active_key.x, active_key2.x);
         assert_eq!(active_key.y, active_key2.y);
 
@@ -238,7 +249,7 @@ mod tests {
         let op = KeyOperation::Update;
 
         // create new key
-        let next = kr.next_key(op.clone()).await.expect("failed to get next update key");
+        let next = kr.next_key(&op).await.expect("failed to get next update key");
 
         // should be tracking 1 created key
         let key_buffer = {
@@ -248,7 +259,7 @@ mod tests {
         assert_eq!(key_buffer.len(), 1);
 
         // key should not be active
-        match kr.active_key(op.clone()).await {
+        match kr.active_key(&op).await {
             Ok(_) => panic!("Expected key not found error from active_key"),
             Err(e) => {
                 if !e.is(Err::KeyNotFound) {
@@ -262,7 +273,7 @@ mod tests {
         assert_eq!(next.crv, Some("secp256k1".to_string()));
 
         // another call to next_key should return the same key
-        let next2 = kr.next_key(op.clone()).await.expect("failed to get next expected update key");
+        let next2 = kr.next_key(&op).await.expect("failed to get next expected update key");
         assert_eq!(next.x, next2.x);
         assert_eq!(next.y, next2.y);
 
@@ -279,11 +290,11 @@ mod tests {
 
         // create a new key
         let op = KeyOperation::Update;
-        let key_name = kr.key_name(op.clone());
-        let next = kr.next_key(op.clone()).await.expect("failed to get next update key");
+        let key_name = kr.key_name(&op);
+        let next = kr.next_key(&op).await.expect("failed to get next update key");
 
         // key should not be active
-        match kr.active_key(op.clone()).await {
+        match kr.active_key(&op).await {
             Ok(_) => panic!("Expected key not found error from active_key"),
             Err(e) => {
                 if !e.is(Err::KeyNotFound) {
@@ -311,7 +322,7 @@ mod tests {
         assert_eq!(key_buffer.len(), 0);
 
         // key should be active
-        let active2 = kr.active_key(op.clone()).await.expect("failed to get next update key");
+        let active2 = kr.active_key(&op).await.expect("failed to get next update key");
 
         // next key and currently active key should have the same version
         assert_eq!(next.x, active2.x);

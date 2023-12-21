@@ -18,9 +18,9 @@ pub trait KeyRing {
     ///
     /// # Returns
     ///
-    /// A [PublicKeyJwk] containing the public key for the specified key operation or an error if
+    /// A [`PublicKeyJwk`] containing the public key for the specified key operation or an error if
     /// the key could not be found or some other error occurred.
-    async fn active_key(&self, op: KeyOperation) -> Result<Jwk>;
+    async fn active_key(&self, op: &KeyOperation) -> Result<Jwk>;
 
     /// Get the public key for the next key pair that will be used for DID operations of the
     /// specified type.
@@ -31,15 +31,18 @@ pub trait KeyRing {
     ///
     /// # Returns
     ///
-    /// A [PublicKeyJwk] containing the public key for the specified key operation or an error if
+    /// A [`PublicKeyJwk`] containing the public key for the specified key operation or an error if
     /// none could be created.
-    async fn next_key(&self, op: KeyOperation) -> Result<Jwk>;
+    async fn next_key(&self, op: &KeyOperation) -> Result<Jwk>;
 
-    /// The KeyRing is asynchronous and needs to be thread-safe so we cannot mutate the KeyRing
+    /// The `KeyRing` is asynchronous and needs to be thread-safe so we cannot mutate the `KeyRing`
     /// structure itself to manage interim key information. Commit will be called following
     /// a successful DID operation and can be used to save newly generated "next" keys to a key
-    /// store and make them current.
+    /// store and make them current. A no-op default is provided if your implementation does not
+    /// need a commit.
     async fn commit(&self) -> Result<()> {
-        Ok(())
+        async move {
+            Ok(())
+        }.await
     }
 }

@@ -5,11 +5,11 @@ use crate::Result;
 
 /// Test keyring implementation. Uses a few hardcoded keys.
 #[derive(Default)]
-pub struct TestKeyRing {}
+pub struct Test {}
 
 #[allow(async_fn_in_trait)]
-impl KeyRing for TestKeyRing {
-    async fn active_key(&self, op: KeyOperation) -> Result<Jwk> {
+impl KeyRing for Test {
+    async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
         match op {
             KeyOperation::Update =>
             // jwkEs256k2Public
@@ -36,7 +36,7 @@ impl KeyRing for TestKeyRing {
         }
     }
 
-    async fn next_key(&self, op: KeyOperation) -> Result<Jwk> {
+    async fn next_key(&self, op: &KeyOperation) -> Result<Jwk> {
         match op {
             KeyOperation::Update =>
             // jwkEs256k3Public

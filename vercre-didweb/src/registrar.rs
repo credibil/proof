@@ -1,10 +1,10 @@
 use vercre_didcore::{
-    error::Err, hash::rand_hex, tracerr, Context, DidDocument, KeyOperation, KeyPurpose, KeyRing,
-    Patch, PatchAction, Registrar, Result, Service, Signer, VerificationMethod,
-    VerificationMethodPatch, DID_CONTEXT,
+    error::Err, hashing::rand_hex, tracerr, Context, DidDocument, KeyOperation, KeyPurpose, KeyRing,
+    Patch, Action, Registrar, Result, Service, Signer, VerificationMethod,
+    VmWithPurpose, DID_CONTEXT,
 };
 
-use crate::web::WebRegistrar;
+use crate::web::Registrar as WebRegistrar;
 
 /// DID Registrar implementation for the Web method.
 #[allow(async_fn_in_trait)]
@@ -22,8 +22,8 @@ where
     ///
     /// The returned document will have no ID, so it is up to the caller to assign one and host it.
     async fn create(&self, services: Option<&[Service]>) -> Result<DidDocument> {
-        let signing_key = self.keyring.next_key(KeyOperation::Sign).await?;
-        let algorithm = match signing_key.check(self.keyring.supported_algorithms()) {
+        let signing_key = self.keyring.next_key(&KeyOperation::Sign).await?;
+        let algorithm = match signing_key.check(&self.keyring.supported_algorithms()) {
             Ok(a) => a,
             Err(e) => tracerr!(e, "Signing key error"),
         };
@@ -35,7 +35,7 @@ where
             }],
             ..Default::default()
         };
-        let vm = VerificationMethodPatch {
+        let vm = VmWithPurpose {
             verification_method: VerificationMethod {
                 id: rand_hex(8),
                 controller: self.controller.clone().unwrap_or_default(),
@@ -48,12 +48,12 @@ where
                 KeyPurpose::AssertionMethod,
             ]),
         };
-        let patch_key = Patch::builder(PatchAction::AddPublicKeys).public_key(&vm)?.build()?;
+        let patch_key = Patch::builder(Action::AddPublicKeys).public_key(&vm)?.build()?;
         doc.apply_patches(&[patch_key]);
 
         if let Some(svcs) = services {
-            let mut patch_service_builder = Patch::builder(PatchAction::AddServices);
-            for s in svcs.iter() {
+            let mut patch_service_builder = Patch::builder(Action::AddServices);
+            for s in svcs {
                 patch_service_builder.service(s)?;
             }
             let patch_service = patch_service_builder.build()?;

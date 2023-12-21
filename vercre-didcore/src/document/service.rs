@@ -21,13 +21,13 @@ pub struct Service {
     pub type_: Vec<String>,
     /// Location(s) of the service.
     #[serde(with = "endpoint_serialization")]
-    pub service_endpoint: Vec<ServiceEndpoint>,
+    pub service_endpoint: Vec<Endpoint>,
 }
 
 /// A service endpoint can be a string, a map or a set composed of one or more strings and/or maps.
 /// All string values must be valid URIs.
 #[derive(Clone, Debug, Default, Deserialize)]
-pub struct ServiceEndpoint {
+pub struct Endpoint {
     /// Location of the service endpoint, if applicable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
@@ -37,7 +37,7 @@ pub struct ServiceEndpoint {
 }
 
 /// Required by serde to deserialise a service endpoint using [`crate::serde::flexvec`].
-impl FromStr for ServiceEndpoint {
+impl FromStr for Endpoint {
     type Err = Infallible;
 
     fn from_str(url: &str) -> Result<Self, Self::Err> {
@@ -50,7 +50,7 @@ impl FromStr for ServiceEndpoint {
 
 /// Serialize a service endpoint to a string or map. If only the `url` field is set, serialize to a
 /// string, otherwise serialize to a map.
-impl Serialize for ServiceEndpoint {
+impl Serialize for Endpoint {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -72,6 +72,12 @@ impl Serialize for ServiceEndpoint {
 }
 
 /// Check the services in a set conform to format constraints.
+/// 
+/// # Errors
+/// 
+/// - [`Err::InvalidInput`] if a service ID is duplicated
+/// - [`Err::InvalidFormat`] if a service type exceeds the limit of 30 characters
+/// - URL parsing error if a service endpoint is not a valid URL
 pub fn check_services(services: &[Service]) -> Result<()> {
     let mut map = HashMap::new();
     for s in services {
@@ -115,9 +121,9 @@ pub(super) mod endpoint_serialization {
     use std::marker::PhantomData;
     use std::str::FromStr;
 
-    use super::*;
+    use super::{Result, Endpoint};
 
-    pub(crate) fn serialize<S>(value: &[ServiceEndpoint], serializer: S) -> Result<S::Ok, S::Error>
+    pub(crate) fn serialize<S>(value: &[Endpoint], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -132,14 +138,15 @@ pub(super) mod endpoint_serialization {
         }
     }
 
-    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Vec<ServiceEndpoint>, D::Error>
+    #[allow(clippy::too_many_lines)]
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Endpoint>, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         struct StringOrMap<T>(PhantomData<fn() -> Vec<T>>);
 
-        impl<'de> Visitor<'de> for StringOrMap<Vec<ServiceEndpoint>> {
-            type Value = Vec<ServiceEndpoint>;
+        impl<'de> Visitor<'de> for StringOrMap<Vec<Endpoint>> {
+            type Value = Vec<Endpoint>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str(
@@ -153,7 +160,7 @@ pub(super) mod endpoint_serialization {
             where
                 E: de::Error,
             {
-                match ServiceEndpoint::from_str(value) {
+                match Endpoint::from_str(value) {
                     Ok(res) => Ok(vec![res]),
                     Err(_) => Err(de::Error::invalid_type(de::Unexpected::Str(value), &self)),
                 }
@@ -192,7 +199,7 @@ pub(super) mod endpoint_serialization {
                     }
                 }
 
-                Ok(vec![ServiceEndpoint {
+                Ok(vec![Endpoint {
                     url: None,
                     url_map: Some(deser),
                 }])
@@ -204,11 +211,11 @@ pub(super) mod endpoint_serialization {
                 A: SeqAccess<'de>,
             {
                 // could be mixed array of strings and objects
-                let mut deser: Vec<ServiceEndpoint> = Vec::new();
+                let mut deser: Vec<Endpoint> = Vec::new();
                 while let Some(curr) = seq.next_element::<serde_json::Value>()? {
                     match curr {
                         serde_json::Value::String(s) => {
-                            let Ok(res) = ServiceEndpoint::from_str(&s) else {
+                            let Ok(res) = Endpoint::from_str(&s) else {
                                 return Err(de::Error::invalid_type(
                                     de::Unexpected::Str(&s),
                                     &self,
@@ -244,7 +251,7 @@ pub(super) mod endpoint_serialization {
                                     }
                                 }
                             };
-                            let se = ServiceEndpoint {
+                            let se = Endpoint {
                                 url: None,
                                 url_map: Some(map_of_vecs),
                             };
@@ -373,7 +380,7 @@ mod tests {
             service: vec![Service {
                 id: "did:example:123456789abcdefghi#openid".to_string(),
                 type_: vec!["OpenIdConnectVersion1.0Service".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("https://openid.example.com/".to_string()),
                     url_map: None,
                 }],
@@ -395,7 +402,7 @@ mod tests {
             service: vec![Service {
                 id: "did:example:123456789abcdefghi#openid".to_string(),
                 type_: vec!["OpenIdConnectVersion1.0Service".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: None,
                     url_map: Some(HashMap::from([(
                         "origin".to_string(),
@@ -421,11 +428,11 @@ mod tests {
                 id: "did:example:123456789abcdefghi#openid".to_string(),
                 type_: vec!["OpenIdConnectVersion1.0Service".to_string()],
                 service_endpoint: vec![
-                    ServiceEndpoint {
+                    Endpoint {
                         url: Some("https://openid.example.com/".to_string()),
                         url_map: None,
                     },
-                    ServiceEndpoint {
+                    Endpoint {
                         url: None,
                         url_map: Some(HashMap::from([(
                             "alt".to_string(),

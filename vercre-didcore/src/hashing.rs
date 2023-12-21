@@ -14,6 +14,19 @@ const SHA2_256: u64 = 0x12;
 /// Transforms the provided data into a base64-encoded multihash. It creates canonical JSON,
 /// multi-hashes it using SHA256, and then base64-encodes the result.
 /// See [JSON Canonicalization Scheme (JCS)](https://identity.foundation/JCS/) for details.
+/// 
+/// # Arguments
+/// 
+/// * `data` - The data to hash.
+/// 
+/// # Returns
+/// 
+/// A base64-encoded multi-hash of the data.
+/// 
+/// # Errors
+/// 
+/// * Serialization error if the data cannot be serialized.
+/// * Multi-hash error if the data cannot be hashed.
 pub fn hash_data(data: &impl Serialize) -> Result<String> {
     let mut buf = Vec::new();
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
@@ -24,31 +37,56 @@ pub fn hash_data(data: &impl Serialize) -> Result<String> {
 
 /// Hash the public key by hashing the canoncial JSON representation and then multi-hashing the
 /// hash.
+/// 
+/// # Arguments
+/// 
+/// * `data` - The public key data to hash.
+/// 
+/// # Returns
+/// 
+/// A base64-encoded multi-hash of the public key.
+/// 
+/// # Errors
+/// 
+/// * Serialization error if the public key cannot be serialized.
+/// * Multi-hash error if the public key cannot be hashed.
 pub fn hash_commitment(data: &impl Serialize) -> Result<String> {
     let mut buf = Vec::new();
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
     data.serialize(&mut ser)?;
-    let hashed = hash(&buf)?;
+    let hashed = hash_bytes(&buf);
     let multi = multi_hash(&hashed)?;
     Ok(Base64UrlUnpadded::encode_string(&multi))
 }
 
 /// Hashes the provided data using SHA256.
-fn hash(data: &[u8]) -> Result<Vec<u8>> {
+fn hash_bytes(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    Ok(hasher.finalize().to_vec())
+    hasher.finalize().to_vec()
 }
 
 /// Multi-hashes the provided data using SHA256.
 fn multi_hash(data: &[u8]) -> Result<Vec<u8>> {
-    let hashed = hash(data)?;
+    let hashed = hash_bytes(data);
     let mhash = Multihash::<64>::wrap(SHA2_256, &hashed)?;
     Ok(mhash.to_bytes())
 }
 
 /// Check the provided string is a valid multi-hash.
-pub fn check_hash(hash: &str) -> Result<()> {
+/// 
+/// # Arguments
+/// 
+/// * `hash` - The hash to check.
+/// 
+/// # Returns
+/// 
+/// An `Ok` result if the hash is valid, otherwise an `Err` result.
+/// 
+/// # Errors
+/// 
+/// * `InvalidHash` - The hash is not a valid multi-hash.
+pub fn check(hash: &str) -> Result<()> {
     let decoded = Base64UrlUnpadded::decode_vec(hash)?;
     let wrapped = Multihash::<64>::from_bytes(&decoded)?;
     if wrapped.code() != SHA2_256 {
@@ -58,6 +96,7 @@ pub fn check_hash(hash: &str) -> Result<()> {
 }
 
 /// Random hex string generator
+#[must_use]
 pub fn rand_hex(n: usize) -> String {
     let mut bytes = vec![0u8; n];
     let mut rng = StdRng::from_entropy();

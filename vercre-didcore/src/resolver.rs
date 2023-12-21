@@ -107,7 +107,7 @@ pub trait Resolver {
     /// # Returns
     ///
     /// The DID document and associated metadata. If the resolution fails, it should return an
-    /// Error::NotFound.
+    /// `Error::NotFound`.
     async fn resolve(&self, did: &str) -> Result<Resolution>;
 
     /// Convenience method that resolves a DID to a DID document and then extracts a public key

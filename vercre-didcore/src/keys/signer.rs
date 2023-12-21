@@ -1,4 +1,4 @@
-//! Message signer and verifier trait. Intended to be used together with a [KeyRing], but can be
+//! Message signer and verifier trait. Intended to be used together with a [`KeyRing`], but can be
 //! independent.
 
 use crate::keys::{Algorithm, KeyOperation};
@@ -14,8 +14,8 @@ pub trait Signer {
     /// Type of key signatures supported by this signer.
     fn supported_algorithms(&self) -> Vec<Algorithm>;
 
-    /// Sign the provided message bytestring using `Self`. The key stored for KeyOperation::Sign
-    /// should be used. To sign a message using a different key, use the [sign_op] function.
+    /// Sign the provided message bytestring using `Self`. The key stored for `KeyOperation::Sign`
+    /// should be used. To sign a message using a different key, use the [`sign_op`] function.
     ///
     /// # Arguments
     ///
@@ -34,7 +34,7 @@ pub trait Signer {
         msg: &[u8],
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
-        self.try_sign_op(msg, KeyOperation::Sign, alg).await
+        self.try_sign_op(msg, &KeyOperation::Sign, alg).await
     }
 
     /// Sign the provided message bytestring using `Self` and the key stored for the specified key
@@ -56,12 +56,12 @@ pub trait Signer {
     async fn try_sign_op(
         &self,
         msg: &[u8],
-        op: KeyOperation,
+        op: &KeyOperation,
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)>;
 
     /// Verify the provided signature against the provided message bytestring using `Self` and the
-    /// key stored for the KeyOperation::Sign key operation.
+    /// key stored for the `KeyOperation::Sign` key operation.
     ///
     /// # Arguments
     ///

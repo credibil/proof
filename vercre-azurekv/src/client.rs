@@ -1,13 +1,13 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
-use vercre_didcore::{error::Err, tracerr, Result};
 use reqwest::{Response, Url};
 use serde::{Deserialize, Serialize};
+use vercre_didcore::{error::Err, tracerr, Result};
 
 use crate::error::ApiErrorResponse;
 use crate::key_bundle::{JwkCurve, JwkOperation, JwkType, KeyList};
 
 use super::auth::AccessToken;
-use super::key_bundle::{DeletedKeyBundle, KeyBundle};
+use super::key_bundle::{Deleted, KeyBundle};
 
 const API_VERSION: &str = "7.4";
 // Maximum number of versions of a key to query when looking for the immediate previous version.
@@ -15,7 +15,7 @@ const MAX_KEY_VERSIONS: usize = 25;
 
 /// Azure Key Vault client.
 #[derive(Clone)]
-pub struct KeyVaultClient {
+pub struct KeyVault {
     /// Vault URL
     vault_url: String,
     /// Reusable HTTP client
@@ -70,12 +70,16 @@ pub struct SignatureResponse {
 }
 
 /// Azure Key Vault client constructor and vault operation methods.
-impl KeyVaultClient {
+impl KeyVault {
     /// Constructor.
     ///
     /// # Arguments
     ///
     /// * `vault_url` - URL of the Azure Key Vault.
+    /// 
+    /// # Panics
+    /// 
+    /// If the HTTP client cannot be created.
     pub fn new(vault_url: &str) -> Self {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
@@ -101,7 +105,14 @@ impl KeyVaultClient {
     ///
     /// # Returns
     ///
-    /// The [super::key_bundle::KeyBundle] created.
+    /// The [`super::key_bundle::KeyBundle`] created.
+    /// 
+    /// # Errors
+    /// 
+    /// * URL parsing error if constructing URL from configuration and key name fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
     pub async fn create_key(&self, key_name: &str, active: bool) -> Result<KeyBundle> {
         let token = AccessToken::get_token().await?;
 
@@ -114,15 +125,15 @@ impl KeyVaultClient {
             crv: JwkCurve::Secp256k1,
             attributes: SettableAttributes { enabled: active },
         };
-        let req = self.http_client.post(url).bearer_auth(token.as_str()).json(&create_request);
+        let request = self.http_client.post(url).bearer_auth(token.as_str()).json(&create_request);
 
-        let res = match req.send().await {
+        let response = match request.send().await {
             Ok(res) => res,
             Err(e) => {
                 tracerr!(Err::RequestError, "unable to make request: {}", e);
             }
         };
-        unpack_response(res).await
+        unpack_response(response).await
     }
 
     /// Activate a key in the key vault.
@@ -130,6 +141,13 @@ impl KeyVaultClient {
     /// # Arguments
     ///
     /// * `key_name` - Name of the key to activate.
+    /// 
+    /// # Errors
+    /// 
+    /// * URL parsing error if constructing URL from configuration and key name fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
     pub async fn activate_key(&self, key_name: &str) -> Result<KeyBundle> {
         let token = AccessToken::get_token().await?;
         // version is required by the API. Try empty string.
@@ -141,15 +159,15 @@ impl KeyVaultClient {
         let update_request = UpdateKeyRequest {
             attributes: SettableAttributes { enabled: true },
         };
-        let req = self.http_client.patch(url).bearer_auth(token.as_str()).json(&update_request);
+        let request = self.http_client.patch(url).bearer_auth(token.as_str()).json(&update_request);
 
-        let res = match req.send().await {
+        let response = match request.send().await {
             Ok(res) => res,
             Err(e) => {
                 tracerr!(Err::RequestError, "unable to make request: {}", e);
             }
         };
-        unpack_response(res).await
+        unpack_response(response).await
     }
 
     /// Get a key from the vault.
@@ -161,7 +179,15 @@ impl KeyVaultClient {
     ///
     /// # Returns
     ///
-    /// The [super::key_bundle::KeyBundle] requested. If there is no such key, an error is returned.
+    /// The [`super::key_bundle::KeyBundle`] requested. If there is no such key, an error is
+    /// returned.
+    /// 
+    /// # Errors
+    /// 
+    /// * URL parsing error if constructing URL from configuration and key name fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
     pub async fn get_key(&self, key_name: &str, key_version: Option<&str>) -> Result<KeyBundle> {
         let token = AccessToken::get_token().await?;
 
@@ -189,7 +215,15 @@ impl KeyVaultClient {
     ///
     /// # Returns
     ///
-    /// The [super::key_bundle::KeyBundle] requested. If there is no such key, an error is returned.
+    /// The [`super::key_bundle::KeyBundle`] requested. If there is no such key, an error is returned.
+    /// 
+    /// # Errors
+    /// 
+    /// * URL parsing error if constructing URL from configuration and key name fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
+    /// * `Err::KeyNotFound` if there is no previous version of the key.
     pub async fn get_previous_version(&self, key_name: &str) -> Result<KeyBundle> {
         let token = AccessToken::get_token().await?;
 
@@ -225,8 +259,15 @@ impl KeyVaultClient {
     ///
     /// # Returns
     ///
-    /// The [super::key_bundle::KeyBundle] removed. If there is no such key, an error is returned.
-    pub async fn delete_key(&self, key_name: &str) -> Result<DeletedKeyBundle> {
+    /// The [`super::key_bundle::KeyBundle`] removed. If there is no such key, an error is returned.
+    /// 
+    /// # Errors
+    /// 
+    /// * URL parsing error if constructing URL from configuration and key name fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
+    pub async fn delete_key(&self, key_name: &str) -> Result<Deleted> {
         let token = AccessToken::get_token().await?;
 
         let mut url = Url::parse(&format!("{}/keys/{}", self.vault_url, key_name))?;
@@ -253,6 +294,13 @@ impl KeyVaultClient {
     /// # Returns
     ///
     /// The signature for the message, and the ID of the public key that can be used to verify.
+    ///
+    /// # Errors
+    ///
+    /// * URL parsing error if constructing URL from configuration, key name and key version fails.
+    /// * `Err::RequestError` if the request to the underlying API fails.
+    /// * `Err::DeserializationError` if the response from the underlying API cannot be
+    /// deserialized.
     pub async fn sign(
         &self,
         key_name: &str,
@@ -310,15 +358,18 @@ where
         }
     } else {
         match res.json::<ApiErrorResponse>().await {
-            Ok(err) => match err.error.code.as_str() {
-                "KeyNotFound" => Err(Err::KeyNotFound.into()),
-                _ => tracerr!(
-                    Err::ApiError,
-                    "code: {}, message: {}",
-                    err.error.code,
-                    err.error.message
-                ),
-            },
+            Ok(err) => {
+                if err.error.code.as_str() == "KeyNotFound" {
+                    Err(Err::KeyNotFound.into())
+                } else {
+                    tracerr!(
+                        Err::ApiError,
+                        "code: {}, message: {}",
+                        err.error.code,
+                        err.error.message
+                    )
+                }
+            }
             Err(err) => tracerr!(Err::Unknown, "{}", err),
         }
     }
@@ -328,9 +379,9 @@ where
 mod tests {
     use super::*;
 
-    fn test_client() -> KeyVaultClient {
+    fn test_client() -> KeyVault {
         let url = std::env::var("AZURE_KEY_VAULT").expect("AZURE_KEY_VAULT env var not set");
-        KeyVaultClient::new(url.as_str())
+        KeyVault::new(url.as_str())
     }
 
     // Get a non-existent key and check not-found error.
@@ -368,6 +419,6 @@ mod tests {
         // Delete the key, check deletion and check it sufficiently matches the created one.
         let key_bundle3 = client.delete_key(&key_name).await.expect("Failed to delete key.");
         assert_eq!(key_bundle.key.id, key_bundle3.key_bundle.key.id);
-        assert!(key_bundle3.deleted_date.is_some());
+        assert!(key_bundle3.date.is_some());
     }
 }

@@ -41,7 +41,7 @@ pub struct KeyBundle {
 
 /// A deleted key bundle consists of a key bundle and its deletion information.
 #[derive(Debug, Deserialize)]
-pub struct DeletedKeyBundle {
+pub struct Deleted {
     #[serde(flatten)]
     pub key_bundle: KeyBundle,
     #[serde(rename = "recoveryId")]
@@ -52,7 +52,7 @@ pub struct DeletedKeyBundle {
         skip_serializing_if = "Option::is_none",
         default
     )]
-    pub deleted_date: Option<DateTime<Utc>>,
+    pub date: Option<DateTime<Utc>>,
     #[serde(
         rename = "scheduledPurgeDate",
         with = "ts_seconds_option",
@@ -104,7 +104,7 @@ pub struct KeyAttributes {
     pub updated: Option<DateTime<Utc>>,
 }
 
-/// See http://tools.ietf.org/html/draft-ietf-jose-json-web-key-18
+/// See <http://tools.ietf.org/html/draft-ietf-jose-json-web-key-18>
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JsonWebKey {
     /// Elliptic curve name. For valid values, see [`JwkCurve`].
@@ -325,9 +325,9 @@ mod tests {
                 "recoverableDays": 90
             }
         });
-        let deserialized: DeletedKeyBundle =
+        let deserialized: Deleted =
             serde_json::from_value(serialized).expect("failed to deserialize deleted key bundle");
-        assert!(deserialized.deleted_date.is_some());
+        assert!(deserialized.date.is_some());
         assert_eq!(deserialized.key_bundle.key.key_type, "EC");
     }
 }

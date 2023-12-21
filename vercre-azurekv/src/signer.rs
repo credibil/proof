@@ -1,9 +1,9 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
-use vercre_didcore::{error::Err, tracerr, Algorithm, KeyOperation, Result, Signer};
 use ecdsa::{signature::Verifier, Signature, VerifyingKey};
 use reqwest::Url;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use vercre_didcore::{error::Err, tracerr, Algorithm, KeyOperation, Result, Signer};
 
 use crate::{
     key_bundle::JsonWebKey,
@@ -11,17 +11,19 @@ use crate::{
 };
 
 /// Azure Key Vault signer.
+#[allow(clippy::module_name_repetitions)]
 pub struct AzureSigner {
     keyring: AzureKeyRing,
 }
 
-/// Constructor and methods for AzureSigner.
+/// Constructor and methods for `AzureSigner`.
 impl AzureSigner {
-    /// Create a new AzureSigner instance.
+    /// Create a new `AzureSigner` instance.
     ///
     /// # Arguments
     ///
     /// * `keyring` - The keyring to use for signing.
+    #[must_use]
     pub fn new(keyring: AzureKeyRing) -> Self {
         Self { keyring }
     }
@@ -33,14 +35,14 @@ impl AzureSigner {
         match alg {
             None => Ok(my_algs[0]),
             Some(alg) => {
-                if !my_algs.iter().any(|a| *a == alg) {
+                if my_algs.iter().any(|a| *a == alg) {
+                    Ok(alg)
+                } else {
                     tracerr!(
                         Err::UnsupportedAlgorithm,
                         "Unsupported signing algorithm: {}",
                         alg
                     );
-                } else {
-                    Ok(alg)
                 }
             }
         }
@@ -73,7 +75,7 @@ impl Signer for AzureSigner {
     async fn try_sign_op(
         &self,
         msg: &[u8],
-        op: KeyOperation,
+        op: &KeyOperation,
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
         let key_name = self.keyring.key_name(op);
@@ -171,11 +173,11 @@ impl Signer for AzureSigner {
         };
 
         let mut decoded_signature = [0u8; 128];
-        let dsig = match Base64UrlUnpadded::decode(signature, &mut decoded_signature) {
+        let decoded_sig = match Base64UrlUnpadded::decode(signature, &mut decoded_signature) {
             Ok(dsig) => dsig,
             Err(e) => tracerr!(Err::InvalidFormat, "Error decoding signature: {}", e),
         };
-        let sig = match Signature::<k256::Secp256k1>::from_slice(dsig) {
+        let sig = match Signature::<k256::Secp256k1>::from_slice(decoded_sig) {
             Ok(sig) => sig,
             Err(e) => tracerr!(
                 Err::FailedSignatureVerification,
@@ -185,7 +187,7 @@ impl Signer for AzureSigner {
         };
 
         match vk.verify(&payload, &sig) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(e) => tracerr!(
                 Err::FailedSignatureVerification,
                 "error on verification: {}",
@@ -211,14 +213,14 @@ fn infer_algorithm(key: &JsonWebKey) -> Result<Algorithm> {
 
 #[cfg(test)]
 mod tests {
-    use crate::KeyVaultClient;
+    use crate::KeyVault;
 
     use super::*;
 
     fn test_signer() -> AzureSigner {
         let url = std::env::var("AZURE_KEY_VAULT").expect("AZURE_KEY_VAULT env var not set");
         let namespace = format!("test-{}", uuid::Uuid::new_v4());
-        let kr = AzureKeyRing::new(KeyVaultClient::new(url.as_str()), Some(namespace));
+        let kr = AzureKeyRing::new(KeyVault::new(url.as_str()), Some(namespace));
         AzureSigner::new(kr)
     }
 
@@ -229,8 +231,8 @@ mod tests {
 
         // create a new key and activate
         let op = KeyOperation::Sign;
-        let key_name = s.keyring.key_name(op.clone());
-        let _new_key = match s.keyring.create_key(op.clone(), true).await {
+        let key_name = s.keyring.key_name(&op);
+        let _new_key = match s.keyring.create_key(&op, true).await {
             Ok(key) => key,
             Err(e) => {
                 panic!("Error creating key: {}", e);

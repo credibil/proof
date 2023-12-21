@@ -1,7 +1,10 @@
-use vercre_didcore::{DidDocument, KeyRing, Resolution, Resolver, Result, Signer, DID_CONTEXT, DocumentMetadata, ResolutionMetadata};
 use reqwest::Url;
+use vercre_didcore::{
+    DidDocument, DocumentMetadata, KeyRing, Resolution, ResolutionMetadata, Resolver, Result,
+    Signer, DID_CONTEXT,
+};
 
-use crate::web::WebRegistrar;
+use crate::web::Registrar;
 
 /// A Resolver is responsible for resolving a DID to a DID document. This implementation will make
 /// a resolution request to an http end point to retrieve a DID document.
@@ -15,9 +18,10 @@ use crate::web::WebRegistrar;
 ///
 /// # Returns
 ///
-/// The DID document with the ID corresponding to the supplied DID.
+/// The DID document with the ID corresponding to the supplied DID or an error response if
+/// resolution failed.
 #[allow(async_fn_in_trait)]
-impl<K> Resolver for WebRegistrar<K>
+impl<K> Resolver for Registrar<K>
 where
     K: KeyRing + Signer + Send + Sync,
 {
@@ -35,12 +39,9 @@ where
             path += "/did.json";
         } else {
             path += "/.well-known/did.json";
-        } 
-        let url = match Url::parse(&path) {
-            Ok(u) => u,
-            Err(_) => {
-                return Ok(error_response("invalidDid"));
-            }
+        }
+        let Ok(url) = Url::parse(&path) else {
+            return Ok(error_response("invalidDid"));
         };
 
         let mut headers = reqwest::header::HeaderMap::new();
@@ -48,9 +49,7 @@ where
             reqwest::header::ACCEPT,
             reqwest::header::HeaderValue::from_static("application/json"),
         );
-        let http_client = reqwest::Client::builder()
-            .default_headers(headers)
-            .build()?;
+        let http_client = reqwest::Client::builder().default_headers(headers).build()?;
         let res = match http_client.get(url).send().await {
             Ok(r) => r,
             Err(e) => {

@@ -6,7 +6,7 @@
 
 pub(crate) mod document;
 pub mod error;
-pub mod hash;
+pub mod hashing;
 pub(crate) mod keys;
 pub(crate) mod registrar;
 pub(crate) mod resolver;
@@ -15,8 +15,8 @@ pub mod test_utils;
 
 pub use document::{
     context::{Context, DID_CONTEXT},
-    patch::{Patch, PatchAction, PatchDocument, VerificationMethodPatch},
-    service::{check_services, Service, ServiceEndpoint},
+    patch::{Patch, Action, Document, VmWithPurpose},
+    service::{check_services, Service, Endpoint},
     verification_method::{KeyPurpose, VerificationMethod},
     DidDocument,
 };

@@ -2,13 +2,12 @@ use olpc_cjson::CanonicalFormatter;
 use serde::Serialize;
 use vercre_didcore::{
     error::Err,
-    hash::{check_hash, hash_commitment, hash_data, rand_hex},
-    tracerr, DidDocument, Jwk, KeyOperation, KeyPurpose, KeyRing, OperationType, Patch,
-    PatchAction, PatchDocument, Registrar, Result, Service, Signer, VerificationMethod,
-    VerificationMethodPatch,
+    hashing::{check, hash_commitment, hash_data, rand_hex},
+    tracerr, Action, DidDocument, Document, Jwk, KeyOperation, KeyPurpose, KeyRing, OperationType,
+    Patch, Registrar, Result, Service, Signer, VerificationMethod, VmWithPurpose,
 };
 
-use crate::ion::{Delta, IonRegistrar, Request};
+use crate::ion::{Delta, Registrar as IonRegistrar, Request};
 
 /// DID Registrar implementation for the ION method.
 #[allow(async_fn_in_trait)]
@@ -18,14 +17,14 @@ where
 {
     // Construct a DID creation request for the specified DID document.
     async fn create(&self, services: Option<&[Service]>) -> Result<DidDocument> {
-        let signing_key = self.keyring.next_key(KeyOperation::Sign).await?;
-        let algorithm = match signing_key.check(self.keyring.supported_algorithms()) {
+        let signing_key = self.keyring.next_key(&KeyOperation::Sign).await?;
+        let algorithm = match signing_key.check(&self.keyring.supported_algorithms()) {
             Ok(a) => a,
             Err(e) => tracerr!(e, "Signing key error"),
         };
 
         let mut doc = DidDocument::default();
-        let vm = VerificationMethodPatch {
+        let vm = VmWithPurpose {
             verification_method: VerificationMethod {
                 id: rand_hex(8),
                 controller: self.controller.clone().unwrap_or_default(),
@@ -38,33 +37,34 @@ where
                 KeyPurpose::AssertionMethod,
             ]),
         };
-        let patch_key = Patch::builder(PatchAction::AddPublicKeys).public_key(&vm)?.build()?;
+        let patch_key = Patch::builder(Action::AddPublicKeys).public_key(&vm)?.build()?;
         doc.apply_patches(&[patch_key]);
 
         if let Some(svcs) = services {
-            let mut patch_service_builder = Patch::builder(PatchAction::AddServices);
-            for s in svcs.iter() {
+            let mut patch_service_builder = Patch::builder(Action::AddServices);
+            for s in svcs {
                 patch_service_builder.service(s)?;
             }
             let patch_service = patch_service_builder.build()?;
             doc.apply_patches(&[patch_service]);
         }
 
-        let next_update_key = self.keyring.next_key(KeyOperation::Update).await?;
-        match next_update_key.check(self.keyring.supported_algorithms()) {
+        let next_update_key = self.keyring.next_key(&KeyOperation::Update).await?;
+        match next_update_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Next update key error"),
         };
         let update_commitment = hash_commitment(&next_update_key)?;
 
-        let next_recover_key = self.keyring.next_key(KeyOperation::Recover).await?;
-        match next_recover_key.check(self.keyring.supported_algorithms()) {
+        let next_recover_key = self.keyring.next_key(&KeyOperation::Recover).await?;
+        match next_recover_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Next recovery key error"),
         }
         let recovery_commitment = hash_commitment(&next_recover_key)?;
 
-        let req = self.create_request(&recovery_commitment, &update_commitment, &doc)?;
+        let req =
+            IonRegistrar::<K>::create_request(&recovery_commitment, &update_commitment, &doc)?;
 
         if self.anchor {
             self.submit(&req).await?;
@@ -79,21 +79,45 @@ where
     }
 
     /// Construct a DID update request for the specified patches.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc` - The current-state DID document to update.
+    /// * `patches` - The patches to apply to the DID document.
+    ///
+    /// # Returns
+    ///
+    /// The updated DID document.
+    ///
+    /// # Errors
+    ///
+    /// * Underlying Azure Key Vault client errors.
+    /// * Validation errors.
+    /// * Serialization errors.
+    /// * Hashing and signing errors.
+    /// * Error if failing to successfully call the anchoring API.
+    /// * Error if failing to commit the key ring key rotations.
     async fn update(&self, doc: &DidDocument, patches: &[Patch]) -> Result<DidDocument> {
-        let update_key = self.keyring.active_key(KeyOperation::Update).await?;
-        match update_key.check(self.keyring.supported_algorithms()) {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Data {
+            update_key: Jwk,
+            delta_hash: String,
+        }
+        let update_key = self.keyring.active_key(&KeyOperation::Update).await?;
+        match update_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Active update key error"),
         }
 
-        let next_update_key = self.keyring.next_key(KeyOperation::Update).await?;
-        match next_update_key.check(self.keyring.supported_algorithms()) {
+        let next_update_key = self.keyring.next_key(&KeyOperation::Update).await?;
+        match next_update_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Next update key error"),
         }
 
         let (_, suffix) = doc.id.rsplit_once(':').unwrap_or((&doc.id, ""));
-        check_hash(suffix)?;
+        check(suffix)?;
 
         let update_commitment = hash_commitment(&next_update_key)?;
 
@@ -103,12 +127,6 @@ where
         };
         let delta_hash = hash_data(&delta)?;
 
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct Data {
-            update_key: Jwk,
-            delta_hash: String,
-        }
         let data = Data {
             update_key: update_key.clone(),
             delta_hash,
@@ -116,7 +134,7 @@ where
         let data_bytes = serde_json::to_vec(&data)?;
         let alg = update_key.infer_algorithm()?;
         let (signed_bytes, _kid) =
-            self.keyring.try_sign_op(&data_bytes, KeyOperation::Update, Some(alg)).await?;
+            self.keyring.try_sign_op(&data_bytes, &KeyOperation::Update, Some(alg)).await?;
 
         let signed_data = String::from_utf8(signed_bytes)?;
         let reveal_value = hash_data(&update_key.clone())?;
@@ -145,22 +163,36 @@ where
     }
 
     /// Construct a DID deactivation request.
+    ///
+    /// # Arguments
+    ///
+    /// * `did` - The DID to deactivate.
+    ///  
+    /// # Errors
+    ///
+    /// * Underlying Azure Key Vault client errors.
+    /// * Validation errors.
+    /// * Serialization errors.
+    /// * Hashing and signing errors.
+    /// * Error if failing to successfully call the anchoring API.
+    /// * Error if failing to commit the key ring key rotations.
     async fn deactivate(&self, did: &str) -> Result<()> {
-        let recovery_key = self.keyring.active_key(KeyOperation::Recover).await?;
-        match recovery_key.check(self.keyring.supported_algorithms()) {
-            Ok(_) => (),
-            Err(e) => tracerr!(e, "Active recovery key error"),
-        }
-
-        let (_, suffix) = did.rsplit_once(':').unwrap_or((&did, ""));
-        check_hash(suffix)?;
-
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Data {
             did_suffix: String,
             recovery_key: Jwk,
         }
+
+        let recovery_key = self.keyring.active_key(&KeyOperation::Recover).await?;
+        match recovery_key.check(&self.keyring.supported_algorithms()) {
+            Ok(_) => (),
+            Err(e) => tracerr!(e, "Active recovery key error"),
+        }
+
+        let (_, suffix) = did.rsplit_once(':').unwrap_or((&did, ""));
+        check(suffix)?;
+
         let data = Data {
             did_suffix: suffix.to_string(),
             recovery_key: recovery_key.clone(),
@@ -168,7 +200,7 @@ where
         let data_bytes = serde_json::to_vec(&data)?;
         let alg = recovery_key.infer_algorithm()?;
         let (signed_bytes, _kid) =
-            self.keyring.try_sign_op(&data_bytes, KeyOperation::Recover, Some(alg)).await?;
+            self.keyring.try_sign_op(&data_bytes, &KeyOperation::Recover, Some(alg)).await?;
         let signed_data = String::from_utf8(signed_bytes)?;
         let reveal_value = hash_data(&recovery_key.clone())?;
 
@@ -187,33 +219,48 @@ where
     }
 
     /// Construct a DID recovery request.
+    ///
+    /// # Errors
+    ///
+    /// * Underlying Azure Key Vault client errors.
+    /// * Validation errors.
+    /// * Serialization errors.
+    /// * Hashing and signing errors.
     async fn recover(&self, doc: &DidDocument) -> Result<()> {
-        let recovery_key = self.keyring.active_key(KeyOperation::Recover).await?;
-        match recovery_key.check(self.keyring.supported_algorithms()) {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Data {
+            recovery_commitment: String,
+            recovery_key: Jwk,
+            delta_hash: String,
+        }
+
+        let recovery_key = self.keyring.active_key(&KeyOperation::Recover).await?;
+        match recovery_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Active recovery key error"),
         }
 
-        let next_update_key = self.keyring.next_key(KeyOperation::Update).await?;
-        match next_update_key.check(self.keyring.supported_algorithms()) {
+        let next_update_key = self.keyring.next_key(&KeyOperation::Update).await?;
+        match next_update_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Next update key error"),
         }
 
-        let next_recovery_key = self.keyring.next_key(KeyOperation::Recover).await?;
-        match next_recovery_key.check(self.keyring.supported_algorithms()) {
+        let next_recovery_key = self.keyring.next_key(&KeyOperation::Recover).await?;
+        match next_recovery_key.check(&self.keyring.supported_algorithms()) {
             Ok(_) => (),
             Err(e) => tracerr!(e, "Next recovery key error"),
-        }
+        };
 
         let (_, suffix) = doc.id.rsplit_once(':').unwrap_or((&doc.id, ""));
-        check_hash(suffix)?;
+        check(suffix)?;
 
         let update_commitment = hash_commitment(&next_update_key)?;
         let delta = Delta {
             patches: vec![Patch {
-                action: PatchAction::Replace,
-                document: Some(PatchDocument::from(doc)),
+                action: Action::Replace,
+                document: Some(Document::from(doc)),
                 ..Default::default()
             }],
             update_commitment: update_commitment.clone(),
@@ -223,13 +270,6 @@ where
 
         let recovery_commitment = hash_commitment(&next_recovery_key)?;
 
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct Data {
-            recovery_commitment: String,
-            recovery_key: Jwk,
-            delta_hash: String,
-        }
         let data = Data {
             recovery_commitment: recovery_commitment.clone(),
             recovery_key: recovery_key.clone(),
@@ -238,7 +278,7 @@ where
         let data_bytes = serde_json::to_vec(&data)?;
         let alg = next_recovery_key.infer_algorithm()?;
         let (signed_bytes, _kid) =
-            self.keyring.try_sign_op(&data_bytes, KeyOperation::Recover, Some(alg)).await?;
+            self.keyring.try_sign_op(&data_bytes, &KeyOperation::Recover, Some(alg)).await?;
         let signed_data = String::from_utf8(signed_bytes)?;
         let reveal_value = hash_data(&recovery_key.clone())?;
 
@@ -266,6 +306,11 @@ where
 }
 
 /// Check the delta can be marshalled to canonical JSON that is no more than 1000 bytes long.
+///
+/// # Errors
+///
+/// * `Err::InvalidFormat` if the delta is too long.
+/// * serialization error if the delta cannot be serialised.
 pub fn check_delta(delta: &Delta) -> Result<()> {
     let mut buf = Vec::new();
     let mut ser = serde_json::Serializer::with_formatter(&mut buf, CanonicalFormatter::new());
@@ -283,8 +328,7 @@ pub fn check_delta(delta: &Delta) -> Result<()> {
 #[cfg(test)]
 mod test {
     use vercre_didcore::{
-        test_utils::TestKeyRingSigner, KeyPurpose, Registrar, Service, ServiceEndpoint,
-        VerificationMethod,
+        test_utils::TestKeyRingSigner, Endpoint, KeyPurpose, Registrar, Service, VerificationMethod,
     };
 
     use super::*;
@@ -308,7 +352,7 @@ mod test {
         let service = vec![Service {
             id: "service1Id".to_string(),
             type_: vec!["service1Type".to_string()],
-            service_endpoint: vec![ServiceEndpoint {
+            service_endpoint: vec![Endpoint {
                 url: Some("http://www.service1.com".to_string()),
                 url_map: None,
             }],
@@ -336,8 +380,8 @@ mod test {
             ..Default::default()
         };
 
-        let patch = Patch::builder(PatchAction::AddPublicKeys)
-            .public_key(&VerificationMethodPatch {
+        let patch = Patch::builder(Action::AddPublicKeys)
+            .public_key(&VmWithPurpose {
                 verification_method: VerificationMethod {
                     id: "keyId2".to_string(),
                     type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
@@ -355,7 +399,7 @@ mod test {
             .create(Some(&[Service {
                 id: "service1Id".to_string(),
                 type_: vec!["service1Type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("http://www.service1.com".to_string()),
                     url_map: None,
                 }],
@@ -376,7 +420,7 @@ mod test {
         assert!(updated_doc.authentication.clone().is_some_and(|a| a.len() == 2));
         assert!(updated_doc.key_agreement.clone().is_some_and(|a| a.len() == 1));
 
-        let patch = Patch::builder(PatchAction::RemovePublicKeys)
+        let patch = Patch::builder(Action::RemovePublicKeys)
             .id("keyId2")
             .expect("failed to add id to patch")
             .build()
@@ -391,11 +435,11 @@ mod test {
         assert!(updated_doc2.authentication.clone().is_some_and(|a| a.len() == 1));
         assert!(updated_doc2.key_agreement.clone().is_none());
 
-        let patch = Patch::builder(PatchAction::AddServices)
+        let patch = Patch::builder(Action::AddServices)
             .service(&Service {
                 id: "service2Id".to_string(),
                 type_: vec!["service2Type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("http://www.service2.com".to_string()),
                     url_map: None,
                 }],
@@ -411,7 +455,7 @@ mod test {
         assert_eq!(updated_doc3.id, doc.id);
         assert!(updated_doc3.service.clone().is_some_and(|s| s.len() == 2));
 
-        let patch = Patch::builder(PatchAction::RemoveServices)
+        let patch = Patch::builder(Action::RemoveServices)
             .id("service2Id")
             .expect("failed to add ID to patch")
             .build()
@@ -432,7 +476,7 @@ mod test {
             .create(Some(&[Service {
                 id: "service1Id".to_string(),
                 type_: vec!["service1Type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("http://www.service1.com".to_string()),
                     url_map: None,
                 }],
@@ -444,7 +488,7 @@ mod test {
             .create(Some(&[Service {
                 id: "service2Id".to_string(),
                 type_: vec!["service1Type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("http://www.service2.com".to_string()),
                     url_map: None,
                 }],

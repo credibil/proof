@@ -1,11 +1,11 @@
 use chrono::{DateTime, Utc};
-use vercre_didcore::{error::Err, tracerr, Result};
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthType, AuthUrl, ClientId, ClientSecret,
     Scope, TokenResponse, TokenUrl,
 };
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use vercre_didcore::{error::Err, tracerr, Result};
 
 const AZURE_PUBLIC_CLOUD: &str = "https://login.microsoftonline.com";
 const AUDIENCE: &str = "https://vault.azure.net";
@@ -33,36 +33,29 @@ impl AccessToken {
     /// | `AZURE_CLIENT_ID`     | The client(application) ID of an App Registration in the tenant. |
     /// | `AZURE_CLIENT_SECRET` | A client secret that was generated for the App Registration.     |
     pub async fn get_token() -> Result<Self> {
-        let tenant = match std::env::var("AZURE_TENANT_ID") {
-            Ok(t) => t,
-            Err(_) => tracerr!(
+        let Ok(tenant) = std::env::var("AZURE_TENANT_ID") else {
+            tracerr!(
                 Err::InvalidConfig,
                 "AZURE_TENANT_ID environment variable not set"
-            ),
+            )
         };
-        let client = match std::env::var("AZURE_CLIENT_ID") {
-            Ok(c) => c,
-            Err(_) => tracerr!(
+        let Ok(client) = std::env::var("AZURE_CLIENT_ID") else {
+            tracerr!(
                 Err::InvalidConfig,
                 "AZURE_CLIENT_ID environment variable not set"
-            ),
+            )
         };
-        let secret = match std::env::var("AZURE_CLIENT_SECRET") {
-            Ok(s) => s,
-            Err(_) => tracerr!(
+        let Ok(secret) = std::env::var("AZURE_CLIENT_SECRET") else {
+            tracerr!(
                 Err::InvalidConfig,
                 "AZURE_CLIENT_SECRET environment variable not set"
-            ),
+            )
         };
 
-        let t_url = Url::parse(&format!(
-            "{}/{}/oauth2/v2.0/token",
-            AZURE_PUBLIC_CLOUD, tenant
-        ))?;
+        let t_url = Url::parse(&format!("{AZURE_PUBLIC_CLOUD}/{tenant}/oauth2/v2.0/token"))?;
         let token_url = TokenUrl::from_url(t_url);
         let a_url = Url::parse(&format!(
-            "{}/{}/oauth2/v2.0/authorize",
-            AZURE_PUBLIC_CLOUD, tenant
+            "{AZURE_PUBLIC_CLOUD}/{tenant}/oauth2/v2.0/authorize"
         ))?;
         let auth_url = AuthUrl::from_url(a_url);
 
@@ -73,14 +66,13 @@ impl AccessToken {
             Some(token_url),
         )
         .set_auth_type(AuthType::RequestBody);
-        let token_res = match client
+        let Ok(token_res) = client
             .exchange_client_credentials()
             .add_scope(Scope::new(format!("{AUDIENCE}/.default")))
             .request_async(async_http_client)
             .await
-        {
-            Ok(t) => t,
-            Err(_) => tracerr!(Err::AuthError, "Failed to get access token."),
+        else {
+            tracerr!(Err::AuthError, "Failed to get access token.")
         };
 
         Ok(Self {
@@ -100,6 +92,9 @@ mod tests {
     async fn get_token() {
         let token = AccessToken::get_token().await;
         assert!(token.is_ok());
-        println!("{}", token.expect("failed to retrieve access token").as_str());
+        println!(
+            "{}",
+            token.expect("failed to retrieve access token").as_str()
+        );
     }
 }

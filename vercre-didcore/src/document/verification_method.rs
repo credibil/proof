@@ -33,7 +33,7 @@ pub struct VerificationMethod {
 }
 
 /// Key purpose type.
-#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum KeyPurpose {
     #[default]

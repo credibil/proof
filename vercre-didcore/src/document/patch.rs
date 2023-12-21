@@ -19,20 +19,20 @@ use crate::{
 impl DidDocument {
     /// Apply patches to a DID document.
     pub fn apply_patches(&mut self, patches: &[Patch]) {
-        for p in patches.iter() {
+        for p in patches {
             match p.action {
-                PatchAction::Replace => {
+                Action::Replace => {
                     self.apply_replace(p);
                     // Only honour a single replace patch
                     break;
                 }
-                PatchAction::AddPublicKeys => {
+                Action::AddPublicKeys => {
                     self.apply_add_keys(p);
                 }
-                PatchAction::RemovePublicKeys => {
+                Action::RemovePublicKeys => {
                     self.apply_remove_keys(p);
                 }
-                PatchAction::AddServices => {
+                Action::AddServices => {
                     if let Some(services) = &p.services {
                         if let Some(mut s) = self.service.clone() {
                             s.extend(services.clone());
@@ -42,7 +42,7 @@ impl DidDocument {
                         }
                     }
                 }
-                PatchAction::RemoveServices => {
+                Action::RemoveServices => {
                     if let Some(services) = &p.ids {
                         if let Some(mut s) = self.service.clone() {
                             for k in services {
@@ -77,12 +77,12 @@ impl DidDocument {
         if let Some(keys) = &pdoc.public_keys {
             let mut vm = Vec::new();
             let mut my_purp = VmRelationshipSet::default();
-            for k in keys.iter() {
+            for k in keys {
                 vm.push(k.verification_method.clone());
                 let vm_ref = VmRelationship::from(&k.verification_method);
                 if let Some(purposes) = &k.purposes {
                     for p in purposes {
-                        my_purp.push(p.clone(), &vm_ref.clone());
+                        my_purp.push(*p, &vm_ref.clone());
                     }
                 }
             }
@@ -101,12 +101,12 @@ impl DidDocument {
         };
         let mut my_vm = self.verification_method.clone().unwrap_or_default();
         let mut my_purp = VmRelationshipSet::from(self.clone());
-        for k in keys.iter() {
+        for k in keys {
             let vm_ref = VmRelationship::from(&k.verification_method);
             my_vm.push(k.verification_method.clone());
             if let Some(purposes) = &k.purposes {
                 for p in purposes {
-                    my_purp.push(p.clone(), &vm_ref.clone());
+                    my_purp.push(*p, &vm_ref.clone());
                 }
             }
         }
@@ -125,7 +125,7 @@ impl DidDocument {
                 self.verification_method = Some(vms);
             }
 
-            for id in ids.iter() {
+            for id in ids {
                 let vm_ref = VmRelationship {
                     key_id: Some(id.clone()),
                     verification_method: None,
@@ -139,7 +139,7 @@ impl DidDocument {
 
 /// Types of patches (updates) that can be applied to a DID document.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub enum PatchAction {
+pub enum Action {
     /// Create a new DID document or replace an entire DID document.
     #[default]
     #[serde(rename = "replace")]
@@ -158,94 +158,94 @@ pub enum PatchAction {
     RemoveServices,
 }
 
-impl Display for PatchAction {
+impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self {
-            PatchAction::Replace => write!(f, "replace"),
-            PatchAction::AddPublicKeys => write!(f, "add-public-keys"),
-            PatchAction::RemovePublicKeys => write!(f, "remove-public-keys"),
-            PatchAction::AddServices => write!(f, "add-services"),
-            PatchAction::RemoveServices => write!(f, "remove-services"),
+            Action::Replace => write!(f, "replace"),
+            Action::AddPublicKeys => write!(f, "add-public-keys"),
+            Action::RemovePublicKeys => write!(f, "remove-public-keys"),
+            Action::AddServices => write!(f, "add-services"),
+            Action::RemoveServices => write!(f, "remove-services"),
         }
     }
 }
 
-impl PartialEq for PatchAction {
+impl PartialEq for Action {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (PatchAction::Replace, PatchAction::Replace)
-                | (PatchAction::AddPublicKeys, PatchAction::AddPublicKeys)
-                | (PatchAction::RemovePublicKeys, PatchAction::RemovePublicKeys)
-                | (PatchAction::AddServices, PatchAction::AddServices)
-                | (PatchAction::RemoveServices, PatchAction::RemoveServices)
+            (Action::Replace, Action::Replace)
+                | (Action::AddPublicKeys, Action::AddPublicKeys)
+                | (Action::RemovePublicKeys, Action::RemovePublicKeys)
+                | (Action::AddServices, Action::AddServices)
+                | (Action::RemoveServices, Action::RemoveServices)
         )
     }
 }
-impl Eq for PatchAction {}
+impl Eq for Action {}
 
 /// DID document patch for creation or replacement of keys and services.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct PatchDocument {
+pub struct Document {
     /// Public keys to add or remove.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_keys: Option<Vec<VerificationMethodPatch>>,
+    pub public_keys: Option<Vec<VmWithPurpose>>,
     /// Services to add or remove.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<Service>>,
 }
 
-/// Create a PatchDocument from a DID document (for use in a DID create or replace)
-impl From<&DidDocument> for PatchDocument {
+/// Create a patch `Document` from a DID document (for use in a DID create or replace)
+impl From<&DidDocument> for Document {
     fn from(doc: &DidDocument) -> Self {
-        let mut pdoc = PatchDocument {
+        let mut patch_doc = Document {
             services: doc.service.clone(),
             ..Default::default()
         };
         let mut public_keys = Vec::new();
         for k in
-            doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new()).iter()
+            doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new())
         {
-            let vmr = VmRelationship::from(k);
-            let vmp = VerificationMethodPatch {
+            let relationship = VmRelationship::from(k);
+            let vmp = VmWithPurpose {
                 verification_method: k.clone(),
                 ..Default::default()
             };
             let mut purposes = Vec::new();
             if let Some(auth) = &doc.authentication {
-                if auth.contains(&vmr) {
+                if auth.contains(&relationship) {
                     purposes.push(KeyPurpose::Authentication);
                 }
             }
             if let Some(assert) = &doc.assertion_method {
-                if assert.contains(&vmr) {
+                if assert.contains(&relationship) {
                     purposes.push(KeyPurpose::AssertionMethod);
                 }
             }
             if let Some(key) = &doc.key_agreement {
-                if key.contains(&vmr) {
+                if key.contains(&relationship) {
                     purposes.push(KeyPurpose::KeyAgreement);
                 }
             }
             if let Some(cap) = &doc.capability_delegation {
-                if cap.contains(&vmr) {
+                if cap.contains(&relationship) {
                     purposes.push(KeyPurpose::CapabilityDelegation);
                 }
             }
             if let Some(cap) = &doc.capability_invocation {
-                if cap.contains(&vmr) {
+                if cap.contains(&relationship) {
                     purposes.push(KeyPurpose::CapabilityInvocation);
                 }
             }
             public_keys.push(vmp);
         }
-        pdoc.public_keys = if public_keys.is_empty() {
+        patch_doc.public_keys = if public_keys.is_empty() {
             None
         } else {
             Some(public_keys)
         };
-        pdoc
+        patch_doc
     }
 }
 
@@ -254,10 +254,10 @@ impl From<&DidDocument> for PatchDocument {
 #[serde(rename_all = "camelCase", default)]
 pub struct Patch {
     /// The type of patch to apply.
-    pub action: PatchAction,
+    pub action: Action,
     /// A set of keys and services to construct a whole DID document.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub document: Option<PatchDocument>,
+    pub document: Option<Document>,
     /// A set of services to add. Only use this field for adding services. To remove services use
     /// the `ids` field instead.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -269,31 +269,32 @@ pub struct Patch {
     /// A set of public keys to add and the purposes they should be applied to. Only use this field
     /// for adding keys. To remove keys use the `ids` field instead.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_keys: Option<Vec<VerificationMethodPatch>>,
+    pub public_keys: Option<Vec<VmWithPurpose>>,
 }
 
 impl Patch {
-    /// Construct a new patch using a PatchBuilder
-    pub fn builder(action: PatchAction) -> PatchBuilder {
-        PatchBuilder::new(action)
+    /// Construct a new patch using a patch `Builder`
+    #[must_use]
+    pub fn builder(action: Action) -> Builder {
+        Builder::new(action)
     }
 }
 
 /// Build and validate a patch.
 #[derive(Default)]
-pub struct PatchBuilder {
-    action: PatchAction,
-    document: Option<PatchDocument>,
+pub struct Builder {
+    action: Action,
+    document: Option<Document>,
     services: Vec<Service>,
     ids: Vec<String>,
-    public_keys: Vec<VerificationMethodPatch>,
+    public_keys: Vec<VmWithPurpose>,
 }
 
-impl PatchBuilder {
+impl Builder {
     /// Initiate the build of a patch by supplying the intended action. This will drive what
     /// subsequent functions will validate and the final validation on build.
-    pub fn new(action: PatchAction) -> PatchBuilder {
-        PatchBuilder {
+    pub fn new(action: Action) -> Builder {
+        Builder {
             action,
             document: None,
             services: Vec::new(),
@@ -302,9 +303,9 @@ impl PatchBuilder {
         }
     }
 
-    /// Adds a PatchDocument to the patch. This is only valid for a replace action.
-    pub fn document(&mut self, document: &PatchDocument) -> Result<&PatchBuilder> {
-        if self.action != PatchAction::Replace {
+    /// Adds a patch `Document` to the patch. This is only valid for a replace action.
+    pub fn document(&mut self, document: &Document) -> Result<&Builder> {
+        if self.action != Action::Replace {
             tracerr!(
                 Err::InvalidPatch,
                 "A document can only be added to a replace patch"
@@ -315,8 +316,8 @@ impl PatchBuilder {
     }
 
     /// Adds a service to the patch. This is only valid for an add services action.
-    pub fn service(&mut self, service: &Service) -> Result<&PatchBuilder> {
-        if self.action != PatchAction::AddServices {
+    pub fn service(&mut self, service: &Service) -> Result<&Builder> {
+        if self.action != Action::AddServices {
             tracerr!(
                 Err::InvalidPatch,
                 "A service can only be added to an add-services patch"
@@ -327,15 +328,15 @@ impl PatchBuilder {
     }
 
     /// Adds a public key to the patch. Only valid for an add keys action.
-    pub fn public_key(&mut self, key: &VerificationMethodPatch) -> Result<&PatchBuilder> {
-        if self.action != PatchAction::AddPublicKeys {
+    pub fn public_key(&mut self, key: &VmWithPurpose) -> Result<&Builder> {
+        if self.action != Action::AddPublicKeys {
             tracerr!(
                 Err::InvalidPatch,
                 "A public key can only be added to an add-public-keys patch"
             );
         }
         // Check the key ID looks OK
-        self.check_key_id(&key.verification_method.id)?;
+        Builder::check_key_id(&key.verification_method.id)?;
         // Check the purposes don't contain duplicates
         if let Some(purposes) = &key.purposes {
             let mut purpose_map = HashMap::new();
@@ -343,11 +344,11 @@ impl PatchBuilder {
                 if purpose_map.contains_key(p) {
                     tracerr!(Err::InvalidInput, "Duplicate key purpose: {}", p);
                 }
-                purpose_map.insert(p.clone(), true);
+                purpose_map.insert(*p, true);
             }
         }
         // Make sure the key ID is not already on the patch
-        for k in self.public_keys.iter() {
+        for k in &self.public_keys {
             if k.verification_method.id == key.verification_method.id {
                 tracerr!(
                     Err::InvalidPatch,
@@ -361,10 +362,10 @@ impl PatchBuilder {
     }
 
     /// Adds an ID to the patch. This is only valid for remove keys or remove services actions.
-    pub fn id(&mut self, id: &str) -> Result<&PatchBuilder> {
-        self.check_key_id(id)?;
-        if self.action != PatchAction::RemovePublicKeys
-            && self.action != PatchAction::RemoveServices
+    pub fn id(&mut self, id: &str) -> Result<&Builder> {
+        Builder::check_key_id(id)?;
+        if self.action != Action::RemovePublicKeys
+            && self.action != Action::RemoveServices
         {
             tracerr!(
                 Err::InvalidPatch,
@@ -372,7 +373,7 @@ impl PatchBuilder {
             );
         }
         // No duplicates
-        for i in self.ids.iter() {
+        for i in &self.ids {
             if i == id {
                 tracerr!(Err::InvalidPatch, "Duplicate ID: {}", id);
             }
@@ -384,7 +385,7 @@ impl PatchBuilder {
     /// Build the patch. Returns an error if the patch components have not been provided properly.
     pub fn build(&self) -> Result<Patch> {
         match self.action {
-            PatchAction::Replace => {
+            Action::Replace => {
                 if self.document.is_none() {
                     tracerr!(
                         Err::InvalidPatch,
@@ -397,7 +398,7 @@ impl PatchBuilder {
                     ..Default::default()
                 })
             }
-            PatchAction::AddPublicKeys => {
+            Action::AddPublicKeys => {
                 if self.public_keys.is_empty() {
                     tracerr!(
                         Err::InvalidPatch,
@@ -410,7 +411,7 @@ impl PatchBuilder {
                     ..Default::default()
                 })
             }
-            PatchAction::RemovePublicKeys => {
+            Action::RemovePublicKeys => {
                 if self.ids.is_empty() {
                     tracerr!(
                         Err::InvalidPatch,
@@ -423,7 +424,7 @@ impl PatchBuilder {
                     ..Default::default()
                 })
             }
-            PatchAction::AddServices => {
+            Action::AddServices => {
                 if self.services.is_empty() {
                     tracerr!(
                         Err::InvalidPatch,
@@ -436,7 +437,7 @@ impl PatchBuilder {
                     ..Default::default()
                 })
             }
-            PatchAction::RemoveServices => {
+            Action::RemoveServices => {
                 if self.ids.is_empty() {
                     tracerr!(
                         Err::InvalidPatch,
@@ -454,7 +455,7 @@ impl PatchBuilder {
 
     // Check an ID is the correct length and a valid base64url characters or key ID part delimiters.
     // This is *not* a full check for a valid DID URL since a key ID can be a path fragment.
-    fn check_key_id(&self, id: &str) -> Result<()> {
+    fn check_key_id(id: &str) -> Result<()> {
         let re = Regex::new(r"^[a-zA-Z0-9_\-\?#:/=&\+%]*$")?;
         if !re.is_match(id) {
             tracerr!(
@@ -470,7 +471,7 @@ impl PatchBuilder {
 /// Verification method with purpose information attached. Used for patching.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct VerificationMethodPatch {
+pub struct VmWithPurpose {
     /// The verification method.
     #[serde(flatten)]
     pub verification_method: VerificationMethod,
@@ -539,7 +540,7 @@ mod tests {
     use std::vec;
 
     use super::*;
-    use crate::document::{context, service::ServiceEndpoint, Context, VerificationMethod};
+    use crate::document::{context, service::Endpoint, Context, VerificationMethod};
     use crate::keys::Jwk;
 
     fn public_key() -> Jwk {
@@ -556,7 +557,7 @@ mod tests {
         Service {
             id: "service1".to_string(),
             type_: vec!["service1type".to_string()],
-            service_endpoint: vec![ServiceEndpoint {
+            service_endpoint: vec![Endpoint {
                 url: Some("https://service1.example.com/".to_string()),
                 url_map: None,
             }],
@@ -599,8 +600,8 @@ mod tests {
     #[test]
     fn patch_replace() {
         let mut doc = default_doc();
-        let replacement = PatchDocument {
-            public_keys: Some(vec![VerificationMethodPatch {
+        let replacement = Document {
+            public_keys: Some(vec![VmWithPurpose {
                 verification_method: VerificationMethod {
                     id: "key2".to_string(),
                     type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
@@ -619,14 +620,14 @@ mod tests {
             services: Some(vec![Service {
                 id: "service2".to_string(),
                 type_: vec!["service2type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("https://service2.example.com/".to_string()),
                     url_map: None,
                 }],
             }]),
         };
 
-        let patch = Patch::builder(PatchAction::Replace)
+        let patch = Patch::builder(Action::Replace)
             .document(&replacement)
             .expect("adding replacement document to patch builder failed")
             .build()
@@ -641,8 +642,8 @@ mod tests {
     #[test]
     fn patch_add_key() {
         let mut doc = default_doc();
-        let patch = Patch::builder(PatchAction::AddPublicKeys)
-            .public_key(&VerificationMethodPatch {
+        let patch = Patch::builder(Action::AddPublicKeys)
+            .public_key(&VmWithPurpose {
                 verification_method: VerificationMethod {
                     id: "key2".to_string(),
                     type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
@@ -681,8 +682,8 @@ mod tests {
 
         // Add a second key and remove the first
 
-        let patch_add = Patch::builder(PatchAction::AddPublicKeys)
-            .public_key(&VerificationMethodPatch {
+        let patch_add = Patch::builder(Action::AddPublicKeys)
+            .public_key(&VmWithPurpose {
                 verification_method: VerificationMethod {
                     id: "key2".to_string(),
                     type_: "EcdsaSecp256k1VerificationKey2019".to_string(),
@@ -702,7 +703,7 @@ mod tests {
             .build()
             .expect("failed to build patch");
 
-        let patch_remove = Patch::builder(PatchAction::RemovePublicKeys)
+        let patch_remove = Patch::builder(Action::RemovePublicKeys)
             .id(&key1)
             .expect("failed to add ID to patch builder")
             .build()
@@ -717,11 +718,11 @@ mod tests {
     #[test]
     fn patch_add_service() {
         let mut doc = default_doc();
-        let patch = Patch::builder(PatchAction::AddServices)
+        let patch = Patch::builder(Action::AddServices)
             .service(&Service {
                 id: "service2".to_string(),
                 type_: vec!["service2type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("https://service2.example.com/".to_string()),
                     url_map: None,
                 }],
@@ -743,11 +744,11 @@ mod tests {
         let svc =
             doc.service.clone().expect("expected document services but got none")[0].id.clone();
 
-        let patch_add = Patch::builder(PatchAction::AddServices)
+        let patch_add = Patch::builder(Action::AddServices)
             .service(&Service {
                 id: "service2".to_string(),
                 type_: vec!["service2type".to_string()],
-                service_endpoint: vec![ServiceEndpoint {
+                service_endpoint: vec![Endpoint {
                     url: Some("https://service2.example.com/".to_string()),
                     url_map: None,
                 }],
@@ -755,7 +756,7 @@ mod tests {
             .expect("failed to add services to patch")
             .build()
             .expect("failed to build patch");
-        let patch_remove = Patch::builder(PatchAction::RemoveServices)
+        let patch_remove = Patch::builder(Action::RemoveServices)
             .id(&svc)
             .expect("failed to add id to patch")
             .build()

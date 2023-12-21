@@ -1,7 +1,7 @@
 use vercre_didcore::{KeyRing, Signer};
 
 /// Registrar that implements the Web DID method.
-pub struct WebRegistrar<K>
+pub struct Registrar<K>
 where
     K: KeyRing + Signer,
 {
@@ -16,7 +16,7 @@ where
 }
 
 /// Configuration and internals.
-impl<K> WebRegistrar<K> 
+impl<K> Registrar<K>
 where
     K: KeyRing + Signer,
 {

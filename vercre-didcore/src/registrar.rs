@@ -1,4 +1,5 @@
-//! https://identity.foundation/did-registration/
+//! Trait to describe behaviours for implementing DID operations as described by
+//! [this specification](https://identity.foundation/did-registration/).
 
 use serde::{Deserialize, Serialize};
 
@@ -83,7 +84,9 @@ pub trait Registrar {
     ///
     /// * `doc` - The DID document to replace any existing DID state with.
     async fn recover(&self, _doc: &DidDocument) -> Result<()> {
-        Ok(())
+        async move {
+            Ok(())
+        }.await
     }
 
     /// Declare the DID method for this registrar.

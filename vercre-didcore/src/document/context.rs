@@ -4,7 +4,7 @@ use std::{collections::HashMap, convert::Infallible, str::FromStr};
 
 use serde::{ser::SerializeMap, Deserialize, Serialize};
 
-/// The default context for a DID document. https://www.w3.org/TR/did-core/#context
+/// The default context for a DID document. <https://www.w3.org/TR/did-core/#context>
 pub const DID_CONTEXT: &str = "https://www.w3.org/ns/did/v1";
 
 /// Context uses JSON-LD, a JSON-based format used to serialize Linked Data. This section defines
@@ -25,7 +25,7 @@ pub struct Context {
     pub url_map: Option<HashMap<String, String>>,
 }
 
-/// FromStr implementation for Context. Needed for deserializer.
+/// `FromStr` implementation for `Context`. Needed for deserializer.
 impl FromStr for Context {
     type Err = Infallible;
 
@@ -66,7 +66,7 @@ pub(crate) mod context_serialization {
     use std::marker::PhantomData;
     use std::str::FromStr;
 
-    use super::*;
+    use super::Context;
 
     pub(crate) fn serialize<S>(value: &[Context], serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use vercre_didcore::{
     error::Err,
-    hash::{hash_data, rand_hex},
-    tracerr, DidDocument, KeyRing, OperationType, Patch, PatchAction, PatchDocument, Resolution,
-    Result, Service, Signer, VerificationMethod,
+    hashing::{hash_data, rand_hex},
+    tracerr, Action, DidDocument, Document, KeyRing, OperationType, Patch, Resolution, Result,
+    Service, Signer, VerificationMethod,
 };
 
 use crate::registrar::check_delta;
@@ -77,7 +77,7 @@ pub struct LongSegment {
 /// ION Operation submitted to an ION node to update the public ledger
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct IonOperation {
+pub struct Operation {
     #[serde(rename = "type")]
     pub type_: String,
     pub suffix_data: SuffixData,
@@ -135,7 +135,7 @@ impl Display for ErrorResponseDetail {
 }
 
 /// Registrar that implements the ION DID method.
-pub struct IonRegistrar<K>
+pub struct Registrar<K>
 where
     K: KeyRing + Signer,
 {
@@ -155,12 +155,16 @@ where
 }
 
 /// Configuration and internal implementation for the ION registrar.
-impl<K> IonRegistrar<K>
+impl<K> Registrar<K>
 where
     K: KeyRing + Signer,
 {
     /// Constructor.
-    pub fn new(
+/// 
+/// # Panics
+/// 
+/// Panics if the HTTP client cannot be created.
+pub fn new(
         challenge_url: &str,
         solution_url: &str,
         resolution_url: &str,
@@ -221,12 +225,12 @@ where
                 ),
             },
         );
-        let res = match self.http_client.post(url).headers(headers).json(req).send().await {
+        let response = match self.http_client.post(url).headers(headers).json(req).send().await {
             Ok(v) => v,
             Err(e) => tracerr!(Err::RequestError, "failed to submit request: {}", e),
         };
 
-        unpack_response::<()>(res).await
+        unpack_response::<()>(response).await
     }
 
     // Generate a proof-of-work for the anchor request. Uses Argon2 to generate a nonce that
@@ -234,14 +238,15 @@ where
     // than or equal to the largest allowed hash.
     async fn proof_of_work(&self, req: &Request) -> Result<ProofOfWork> {
         let url = Url::parse(&self.challenge_url)?;
-        let res = match self.http_client.get(url).send().await {
+        let response = match self.http_client.get(url).send().await {
             Ok(v) => v,
             Err(e) => tracerr!(Err::RequestError, "failed to get challenge: {}", e),
         };
-        let challenge = unpack_response::<ChallengeResponse>(res).await?;
+        let challenge = unpack_response::<ChallengeResponse>(response).await?;
 
         let data_bytes = serde_json::to_vec(req)?;
-        let expires = Utc::now() + Duration::minutes(challenge.valid_duration_in_minutes as i64);
+        let expires =
+            Utc::now() + Duration::minutes(i64::from(challenge.valid_duration_in_minutes));
         let pow = loop {
             let nonce = rand_hex(500).as_bytes().to_vec();
             let mut pwd = nonce.clone();
@@ -249,7 +254,7 @@ where
             let salt = challenge.challenge_nonce.as_bytes().to_vec();
             let mut key = [0u8; 32];
             match Argon2::default().hash_password_into(&pwd, &salt, &mut key) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => tracerr!(Err::SerializationError, "failed to hash password: {}", e),
             };
 
@@ -298,15 +303,14 @@ where
     // Construct a create request for the given DID document. Used by other DID operations that
     // need to provide a new DID.
     pub(crate) fn create_request(
-        &self,
         recovery_commitment: &str,
         update_commitment: &str,
         doc: &DidDocument,
     ) -> Result<Request> {
         let delta = Delta {
             patches: vec![Patch {
-                action: PatchAction::Replace,
-                document: Some(PatchDocument::from(doc)),
+                action: Action::Replace,
+                document: Some(Document::from(doc)),
                 ..Default::default()
             }],
             update_commitment: update_commitment.to_string(),
@@ -343,9 +347,9 @@ where
 
         let suffix = hash_data(&req.suffix_data)?;
         let short_did = match &self.network {
-            Some(network) if network == "mainnet" => format!("did:ion:{}", suffix),
-            Some(network) => format!("did:ion:{}:{}", network, suffix),
-            None => format!("did:ion:{}", suffix),
+            Some(network) if network == "mainnet" => format!("did:ion:{suffix}"),
+            Some(network) => format!("did:ion:{network}:{suffix}"),
+            None => format!("did:ion:{suffix}"),
         };
 
         let long_segment = LongSegment {
@@ -378,10 +382,12 @@ where
         }
     } else {
         match res.json::<ErrorResponse>().await {
-            Ok(e) => match e.error {
-                Some(e) => tracerr!(Err::ApiError, "{}", e),
-                None => tracerr!(Err::ApiError, "error response but no detail provided"),
-            },
+            Ok(e) => {
+                if let Some(e) = e.error {
+                    tracerr!(Err::ApiError, "{}", e);
+                }
+                tracerr!(Err::ApiError, "error response but no detail provided");
+            }
             Err(e) => tracerr!(
                 Err::DeserializationError,
                 "failed to deserialize error response: {}",

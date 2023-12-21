@@ -10,29 +10,30 @@ pub mod signer;
 #[derive(Default)]
 pub struct TestKeyRingSigner {
     /// Test keyring.
-    pub keyring: keyring::TestKeyRing,
+    pub keyring: keyring::Test,
     /// Test signer.
-    pub signer: signer::TestSigner,
+    pub signer: signer::Test,
 }
 
 /// Construction implementation.
 impl TestKeyRingSigner {
     /// Create a new keyring and signer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            keyring: keyring::TestKeyRing{},
-            signer: signer::TestSigner{},
+            keyring: keyring::Test {},
+            signer: signer::Test {},
         }
     }
 }
 
 #[allow(async_fn_in_trait)]
 impl KeyRing for TestKeyRingSigner {
-    async fn active_key(&self, op: KeyOperation) -> Result<Jwk> {
+    async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
         self.keyring.active_key(op).await
     }
 
-    async fn next_key(&self, op: KeyOperation) -> Result<Jwk> {
+    async fn next_key(&self, op: &KeyOperation) -> Result<Jwk> {
         self.keyring.next_key(op).await
     }
 }
@@ -46,7 +47,7 @@ impl Signer for TestKeyRingSigner {
     async fn try_sign_op(
         &self,
         msg: &[u8],
-        op: KeyOperation,
+        op: &KeyOperation,
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
         self.signer.try_sign_op(msg, op, alg).await

@@ -22,9 +22,10 @@ pub mod verification_method;
 // ----------------------------------------------------------------------------
 
 /// A DID is associated with a DID document that can be serialized into a representation of the DID.
-/// https://www.w3.org/TR/did-core/
+/// <https://www.w3.org/TR/did-core/>
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
+#[allow(clippy::module_name_repetitions)]
 pub struct DidDocument {
     /// The DID document's unique identifier. It is a URI scheme conformant with RFC3986. The syntax
     /// conforms to the that of the DID method implementation: "did:{method}:{uri}", where the URI
@@ -106,6 +107,20 @@ impl DidDocument {
     }
 
     /// Get a key from the document by purpose. If the key is not found, returns an error.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `purpose` - The purpose of the key to retrieve. Must map to one of the supported
+    /// verifaction method references.
+    /// 
+    /// # Returns
+    /// 
+    /// A verification method referred to by the verification method reference for the given
+    /// purpose.
+    /// 
+    /// # Errors
+    /// 
+    /// * `Err::KeyNotFound` - If no key is found for the given purpose.
     pub fn get_key(&self, purpose: KeyPurpose) -> Result<VerificationMethod> {
         let mut vm = Option::<VerificationMethod>::None;
         match purpose {
@@ -161,9 +176,10 @@ impl DidDocument {
             }
         };
 
-        match vm {
-            Some(v) => Ok(v),
-            None => tracerr!(Err::KeyNotFound, "No key found for purpose"),
+        if let Some(v) = vm {
+            Ok(v)
+        } else {
+            tracerr!(Err::KeyNotFound, "No key found for purpose")
         }
     }
 }
@@ -175,7 +191,7 @@ mod tests {
     use olpc_cjson::CanonicalFormatter;
 
     use super::*;
-    use crate::document::service::ServiceEndpoint;
+    use crate::document::service::Endpoint;
     use crate::keys::Jwk;
 
     fn public_key() -> Jwk {
@@ -192,7 +208,7 @@ mod tests {
         Service {
             id: "service1".to_string(),
             type_: vec!["service1type".to_string()],
-            service_endpoint: vec![ServiceEndpoint {
+            service_endpoint: vec![Endpoint {
                 url: Some("https://service1.example.com/".to_string()),
                 url_map: None,
             }],
@@ -391,7 +407,7 @@ mod tests {
                 Service {
                     id: "did:example:123#vcs".to_string(),
                     type_: vec!["VerifiableCredentialService".to_string()],
-                    service_endpoint: vec![ServiceEndpoint {
+                    service_endpoint: vec![Endpoint {
                         url: Some("https://example.com/vc/".to_string()),
                         url_map: None,
                     }],
@@ -400,11 +416,11 @@ mod tests {
                     id: "did:example:123#wibble".to_string(),
                     type_: vec!["WibbleService".to_string()],
                     service_endpoint: vec![
-                        ServiceEndpoint {
+                        Endpoint {
                             url: Some("https://example.com/wibbleThing/".to_string()),
                             url_map: None,
                         },
-                        ServiceEndpoint {
+                        Endpoint {
                             url: None,
                             url_map: Some(HashMap::from_iter(vec![(
                                 "mappyThing".to_string(),

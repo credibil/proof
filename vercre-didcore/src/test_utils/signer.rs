@@ -43,10 +43,10 @@ impl SignKey {
 
 /// Test signer for use in tests.
 #[derive(Default)]
-pub struct TestSigner {}
+pub struct Test {}
 
 #[allow(async_fn_in_trait)]
-impl Signer for TestSigner {
+impl Signer for Test {
     fn supported_algorithms(&self) -> Vec<Algorithm> {
         vec![Algorithm::Secp256k1]
     }
@@ -54,7 +54,7 @@ impl Signer for TestSigner {
     async fn try_sign_op(
         &self,
         msg: &[u8],
-        _op: KeyOperation,
+        _op: &KeyOperation,
         _alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
         let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
@@ -87,25 +87,25 @@ impl Signer for TestSigner {
         let mut sec1 = vec![0x04];
         let mut x = match Base64UrlUnpadded::decode_vec(&sign_key.x) {
             Ok(x) => x,
-            Err(e) => panic!("Error decoding x coordinate: {}", e),
+            Err(e) => panic!("Error decoding x coordinate: {e}"),
         };
         sec1.append(&mut x);
         let mut y = match Base64UrlUnpadded::decode_vec(&sign_key.y) {
             Ok(y) => y,
-            Err(e) => panic!("Error decoding x coordinate: {}", e),
+            Err(e) => panic!("Error decoding x coordinate: {e}"),
         };
         sec1.append(&mut y);
         let vk = match VerifyingKey::from_sec1_bytes(&sec1) {
             Ok(vk) => vk,
-            Err(e) => panic!("Error creating verifying key: {}", e),
+            Err(e) => panic!("Error creating verifying key: {e}"),
         };
 
         let mut decoded_signature = [0u8; 128];
-        let dsig = Base64UrlUnpadded::decode(signature, &mut decoded_signature)?;
-        let sig = Signature::<k256::Secp256k1>::from_slice(dsig)?;
+        let decoded_sig = Base64UrlUnpadded::decode(signature, &mut decoded_signature)?;
+        let sig = Signature::<k256::Secp256k1>::from_slice(decoded_sig)?;
 
         match vk.verify(&digest, &sig) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(e) => tracerr!(
                 Err::FailedSignatureVerification,
                 "Error verifying signature: {}",
@@ -173,7 +173,7 @@ mod tests {
     #[tokio::test]
     async fn sign_then_verify() {
         let msg = b"hello world";
-        let signer = TestSigner {};
+        let signer = Test {};
         let (signed, _) = signer.try_sign(msg, None).await.expect("failed to sign");
         let parts = signed.split(|s| *s == b'.').collect::<Vec<&[u8]>>();
         assert_eq!(parts.len(), 3);

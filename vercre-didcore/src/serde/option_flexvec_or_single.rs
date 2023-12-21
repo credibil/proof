@@ -95,7 +95,9 @@ where
             E: de::Error,
         {
             if value.starts_with('[') {
-                return Ok(Some(serde_json::from_str::<Vec<T>>(value).unwrap_or_default()));
+                return Ok(Some(
+                    serde_json::from_str::<Vec<T>>(value).unwrap_or_default(),
+                ));
             }
 
             let Ok(res) = T::from_str(value) else {
@@ -173,13 +175,22 @@ mod tests {
 
         // serialize
         let test_json = serde_json::to_value(&test_data).expect("failed to serialize");
-        assert_eq!(*test_json.get("string").expect("expected value but got none"), json!("string"));
-        assert_eq!(*test_json.get("object").expect("expected value but got none"), json!({"n": "object"}));
+        assert_eq!(
+            *test_json.get("string").expect("expected value but got none"),
+            json!("string")
+        );
+        assert_eq!(
+            *test_json.get("object").expect("expected value but got none"),
+            json!({"n": "object"})
+        );
         assert_eq!(
             *test_json.get("object_array").expect("expected value but got none"),
             json!([{"n": "object1"}, {"n": "object2"}])
         );
-        assert_eq!(*test_json.get("array").expect("expected value but got none"), json!(["item1", "item2"]),);
+        assert_eq!(
+            *test_json.get("array").expect("expected value but got none"),
+            json!(["item1", "item2"]),
+        );
         assert_eq!(test_json.get("none"), None);
 
         // deserialize

@@ -47,7 +47,8 @@ macro_rules! tracerr {
 pub struct Error(#[from] anyhow::Error);
 
 impl Error {
-    /// Transfer the error to OAuth2 compatible format.
+    /// Transfer the error to `OAuth2` compatible format.
+    #[must_use]
     pub fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
             "error": self.0.root_cause().to_string(),
@@ -56,13 +57,14 @@ impl Error {
     }
 
     /// Returns true if `E` is the type held by this error object.
+    #[must_use]
     pub fn is(&self, err: Err) -> bool {
         self.0.downcast_ref::<Err>().map_or(false, |e| e == &err)
     }
 }
 
 /// Typed errors for DID Core.
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Error, Debug, PartialEq, Eq)]
 pub enum Err {
     /// Hash is not a valid SHA-256 hash.
     #[error("invalid_hash")]
@@ -156,6 +158,18 @@ where
     E: std::error::Error + Send + Sync + 'static,
 {
     /// Adds context to the error.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `context` - The context to add to the error.
+    /// 
+    /// # Returns
+    /// 
+    /// Original return object or error with context appended.
+    /// 
+    /// # Errors
+    /// 
+    /// * Original error with context appended.
     fn context<C>(self, context: C) -> Result<T, Error>
     where
         C: Display + Send + Sync + 'static;
