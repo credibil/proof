@@ -335,9 +335,9 @@ mod test {
 
     fn test_registrar() -> IonRegistrar<TestKeyRingSigner> {
         IonRegistrar::new(
-            &std::env::var("AZURE_ION_CHALLENGE_URL").expect("AZURE_ION_CHALLENGE_URL not set"),
-            &std::env::var("AZURE_ION_SOLUTION_URL").expect("AZURE_ION_SOLUTION_URL not set"),
-            &std::env::var("AZURE_ION_RESOLUTION_URL").expect("AZURE_ION_RESOLUTION_URL not set"),
+            &std::env::var("ION_CHALLENGE_URL").expect("ION_CHALLENGE_URL not set"),
+            &std::env::var("ION_OPERATION_URL").expect("ION_OPERATION_URL not set"),
+            &std::env::var("ION_RESOLUTION_URL").expect("ION_RESOLUTION_URL not set"),
             TestKeyRingSigner::default(),
             false,
             None,

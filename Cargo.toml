@@ -37,6 +37,7 @@ members = [
     "vercre-didkey",
     "vercre-didweb",
     "examples/web",
+    "examples/universal-resolver",
 ]
 
 [workspace.dependencies]

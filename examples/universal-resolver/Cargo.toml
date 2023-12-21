@@ -1,0 +1,9 @@
+[package]
+name = "universal-resolver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0.11.23", features = ["json"] }
+tokio = { version = "1.35.1", features = ["full"] }
+vercre-did = { path = "../.." }

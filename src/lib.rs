@@ -1,4 +1,4 @@
-pub use vercre_didcore::{test_utils, DidDocument, Patch, Registrar, Resolver, Service};
+pub use vercre_didcore::{test_utils, DidDocument, Patch, Registrar, Resolution, Resolver, Service};
 
 #[cfg(feature = "azure-kv")]
 pub use vercre_azurekv;
