@@ -282,12 +282,12 @@ where
 
     // Call the DID resolution endpoint and return the DID document if possible.
     pub(crate) async fn resolve_did(&self, did: &str) -> Result<Resolution> {
-        let mut url = Url::parse(&self.resolution_url)?;
-        if self.resolution_url.ends_with('/') {
-            url.join(did)?;
+        let resurl = if self.resolution_url.ends_with('/') {
+            format!("{}{}", self.resolution_url, did)
         } else {
-            url.set_path(did);
-        }
+            format!("{}/{}", self.resolution_url, did)
+        };
+        let url = Url::parse(&resurl)?;
         let res = match self.http_client.get(url).send().await {
             Ok(res) => res,
             Err(e) => tracerr!(

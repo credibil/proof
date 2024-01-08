@@ -1,0 +1,8 @@
+[package]
+name = "ion"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.16.1", features = ["full"] }
+vercre-did = { path = "../..", features = ["didion"] }

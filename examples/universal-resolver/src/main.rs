@@ -1,6 +1,7 @@
 use vercre_did::Resolution;
 
 /// Calls an ION resolver to resolve a DID.
+/// 
 /// # Usage:
 ///
 /// ```
