@@ -19,14 +19,16 @@ crate-type = ["cdylib", "rlib"]
 vercre-azurekv = { path = "vercre-azurekv", optional = true }
 vercre-didcore = { path = "vercre-didcore" }
 vercre-didion = { path = "vercre-didion", optional = true }
-vercre-didkey = { path = "vercre-didkey", optional = true }
+# vercre-didkey = { path = "vercre-didkey", optional = true }
 vercre-didweb = { path = "vercre-didweb", optional = true }
+vercre-ephemeral-keyring = { path = "vercre-ephemeral-keyring", optional = true }
 
 [features]
 azure-kv = ["dep:vercre-azurekv"] # Azure Key Vault as a key ring and signer
 didion = ["dep:vercre-didion"] # did:ion DID method
-didkey = ["dep:vercre-didkey"] # did:key DID method
+# didkey = ["dep:vercre-didkey", "dep:vercre-ephemeral-keyring"] # did:key DID method. Uses ephemeral key ring and signer
 didweb = ["dep:vercre-didweb"] # did:web DID method
+ephemeral-keyring = ["dep:vercre-ephemeral-keyring"] # Ephemeral key ring and signer
 
 [workspace]
 resolver = "2"
@@ -34,8 +36,9 @@ members = [
     "vercre-azurekv",
     "vercre-didcore",
     "vercre-didion",
-    "vercre-didkey",
+#    "vercre-didkey",
     "vercre-didweb",
+    "vercre-ephemeral-keyring",
     "examples/ion",
     "examples/web",
     "examples/universal-resolver",

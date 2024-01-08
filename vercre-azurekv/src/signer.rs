@@ -27,26 +27,6 @@ impl AzureSigner {
     pub fn new(keyring: AzureKeyRing) -> Self {
         Self { keyring }
     }
-
-    // Reconcile the requested algorithm with the supported algorithms, returning a default if no
-    // algorithm is provided or an error if the requested algorithm is not supported.
-    fn algorithm(&self, alg: Option<Algorithm>) -> Result<Algorithm> {
-        let my_algs = self.supported_algorithms();
-        match alg {
-            None => Ok(my_algs[0]),
-            Some(alg) => {
-                if my_algs.iter().any(|a| *a == alg) {
-                    Ok(alg)
-                } else {
-                    tracerr!(
-                        Err::UnsupportedAlgorithm,
-                        "Unsupported signing algorithm: {}",
-                        alg
-                    );
-                }
-            }
-        }
-    }
 }
 
 /// Implementation of the [`Signer`] trait for Azure Key Vault.

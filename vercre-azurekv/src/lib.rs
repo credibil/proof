@@ -1,4 +1,4 @@
-//! # Keyring Implementation for Azure Key Vault
+//! # `KeyRing` and `Signer` implementations for Azure Key Vault
 
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]

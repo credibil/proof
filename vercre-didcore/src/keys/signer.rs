@@ -2,7 +2,7 @@
 //! independent.
 
 use crate::keys::{Algorithm, KeyOperation};
-use crate::Result;
+use crate::{error::Err, tracerr, Result};
 
 /// Message signer. The trait uses methods so the assumption is the implementer of the trait will
 /// have key information stored in the structure. How the data is manipulated before signing is not
@@ -13,6 +13,28 @@ use crate::Result;
 pub trait Signer {
     /// Type of key signatures supported by this signer.
     fn supported_algorithms(&self) -> Vec<Algorithm>;
+
+    /// Reconcile the requested algorithm with the supported algorithms, returning a default if no
+    /// algorithm is provided or an error if the requested algorithm is not supported. A default
+    /// implementation is provided here that will just return the first configured algorithm as the
+    /// default.
+    fn algorithm(&self, alg: Option<Algorithm>) -> Result<Algorithm> {
+        let my_algs = self.supported_algorithms();
+        match alg {
+            None => Ok(my_algs[0]),
+            Some(alg) => {
+                if my_algs.iter().any(|a| *a == alg) {
+                    Ok(alg)
+                } else {
+                    tracerr!(
+                        Err::UnsupportedAlgorithm,
+                        "Unsupported signing algorithm: {}",
+                        alg
+                    );
+                }
+            }
+        }
+    }
 
     /// Sign the provided message bytestring using `Self`. The key stored for `KeyOperation::Sign`
     /// should be used. To sign a message using a different key, use the [`sign_op`] function.

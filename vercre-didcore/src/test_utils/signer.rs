@@ -57,7 +57,8 @@ impl Signer for Test {
         _op: &KeyOperation,
         _alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
-        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
+        let hdr_b = serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()}))
+            .expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);
         let mut payload = [hdr_64.as_bytes(), b".", msg_64.as_bytes()].concat();
@@ -76,7 +77,8 @@ impl Signer for Test {
     }
 
     async fn verify(&self, msg: &[u8], signature: &[u8], _vm: Option<&str>) -> Result<()> {
-        let hdr_b = serde_json::to_vec(&json!({"alg": "ES256K"})).expect("failed to serialize");
+        let hdr_b = serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()}))
+            .expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);
         let payload = [hdr_64.as_bytes(), b".", msg_64.as_bytes()].concat();

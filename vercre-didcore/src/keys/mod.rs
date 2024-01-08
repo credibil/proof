@@ -6,12 +6,11 @@ use serde::{Deserialize, Serialize};
 pub mod keyring;
 pub mod signer;
 
-use crate::error::Err;
-use crate::{tracerr, Result};
+use crate::{error::Err, tracerr, Result};
 
 /// Key operation type. The intent of the key for use in signing a DID document or any message,
 /// updating a DID document or recovering one.
-#[derive(Clone)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum KeyOperation {
     /// Sign a DID document or other message.
     Sign,
