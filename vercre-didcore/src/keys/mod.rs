@@ -10,7 +10,7 @@ use crate::{error::Err, tracerr, Result};
 
 /// Key operation type. The intent of the key for use in signing a DID document or any message,
 /// updating a DID document or recovering one.
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum KeyOperation {
     /// Sign a DID document or other message.
     Sign,
@@ -135,7 +135,7 @@ impl std::fmt::Display for KeyOperation {
 }
 
 /// Types of key signature algorithm supported by the Credibil framework.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Algorithm {
     /// ECDSA using the secp256k1 curve.
     Secp256k1,
@@ -149,15 +149,6 @@ impl std::fmt::Display for Algorithm {
         }
     }
 }
-
-impl PartialEq for Algorithm {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Algorithm::Secp256k1, Algorithm::Secp256k1) => true,
-        }
-    }
-}
-impl Eq for Algorithm {}
 
 /// Verification method type for a key signature type.
 impl Algorithm {

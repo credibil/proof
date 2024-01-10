@@ -45,6 +45,6 @@ members = [
 ]
 
 [workspace.dependencies]
-serde = { version = "1.0.193", default-features = false, features = ["derive", "std"] }
-serde_json = { version = "1.0.108", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.195", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1.0.111", default-features = false, features = ["alloc"] }
 tracing = "0.1.40"

@@ -1,15 +1,16 @@
 use std::{collections::HashMap, sync::{Arc, Mutex}};
-
 use vercre_didcore::{Algorithm, KeyRing, Result, Jwk, KeyOperation, error::Err};
+
+use crate::{secp256k1::Secp256k1KeyPair, KeyPair};
 
 /// Ephemeral key ring.
 pub struct EphemeralKeyRing {
-    // Configure the key type to use by using the constructor.
+    /// The type of key to generate.
     key_type: Algorithm,
-    // Once a key is generated it can be stored for the scope of the struct.
-    current_keys: Arc<Mutex<HashMap<KeyOperation, Jwk>>>,
-    // Holds newly generated keys that are not yet active.
-    next_keys: Arc<Mutex<HashMap<KeyOperation, Jwk>>>,
+    /// Once a key is generated it can be stored for the scope of the struct.
+    current_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
+    /// Holds newly generated keys that are not yet active.
+    next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
 }
 
 /// Configuration and key generation.
@@ -24,33 +25,14 @@ impl EphemeralKeyRing {
         }
     }
 
-    /// Generate a new key pair for the configured key type.
-    pub fn generate(&self) -> Result<Jwk> {
-        Err(Err::KeyNotFound.into())
-        // match self.key_type {
-        //     KeyPair::Ed25519 => {
-        //         let (pk, sk) = ed25519_dalek::Keypair::generate(&mut rand::thread_rng()).to_bytes();
-        //         Ok(Jwk {
-        //             kty: "OKP".to_string(),
-        //             crv: Some("Ed25519".to_string()),
-        //             x: Some(base64::encode_config(&pk, base64::URL_SAFE_NO_PAD)),
-        //             d: Some(base64::encode_config(&sk, base64::URL_SAFE_NO_PAD)),
-        //             ..Default::default()
-        //         })
-        //     }
-        //     KeyPair::Secp256k1 => {
-        //         let sk = secp256k1::SecretKey::random(&mut rand::thread_rng());
-        //         let pk = secp256k1::PublicKey::from_secret_key(&sk);
-        //         Ok(Jwk {
-        //             kty: "EC".to_string(),
-        //             crv: Some("secp256k1".to_string()),
-        //             x: Some(base64::encode_config(&pk.serialize_uncompressed()[1..33], base64::URL_SAFE_NO_PAD)),
-        //             y: Some(base64::encode_config(&pk.serialize_uncompressed()[33..65], base64::URL_SAFE_NO_PAD)),
-        //             d: Some(base64::encode_config(&sk.serialize(), base64::URL_SAFE_NO_PAD)),
-        //             ..Default::default()
-        //         })
-        //     }
-        // }
+    /// Generate a new key pair.
+    fn generate(&self) -> Result<Arc<dyn KeyPair>> {
+        let kp = match self.key_type {
+            Algorithm::Secp256k1 => {
+                Secp256k1KeyPair::generate()?
+            },
+        };
+        Ok(Arc::new(kp))
     }
 }
 
@@ -59,12 +41,9 @@ impl EphemeralKeyRing {
 impl KeyRing for EphemeralKeyRing {
     /// Get the current key for the given operation.
     async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
-        let current_keys = {
-            let ck = self.current_keys.lock().expect("lock on current_keys mutex failed");
-            ck.clone()
-        };
+        let current_keys = self.current_keys.lock().expect("lock on current_keys mutex failed");
         if current_keys.contains_key(op) {
-            return Ok(current_keys[op].clone());
+            return current_keys[op].to_jwk();
         }
         Err(Err::KeyNotFound.into())
     }
@@ -72,28 +51,34 @@ impl KeyRing for EphemeralKeyRing {
     /// Generate a new key pair for the given operation.
     async fn next_key(&self, op: &KeyOperation) -> Result<Jwk> {
         let key = self.generate()?;
-        let mut next_keys = {
-            let nk = self.next_keys.lock().expect("lock on next_keys mutex failed");
-            nk.clone()
-        };
+        let mut next_keys = self.next_keys.lock().expect("lock on next_keys mutex failed");
         next_keys.insert(op.clone(), key.clone());
-        Ok(key)
+        key.to_jwk()
     }
 
     /// Commit (make active) the next keys created.
     async fn commit(&self) -> Result<()> {
-        let mut current_keys = {
-            let ck = self.current_keys.lock().expect("lock on current_keys mutex failed");
-            ck.clone()
-        };
-        let mut next_keys = {
-            let nk = self.next_keys.lock().expect("lock on next_keys mutex failed");
-            nk.clone()
-        };
+        let mut current_keys = self.current_keys.lock().expect("lock on current_keys mutex failed");
+        let next_keys = self.next_keys.lock().expect("lock on next_keys mutex failed");
         for (op, key) in next_keys.iter() {
             current_keys.insert(op.clone(), key.clone());
         }
-        next_keys.clear();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_keyring() {
+        let keyring = EphemeralKeyRing::new(Algorithm::Secp256k1);
+        let first = keyring.active_key(&KeyOperation::Sign).await;
+        assert!(first.is_err());
+        let next = keyring.next_key(&KeyOperation::Sign).await.unwrap();
+        keyring.commit().await.unwrap();
+        let active = keyring.active_key(&KeyOperation::Sign).await.unwrap();
+        assert_eq!(next, active);
     }
 }
