@@ -1,44 +1,49 @@
-use std::{collections::HashMap, sync::{Arc, Mutex}};
-use vercre_didcore::{Algorithm, KeyRing, Result, Jwk, KeyOperation, error::Err};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+use vercre_didcore::{error::Err, Jwk, KeyOperation, KeyRing, Result};
 
-use crate::{secp256k1::Secp256k1KeyPair, KeyPair};
+use crate::KeyPair;
 
 /// Ephemeral key ring.
-pub struct EphemeralKeyRing {
-    /// The type of key to generate.
-    pub(crate) key_type: Algorithm,
+pub struct EphemeralKeyRing<K>
+where
+    K: KeyPair + Send + Sync,
+{
     /// Once a key is generated it can be stored for the scope of the struct.
-    pub(crate) current_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
+    pub(crate) current_keys: Arc<Mutex<HashMap<KeyOperation, Arc<K>>>>,
     /// Holds newly generated keys that are not yet active.
-    pub(crate) next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
+    pub(crate) next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<K>>>>,
 }
 
 /// Configuration and key generation.
-impl EphemeralKeyRing {
+impl<K> EphemeralKeyRing<K>
+where
+    K: KeyPair + Send + Sync,
+{
     /// Create a new `EphemeralKeyRing` instance.
     #[must_use]
-    pub fn new(key_type: Algorithm) -> Self {
+    pub fn new() -> Self {
         Self {
-            key_type,
             current_keys: Arc::new(Mutex::new(HashMap::new())),
             next_keys: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     /// Generate a new key pair.
-    fn generate(&self) -> Result<Arc<dyn KeyPair>> {
-        let kp = match self.key_type {
-            Algorithm::Secp256k1 => {
-                Secp256k1KeyPair::generate()?
-            },
-        };
+    fn generate(&self) -> Result<Arc<K>> {
+        let kp = K::generate()?;
         Ok(Arc::new(kp))
     }
 }
 
 /// `KeyRing` implementation
 #[allow(async_fn_in_trait)]
-impl KeyRing for EphemeralKeyRing {
+impl<K> KeyRing for EphemeralKeyRing<K>
+where
+    K: KeyPair + Send + Sync,
+{
     /// Get the current key for the given operation.
     async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
         let current_keys = self.current_keys.lock().expect("lock on current_keys mutex failed");
@@ -70,10 +75,11 @@ impl KeyRing for EphemeralKeyRing {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::secp256k1::KeyPair as Secp256k1KeyPair;
 
     #[tokio::test]
     async fn test_keyring() {
-        let keyring = EphemeralKeyRing::new(Algorithm::Secp256k1);
+        let keyring = EphemeralKeyRing::<Secp256k1KeyPair>::new();
         let first = keyring.active_key(&KeyOperation::Sign).await;
         assert!(first.is_err());
         let next = keyring.next_key(&KeyOperation::Sign).await.unwrap();

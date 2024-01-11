@@ -54,8 +54,8 @@ impl Signer for Test {
     async fn try_sign_op(
         &self,
         msg: &[u8],
-        _op: &KeyOperation,
-        _alg: Option<Algorithm>,
+        _: &KeyOperation,
+        _: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
         let hdr_b = serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()}))
             .expect("failed to serialize");
@@ -76,7 +76,7 @@ impl Signer for Test {
         Ok((payload, None))
     }
 
-    async fn verify(&self, msg: &[u8], signature: &[u8], _vm: Option<&str>) -> Result<()> {
+    async fn verify(&self, msg: &[u8], signature: &[u8], _: Option<&str>) -> Result<()> {
         let hdr_b = serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()}))
             .expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);

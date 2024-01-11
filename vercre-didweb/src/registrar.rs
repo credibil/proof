@@ -72,13 +72,13 @@ where
 
     /// This function is not supported for the Web method. Deactivation is done by removing the
     /// document from the hosting environment.
-    async fn deactivate(&self, _did: &str) -> Result<()> {
+    async fn deactivate(&self, _: &str) -> Result<()> {
         tracerr!(Err::NotSupported)
     }
 
     /// This function is not supported for the Web method. Recovery is done by re-hosting a document
     /// that had previously been removed..
-    async fn recover(&self, _doc: &DidDocument) -> Result<()> {
+    async fn recover(&self, _: &DidDocument) -> Result<()> {
         tracerr!(Err::NotSupported)
     }
 

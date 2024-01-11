@@ -1,18 +1,25 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
-use ecdsa::{signature::{Signer, Verifier}, Signature, SigningKey, VerifyingKey};
+use ecdsa::{
+    signature::{Signer, Verifier},
+    Signature, SigningKey, VerifyingKey,
+};
 use k256::{PublicKey, Secp256k1};
 use rand_core::OsRng;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use vercre_didcore::{error::Err, tracerr, Algorithm, Jwk, Result};
 
-use crate::{AsymmetricKey, KeyPair};
+use crate::{AsymmetricKey, KeyPair as KeyPairBehavior};
 
-pub type Secp256k1KeyPair =
-    AsymmetricKey<VerifyingKey<Secp256k1>, SigningKey<Secp256k1>>;
+pub type KeyPair = AsymmetricKey<VerifyingKey<Secp256k1>, SigningKey<Secp256k1>>;
 
 /// `KeyPair` implementation for Secp256k1.
-impl KeyPair for Secp256k1KeyPair {
+impl KeyPairBehavior for KeyPair {
+    /// The algorithm used to generate a key pair.
+    fn key_type() -> Algorithm {
+        Algorithm::Secp256k1
+    }
+
     /// Generate a new key pair.
     fn generate() -> Result<Self> {
         let signing_key = SigningKey::random(&mut OsRng);
@@ -27,12 +34,12 @@ impl KeyPair for Secp256k1KeyPair {
     fn to_jwk(&self) -> Result<Jwk> {
         let public_key = PublicKey::from(self.verifying_key);
         let jwk = public_key.to_jwk_string();
-        serde_json::from_str(&jwk).map_err(|e| e.into())
+        serde_json::from_str(&jwk).map_err(std::convert::Into::into)
     }
 
     /// Sign a message.
     fn sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        let hdr_b = match serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()})) {
+        let hdr_b = match serde_json::to_vec(&json!({"alg": Self::key_type().to_string()})) {
             Ok(b) => b,
             Err(e) => {
                 tracerr!(Err::SerializationError, "failed to serialize header: {}", e);
@@ -56,7 +63,7 @@ impl KeyPair for Secp256k1KeyPair {
 
     /// Verify a signature.
     fn verify(&self, msg: &[u8], sig: &[u8]) -> Result<()> {
-        let hdr_b = serde_json::to_vec(&json!({"alg": Algorithm::Secp256k1.to_string()}))
+        let hdr_b = serde_json::to_vec(&json!({"alg": Self::key_type().to_string()}))
             .expect("failed to serialize");
         let hdr_64 = Base64UrlUnpadded::encode_string(&hdr_b);
         let msg_64 = Base64UrlUnpadded::encode_string(msg);

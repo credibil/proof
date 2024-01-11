@@ -83,7 +83,7 @@ pub trait Registrar {
     /// # Arguments
     ///
     /// * `doc` - The DID document to replace any existing DID state with.
-    async fn recover(&self, _doc: &DidDocument) -> Result<()> {
+    async fn recover(&self, _: &DidDocument) -> Result<()> {
         async move { Ok(()) }.await
     }
 

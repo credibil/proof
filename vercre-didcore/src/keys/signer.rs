@@ -18,6 +18,20 @@ pub trait Signer {
     /// algorithm is provided or an error if the requested algorithm is not supported. A default
     /// implementation is provided here that will just return the first configured algorithm as the
     /// default.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `alg` - The algorithm to use for signing. If the signer supports multiple algorithms it
+    /// should use this parameter to select the algorithm to use. If unspecified, the signer can
+    /// use a default.
+    /// 
+    /// # Returns
+    /// 
+    /// The algorithm to use for signing.
+    /// 
+    /// # Errors
+    /// 
+    /// An error should be returned if the requested algorithm is not supported.
     fn algorithm(&self, alg: Option<Algorithm>) -> Result<Algorithm> {
         let my_algs = self.supported_algorithms();
         match alg {
@@ -92,9 +106,9 @@ pub trait Signer {
     /// * `verification_method` - The verification method such as a key ID or URL that can be used
     /// to look up the public key, or a serialized public key itself.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// An error if the signature is invalid or the message could not be verified.
+    /// An error is returned if the signature is invalid or the message could not be verified.
     async fn verify(
         &self,
         data: &[u8],

@@ -1,31 +1,41 @@
 use vercre_didcore::{error::Err, tracerr, Algorithm, KeyOperation, Result, Signer};
 
-use crate::keyring::EphemeralKeyRing;
+use crate::{keyring::EphemeralKeyRing, KeyPair};
 
 /// Signer using an ephemeral keyring.
-pub struct EphemeralSigner {
-    keyring: EphemeralKeyRing,
+#[allow(clippy::module_name_repetitions)]
+pub struct EphemeralSigner<K>
+where
+    K: KeyPair + Send + Sync,
+{
+    keyring: EphemeralKeyRing<K>,
 }
 
 /// Constructor and methods for `EphemeralSigner`.
-impl EphemeralSigner {
+impl<K> EphemeralSigner<K>
+where
+    K: KeyPair + Send + Sync,
+{
     /// Create a new `EphemeralSigner` instance.
     ///
     /// # Arguments
     ///
     /// * `keyring` - The keyring to use for signing.
     #[must_use]
-    pub fn new(keyring: EphemeralKeyRing) -> Self {
+    pub fn new(keyring: EphemeralKeyRing<K>) -> Self {
         Self { keyring }
     }
 }
 
 /// Implementation of the [`Signer`] trait for ephemeral keys.
 #[allow(async_fn_in_trait)]
-impl Signer for EphemeralSigner {
+impl<K> Signer for EphemeralSigner<K>
+where
+    K: KeyPair + Send + Sync,
+{
     /// Type of signature algorithm.
     fn supported_algorithms(&self) -> Vec<Algorithm> {
-        vec![Algorithm::Secp256k1]
+        vec![K::key_type()]
     }
 
     /// Sign the provided message bytestring using `Self` and the key stored for the specified key
@@ -35,7 +45,8 @@ impl Signer for EphemeralSigner {
     ///
     /// * `msg` - The message to sign.
     /// * `op` - The key operation to use for signing.
-    /// * `alg` - The algorithm to use for signing.
+    /// * `alg` - The algorithm to use for signing. This trait parameter is unused. The type of
+    /// key-pair `K` is used to determine the algorithm.
     ///
     /// # Returns
     ///
@@ -48,8 +59,8 @@ impl Signer for EphemeralSigner {
         op: &KeyOperation,
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
-        if alg.is_some() && alg != Some(self.keyring.key_type) {
-            tracerr!(Err::InvalidConfig, "algorithm mismatch");
+        if alg.is_some() {
+            tracerr!(Err::InvalidConfig, "algorithm should be None (inferred by type)");
         }
         let current_keys =
             self.keyring.current_keys.lock().expect("lock on current_keys mutex failed");
@@ -105,25 +116,19 @@ mod tests {
     use vercre_didcore::KeyRing;
 
     use super::*;
-    use crate::keyring::EphemeralKeyRing;
+    use crate::{keyring::EphemeralKeyRing, secp256k1::KeyPair as Secp256k1KeyPair};
 
     #[tokio::test]
     async fn test_signer() {
-        let keyring = EphemeralKeyRing::new(Algorithm::Secp256k1);
+        let keyring = EphemeralKeyRing::<Secp256k1KeyPair>::new();
         keyring.next_key(&KeyOperation::Sign).await.unwrap();
         keyring.commit().await.unwrap();
         let signer = EphemeralSigner::new(keyring);
         let msg = b"Hello, world!";
-        let (payload, _) = signer
-            .try_sign_op(msg, &KeyOperation::Sign, None)
-            .await
-            .unwrap();
+        let (payload, _) = signer.try_sign_op(msg, &KeyOperation::Sign, None).await.unwrap();
         let parts = payload.split(|c| *c == b'.').collect::<Vec<&[u8]>>();
         assert_eq!(parts.len(), 3);
         let sig = parts[2];
-        signer
-            .verify(msg, &sig, None)
-            .await
-            .expect("failed to verify");
+        signer.verify(msg, &sig, None).await.expect("failed to verify");
     }
 }
