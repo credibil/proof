@@ -13,10 +13,13 @@ name = "vercre_ephemeral_keyring"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+base64ct = "1.6.0"
 ecdsa = "0.16.9"
 k256 = { version = "0.13.3", features = ["jwk"] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 serde_json = "1.0.111"
+sha2 = "0.10.8"
+tracing.workspace = true
 vercre-didcore = { version = "0.1.0", path = "../vercre-didcore" }
 
 [dev-dependencies]

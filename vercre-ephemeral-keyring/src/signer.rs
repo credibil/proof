@@ -1,4 +1,4 @@
-use vercre_didcore::{error::Err, KeyOperation, Result, Signer, Algorithm};
+use vercre_didcore::{error::Err, tracerr, Algorithm, KeyOperation, Result, Signer};
 
 use crate::keyring::EphemeralKeyRing;
 
@@ -30,25 +30,38 @@ impl Signer for EphemeralSigner {
 
     /// Sign the provided message bytestring using `Self` and the key stored for the specified key
     /// operation.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `msg` - The message to sign.
     /// * `op` - The key operation to use for signing.
     /// * `alg` - The algorithm to use for signing.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * The signed message as a byte vector or an error if the message could not be signed.
     /// * The key ID that can be used to look up the public key. (This is provided by the
     /// underlying keyring.)
     async fn try_sign_op(
         &self,
-        _msg: &[u8],
-        _op: &KeyOperation,
-        _alg: Option<Algorithm>,
+        msg: &[u8],
+        op: &KeyOperation,
+        alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
-        Err(Err::NotImplemented.into())
+        if alg.is_some() && alg != Some(self.keyring.key_type) {
+            tracerr!(Err::InvalidConfig, "algorithm mismatch");
+        }
+        let current_keys =
+            self.keyring.current_keys.lock().expect("lock on current_keys mutex failed");
+        if !current_keys.contains_key(op) {
+            tracerr!(
+                Err::KeyNotFound,
+                "attempt to sign with key that does not exist"
+            );
+        }
+        let key = current_keys[op].clone();
+        let payload = key.sign(msg)?;
+        Ok((payload, None))
     }
 
     /// Verify the provided signature against the provided message bytestring using `Self` and the
@@ -58,18 +71,59 @@ impl Signer for EphemeralSigner {
     ///
     /// * `data` - The message to verify the signature for.
     /// * `signature` - The signature to verify.
-    /// * `verification_method` - The verification method such as a key ID or URL that can be used
-    /// to look up the public key, or a serialized public key itself.
+    /// * `verification_method` - This is not supported for this keyring. If a value is supplied,
+    /// an error is returned.
     ///
     /// # Returns
     ///
     /// An error if the signature is invalid or the message could not be verified.
     async fn verify(
         &self,
-        _data: &[u8],
-        _signature: &[u8],
-        _verification_method: Option<&str>,
+        data: &[u8],
+        signature: &[u8],
+        verification_method: Option<&str>,
     ) -> Result<()> {
-        Err(Err::NotImplemented.into())
+        if verification_method.is_some() {
+            tracerr!(Err::NotSupported, "verification method not supported");
+        }
+        let current_keys =
+            self.keyring.current_keys.lock().expect("lock on current_keys mutex failed");
+        if !current_keys.contains_key(&KeyOperation::Sign) {
+            tracerr!(
+                Err::KeyNotFound,
+                "attempt to verify with key that does not exist"
+            );
+        }
+        let key = current_keys[&KeyOperation::Sign].clone();
+        key.verify(data, signature)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use vercre_didcore::KeyRing;
+
+    use super::*;
+    use crate::keyring::EphemeralKeyRing;
+
+    #[tokio::test]
+    async fn test_signer() {
+        let keyring = EphemeralKeyRing::new(Algorithm::Secp256k1);
+        keyring.next_key(&KeyOperation::Sign).await.unwrap();
+        keyring.commit().await.unwrap();
+        let signer = EphemeralSigner::new(keyring);
+        let msg = b"Hello, world!";
+        let (payload, _) = signer
+            .try_sign_op(msg, &KeyOperation::Sign, None)
+            .await
+            .unwrap();
+        let parts = payload.split(|c| *c == b'.').collect::<Vec<&[u8]>>();
+        assert_eq!(parts.len(), 3);
+        let sig = parts[2];
+        signer
+            .verify(msg, &sig, None)
+            .await
+            .expect("failed to verify");
     }
 }

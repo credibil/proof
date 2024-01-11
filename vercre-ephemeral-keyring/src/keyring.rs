@@ -6,11 +6,11 @@ use crate::{secp256k1::Secp256k1KeyPair, KeyPair};
 /// Ephemeral key ring.
 pub struct EphemeralKeyRing {
     /// The type of key to generate.
-    key_type: Algorithm,
+    pub(crate) key_type: Algorithm,
     /// Once a key is generated it can be stored for the scope of the struct.
-    current_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
+    pub(crate) current_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
     /// Holds newly generated keys that are not yet active.
-    next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
+    pub(crate) next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<dyn KeyPair>>>>,
 }
 
 /// Configuration and key generation.
@@ -68,7 +68,7 @@ impl KeyRing for EphemeralKeyRing {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[tokio::test]

@@ -15,11 +15,11 @@ pub use signer::EphemeralSigner;
 
 /// Asymmetric key pair.
 #[derive(Clone, Debug)]
-pub struct AsymmetricKey<P, S> {
-    /// Public key for an asymmetric key pair.
-    pub public_key: P,
-    /// Secret key for an asymmetric key pair.
-    pub secret_key: Option<S>,
+pub struct AsymmetricKey<V, S> {
+    /// Key for verifying.
+    pub verifying_key: V,
+    /// Secret key for signing.
+    pub signing_key: Option<S>,
 }
 
 /// A supported key type needs to be able to generate a key pair and express itself as a JWK.
@@ -29,4 +29,10 @@ pub trait KeyPair {
 
     /// Express the public key as a JWK.
     fn to_jwk(&self) -> Result<Jwk>;
+
+    /// Sign a message.
+    fn sign(&self, msg: &[u8]) -> Result<Vec<u8>>;
+
+    /// Verify a signature.
+    fn verify(&self, msg: &[u8], sig: &[u8]) -> Result<()>;
 }
