@@ -17,6 +17,16 @@ where
     pub(crate) next_keys: Arc<Mutex<HashMap<KeyOperation, Arc<K>>>>,
 }
 
+/// Default
+impl<K> Default for EphemeralKeyRing<K>
+where
+    K: KeyPair + Send + Sync,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Configuration and key generation.
 impl<K> EphemeralKeyRing<K>
 where
@@ -32,7 +42,7 @@ where
     }
 
     /// Generate a new key pair.
-    fn generate(&self) -> Result<Arc<K>> {
+    fn generate() -> Result<Arc<K>> {
         let kp = K::generate()?;
         Ok(Arc::new(kp))
     }
@@ -55,7 +65,7 @@ where
 
     /// Generate a new key pair for the given operation.
     async fn next_key(&self, op: &KeyOperation) -> Result<Jwk> {
-        let key = self.generate()?;
+        let key = Self::generate()?;
         let mut next_keys = self.next_keys.lock().expect("lock on next_keys mutex failed");
         next_keys.insert(op.clone(), key.clone());
         key.to_jwk()
