@@ -1,16 +1,16 @@
 use vercre_ephemeral_keyring::{EphemeralKeyRing, KeyPair};
 
 /// Registrar that implements the DID JWK method.
-pub struct Registrar<K>
+pub struct Registrar<'a, K>
 where
     K: KeyPair + Send + Sync,
 {
     /// Key ring for managing keys and signing.
-    pub(crate) keyring: EphemeralKeyRing<K>,
+    pub(crate) keyring: &'a EphemeralKeyRing<K>,
 }
 
 /// Configuration and internals.
-impl<K> Registrar<K>
+impl<'a, K> Registrar<'a, K>
 where
     K: KeyPair + Send + Sync,
 {
@@ -23,7 +23,7 @@ where
     /// # Returns
     /// 
     /// * The registrar with the keyring configured.
-    pub fn new(keyring: EphemeralKeyRing<K>) -> Self {
+    pub fn new(keyring: &'a EphemeralKeyRing<K>) -> Self {
         Self { keyring }
     }
 }

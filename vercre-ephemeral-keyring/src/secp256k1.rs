@@ -4,7 +4,7 @@ use ecdsa::{
     Signature, SigningKey, VerifyingKey,
 };
 use k256::{PublicKey, Secp256k1};
-use rand_core::OsRng;
+use rand::rngs::OsRng;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use vercre_didcore::{error::Err, tracerr, Algorithm, Jwk, Result};

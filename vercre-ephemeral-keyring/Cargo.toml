@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 base64ct = "1.6.0"
 ecdsa = "0.16.9"
 k256 = { version = "0.13.3", features = ["jwk"] }
-rand_core = { version = "0.6.4", features = ["getrandom"] }
+rand = "0.8.5"
 serde_json = "1.0.111"
 sha2 = "0.10.8"
 tracing.workspace = true

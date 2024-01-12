@@ -9,7 +9,7 @@ use crate::jwk::Registrar as JwkRegistrar;
 
 /// DID Registrar implementation for the JWK method.
 #[allow(async_fn_in_trait)]
-impl<K> Registrar for JwkRegistrar<K>
+impl<'a, K> Registrar for JwkRegistrar<'a, K>
 where
     K: KeyPair + Send + Sync,
 {
@@ -40,6 +40,7 @@ where
             );
         }
         let signing_key = self.keyring.next_key(&KeyOperation::Sign).await?;
+        self.keyring.commit().await?;
         let serialized = serde_json::to_vec(&signing_key)?;
         let encoded = Base64UrlUnpadded::encode_string(&serialized);
         let did = format!("did:{}:{}", Self::method(), encoded);
@@ -104,16 +105,23 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vercre_didcore::{KeyOperation, KeyRing, Registrar};
     use vercre_ephemeral_keyring::{EphemeralKeyRing, Secp256k1KeyPair};
 
+    use crate::jwk::Registrar as JwkRegistrar;
+
     #[tokio::test]
-    async fn create() {
+    async fn create_secp256k1() {
         let keyring = EphemeralKeyRing::<Secp256k1KeyPair>::new();
-        let registrar = JwkRegistrar::new(keyring);
+        let registrar = JwkRegistrar::new(&keyring);
         let doc = registrar.create(None).await.unwrap();
-        insta::with_settings!( {sort_maps => true}, {
-            insta::assert_yaml_snapshot!(doc);
-        });
+        let key = keyring.active_key(&KeyOperation::Sign).await.unwrap();
+        // Because every time this is run a new key is generated, we can't test the exact DID so we
+        // just check the verification method exists as expected.
+        assert!(doc.id.starts_with("did:jwk:"));
+        let vm = doc.verification_method.unwrap().clone();
+        assert!(vm.len() == 1);
+        assert_eq!(vm[0].clone().public_key_jwk.unwrap(), key);
+        assert!(vm[0].clone().id.starts_with(&doc.id));
     }
 }
