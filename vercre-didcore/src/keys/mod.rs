@@ -38,6 +38,9 @@ pub struct Jwk {
     /// Secret key.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub d: Option<String>,
+    /// Key use
+    #[serde(skip_serializing_if = "Option::is_none", rename = "use")]
+    pub use_: Option<String>,
 }
 
 impl Jwk {

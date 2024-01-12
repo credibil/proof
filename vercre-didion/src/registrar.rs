@@ -300,8 +300,8 @@ where
     }
 
     /// Declare the DID method for this registrar.
-    fn method(&self) -> &str {
-        "ion"
+    fn method() -> String {
+        "ion".to_owned()
     }
 }
 

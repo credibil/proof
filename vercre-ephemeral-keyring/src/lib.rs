@@ -12,6 +12,7 @@ mod signer;
 
 pub use keyring::EphemeralKeyRing;
 pub use signer::EphemeralSigner;
+pub use secp256k1::KeyPair as Secp256k1KeyPair;
 
 /// Asymmetric key pair.
 #[derive(Clone, Debug)]

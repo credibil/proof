@@ -11,6 +11,7 @@ use vercre_didcore::{error::Err, tracerr, Algorithm, Jwk, Result};
 
 use crate::{AsymmetricKey, KeyPair as KeyPairBehavior};
 
+/// Key pair for Secp256k1.
 pub type KeyPair = AsymmetricKey<VerifyingKey<Secp256k1>, SigningKey<Secp256k1>>;
 
 /// `KeyPair` implementation for Secp256k1.

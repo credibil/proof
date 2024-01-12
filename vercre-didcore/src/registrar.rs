@@ -87,6 +87,6 @@ pub trait Registrar {
         async move { Ok(()) }.await
     }
 
-    /// Declare the DID method for this registrar.
-    fn method(&self) -> &str;
+    /// Declare the DID method for this registrar. (For example "web" for "did:web".)
+    fn method() -> String;
 }

@@ -1,0 +1,27 @@
+---
+source: vercre-didjwk/src/registrar.rs
+assertion_line: 116
+expression: doc
+---
+id: "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ"
+"@context": "https://www.w3.org/ns/did/v1"
+verificationMethod:
+  - id: "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+    type: EcdsaSecp256k1VerificationKey2019
+    controller: "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ"
+    publicKeyJwk:
+      kty: EC
+      crv: secp256k1
+      x: _a3yXXyXzR8EYgznmmaCOPy2dRv4Qs95wxDgR_ZWQrU
+      y: lxK0Kg-PXMmOezbui3P-hA7dGnvlGpSGpjc7HTvPduA
+authentication:
+  - "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+assertionMethod:
+  - "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+keyAgreement:
+  - "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+capabilityInvocation:
+  - "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+capabilityDelegation:
+  - "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJfYTN5WFh5WHpSOEVZZ3pubW1hQ09QeTJkUnY0UXM5NXd4RGdSX1pXUXJVIiwieSI6Imx4SzBLZy1QWE1tT2V6YnVpM1AtaEE3ZEdudmxHcFNHcGpjN0hUdlBkdUEifQ#0"
+

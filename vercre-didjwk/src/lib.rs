@@ -4,3 +4,7 @@
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
+/// Main types for the DID JWK registrar and resolver.
+pub mod jwk;
+/// DID JWK registrar. Implementation of the applicable DID operations, other than Read.
+pub mod registrar;

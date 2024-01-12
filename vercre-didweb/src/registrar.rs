@@ -39,7 +39,7 @@ where
             verification_method: VerificationMethod {
                 id: rand_hex(8),
                 controller: self.controller.clone().unwrap_or_default(),
-                type_: algorithm.cryptosuite().to_string(),
+                type_: algorithm.cryptosuite(),
                 public_key_jwk: Some(signing_key.clone()),
                 ..Default::default()
             },
@@ -83,7 +83,7 @@ where
     }
 
     /// Declare the DID method for this registrar.
-    fn method(&self) -> &str {
-        "web"
+    fn method() -> String {
+        "web".to_owned()
     }
 }
