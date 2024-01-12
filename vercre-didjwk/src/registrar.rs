@@ -1,11 +1,10 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use vercre_didcore::{
-    error::Err, tracerr, Action, Context, DidDocument, KeyOperation, KeyPurpose, KeyRing, Patch,
-    Registrar, Result, Service, VerificationMethod, VmWithPurpose, DID_CONTEXT,
+    error::Err, tracerr, DidDocument, KeyOperation, KeyRing, Patch, Registrar, Result, Service,
 };
 use vercre_ephemeral_keyring::KeyPair;
 
-use crate::jwk::Registrar as JwkRegistrar;
+use crate::jwk::{document_from_jwk, Registrar as JwkRegistrar};
 
 /// DID Registrar implementation for the JWK method.
 #[allow(async_fn_in_trait)]
@@ -45,41 +44,7 @@ where
         let encoded = Base64UrlUnpadded::encode_string(&serialized);
         let did = format!("did:{}:{}", Self::method(), encoded);
 
-        let mut doc = DidDocument {
-            context: vec![Context {
-                url: Some(DID_CONTEXT.to_string()),
-                ..Default::default()
-            }],
-            id: did.clone(),
-            ..Default::default()
-        };
-
-        let mut vm = VmWithPurpose {
-            verification_method: VerificationMethod {
-                id: format!("{}#0", did.clone()),
-                controller: did.clone(),
-                type_: K::key_type().cryptosuite(),
-                public_key_jwk: Some(signing_key.clone()),
-                ..Default::default()
-            },
-            purposes: Some(vec![
-                KeyPurpose::Authentication,
-                KeyPurpose::AssertionMethod,
-                KeyPurpose::CapabilityDelegation,
-                KeyPurpose::CapabilityInvocation,
-            ]),
-        };
-        if signing_key.use_ != Some("sig".to_string()) {
-            if let Some(purposes) = vm.purposes.as_mut() {
-                purposes.push(KeyPurpose::KeyAgreement);
-            } else {
-                vm.purposes = Some(vec![KeyPurpose::KeyAgreement]);
-            }
-        }
-        let patch_key = Patch::builder(Action::AddPublicKeys).public_key(&vm)?.build()?;
-        doc.apply_patches(&[patch_key]);
-
-        Ok(doc)
+        document_from_jwk(&signing_key, &K::key_type().cryptosuite(), &did)
     }
 
     /// The update operation is not supported for the JWK method.
@@ -123,5 +88,7 @@ mod tests {
         assert!(vm.len() == 1);
         assert_eq!(vm[0].clone().public_key_jwk.unwrap(), key);
         assert!(vm[0].clone().id.starts_with(&doc.id));
+
+        println!("DID: {}", doc.id);
     }
 }

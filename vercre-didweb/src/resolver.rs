@@ -86,7 +86,7 @@ fn error_response(error: &str) -> Resolution {
         did_document: None,
         did_document_metadata: Some(DocumentMetadata::default()),
         did_resolution_metadata: Some(ResolutionMetadata {
-            content_type: "application/did+json".to_string(),
+            content_type: "application/did+ld+json".to_string(),
             error: Some(error.to_string()),
         }),
     }

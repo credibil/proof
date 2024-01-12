@@ -8,3 +8,5 @@
 pub mod jwk;
 /// DID JWK registrar. Implementation of the applicable DID operations, other than Read.
 pub mod registrar;
+/// DID JWK resolver. Implementation of the DID Read operation.
+pub mod resolver;

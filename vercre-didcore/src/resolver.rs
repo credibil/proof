@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// Metadata associated with a DID resolution response.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolutionMetadata {
     /// The content type of the response. e.g. "application/did+ld+json".
@@ -23,7 +23,7 @@ pub struct ResolutionMetadata {
 }
 
 /// Metadata associated with a DID document.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DocumentMetadata {
     /// The time the document was created. The value of the property is a string formatted as an XML
