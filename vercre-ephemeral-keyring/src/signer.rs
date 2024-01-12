@@ -60,7 +60,10 @@ where
         alg: Option<Algorithm>,
     ) -> Result<(Vec<u8>, Option<String>)> {
         if alg.is_some() {
-            tracerr!(Err::InvalidConfig, "algorithm should be None (inferred by type)");
+            tracerr!(
+                Err::InvalidConfig,
+                "algorithm should be None (inferred by type)"
+            );
         }
         let current_keys =
             self.keyring.current_keys.lock().expect("lock on current_keys mutex failed");

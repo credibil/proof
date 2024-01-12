@@ -27,6 +27,7 @@ where
     /// # Returns
     ///
     /// * The registrar with the keyring configured.
+    #[must_use]
     pub fn new(keyring: &'a EphemeralKeyRing<K>) -> Self {
         Self { keyring }
     }
@@ -45,7 +46,7 @@ pub(crate) fn document_from_jwk(key: &Jwk, type_: &str, did: &str) -> Result<Did
 
     let mut vm = VmWithPurpose {
         verification_method: VerificationMethod {
-            id: format!("{}#0", did),
+            id: format!("{did}#0"),
             controller: did.to_string(),
             type_: type_.to_string(),
             public_key_jwk: Some(key.clone()),

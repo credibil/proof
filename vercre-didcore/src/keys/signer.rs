@@ -18,19 +18,19 @@ pub trait Signer {
     /// algorithm is provided or an error if the requested algorithm is not supported. A default
     /// implementation is provided here that will just return the first configured algorithm as the
     /// default.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `alg` - The algorithm to use for signing. If the signer supports multiple algorithms it
     /// should use this parameter to select the algorithm to use. If unspecified, the signer can
     /// use a default.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The algorithm to use for signing.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// An error should be returned if the requested algorithm is not supported.
     fn algorithm(&self, alg: Option<Algorithm>) -> Result<Algorithm> {
         let my_algs = self.supported_algorithms();
