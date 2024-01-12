@@ -26,7 +26,7 @@ vercre-ephemeral-keyring = { path = "vercre-ephemeral-keyring", optional = true 
 [features]
 azure-kv = ["dep:vercre-azurekv"] # Azure Key Vault as a key ring and signer
 didion = ["dep:vercre-didion"] # did:ion DID method
-didjwk = ["dep:vercre-didjwk", "dep:vercre-ephemeral-keyring"] # did:jwk DID method. Uses ephemeral key ring and signer
+didjwk = ["ephemeral-keyring", "dep:vercre-didjwk", "dep:vercre-ephemeral-keyring"] # did:jwk DID method. Uses ephemeral key ring and signer
 didweb = ["dep:vercre-didweb"] # did:web DID method
 ephemeral-keyring = ["dep:vercre-ephemeral-keyring"] # Ephemeral key ring and signer
 
@@ -40,8 +40,9 @@ members = [
     "vercre-didweb",
     "vercre-ephemeral-keyring",
     "examples/ion",
-    "examples/web",
+    "examples/jwk",
     "examples/universal-resolver",
+    "examples/web",
 ]
 
 [workspace.dependencies]
