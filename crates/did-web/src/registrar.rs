@@ -5,10 +5,9 @@ use did_core::{
     Result, Service, Signer, VerificationMethod, VmWithPurpose, DID_CONTEXT,
 };
 
-use crate::web::Registrar as WebRegistrar;
+use crate::Registrar as WebRegistrar;
 
 /// DID Registrar implementation for the Web method.
-#[allow(async_fn_in_trait)]
 impl<K> Registrar for WebRegistrar<K>
 where
     K: KeyRing + Signer + Send + Sync,

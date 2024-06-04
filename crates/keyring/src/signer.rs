@@ -30,7 +30,6 @@ where
 }
 
 /// Implementation of the [`Signer`] trait for ephemeral keys.
-#[allow(async_fn_in_trait)]
 impl<K> Signer for EphemeralSigner<K>
 where
     K: KeyPair + Send + Sync,

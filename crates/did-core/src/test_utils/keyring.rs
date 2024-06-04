@@ -8,7 +8,6 @@ use crate::Result;
 #[derive(Default)]
 pub struct Test {}
 
-#[allow(async_fn_in_trait)]
 impl KeyRing for Test {
     async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
         match op {

@@ -2,7 +2,7 @@
 
 use did_core::{KeyRing, Resolution, Resolver, Result, Signer};
 
-use crate::ion::Registrar;
+use crate::Registrar;
 
 /// A Resolver is responsible for resolving a DID to a DID document. This implementation will make
 /// a resolution request to the ION registrar. If the DID has been anchored, a lookup is done to
@@ -18,7 +18,6 @@ use crate::ion::Registrar;
 /// # Returns
 ///
 /// The DID document with the ID corresponding to the supplied DID.
-#[allow(async_fn_in_trait)]
 impl<K> Resolver for Registrar<K>
 where
     K: KeyRing + Signer + Send + Sync,

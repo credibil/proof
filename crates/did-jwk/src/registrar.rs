@@ -3,10 +3,9 @@ use did_core::error::Err;
 use did_core::{tracerr, DidDocument, KeyOperation, KeyRing, Patch, Registrar, Result, Service};
 use keyring::KeyPair;
 
-use crate::jwk::{document_from_jwk, Registrar as JwkRegistrar};
+use crate::{document_from_jwk, Registrar as JwkRegistrar};
 
 /// DID Registrar implementation for the JWK method.
-#[allow(async_fn_in_trait)]
 impl<'a, K> Registrar for JwkRegistrar<'a, K>
 where
     K: KeyPair + Send + Sync,
@@ -69,7 +68,7 @@ mod tests {
     use did_core::{KeyOperation, KeyRing, Registrar};
     use keyring::{EphemeralKeyRing, Secp256k1KeyPair};
 
-    use crate::jwk::Registrar as JwkRegistrar;
+    use crate::Registrar as JwkRegistrar;
 
     #[tokio::test]
     async fn create_secp256k1() {

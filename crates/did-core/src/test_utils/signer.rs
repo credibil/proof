@@ -44,7 +44,6 @@ impl SignKey {
 #[derive(Default)]
 pub struct Test {}
 
-#[allow(async_fn_in_trait)]
 impl Signer for Test {
     fn supported_algorithms(&self) -> Vec<Algorithm> {
         vec![Algorithm::Secp256k1]

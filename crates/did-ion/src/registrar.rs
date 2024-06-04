@@ -9,10 +9,9 @@ use did_core::{
     Patch, Registrar, Result, Service, Signer, VerificationMethod, VmWithPurpose,
 };
 
-use crate::ion::{Delta, Registrar as IonRegistrar, Request};
+use crate::{Delta, Registrar as IonRegistrar, Request};
 
 /// DID Registrar implementation for the ION method.
-#[allow(async_fn_in_trait)]
 impl<K> Registrar for IonRegistrar<K>
 where
     K: KeyRing + Signer + Send + Sync,

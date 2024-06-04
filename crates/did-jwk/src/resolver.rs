@@ -4,7 +4,7 @@ use did_core::{
 };
 use keyring::KeyPair;
 
-use crate::jwk::{document_from_jwk, Registrar};
+use crate::{document_from_jwk, Registrar};
 
 /// Resolver implementation for the JWK method.
 ///
@@ -17,7 +17,6 @@ use crate::jwk::{document_from_jwk, Registrar};
 /// The DID document with a single verification method corresponding to the supplied DID and the
 /// corresponding verification method references for the possible purposes implied by the JWK
 /// encoded in the DID.
-#[allow(async_fn_in_trait)]
 impl<'a, K> Resolver for Registrar<'a, K>
 where
     K: KeyPair + Send + Sync,
@@ -68,7 +67,7 @@ mod tests {
     use keyring::{EphemeralKeyRing, Secp256k1KeyPair};
 
     use super::*;
-    use crate::jwk::Registrar;
+    use crate::Registrar;
 
     #[tokio::test]
     async fn test_resolve_invalid_did_method() {

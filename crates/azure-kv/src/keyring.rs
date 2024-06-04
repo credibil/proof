@@ -58,7 +58,6 @@ impl AzureKeyRing {
 }
 
 /// Key ring implementation backed by Azure Key Vault.
-#[allow(async_fn_in_trait)]
 impl KeyRing for AzureKeyRing {
     /// Get the currently active public key for the specified key operation. If there is no such key
     /// attempt to find the most recent previous version.

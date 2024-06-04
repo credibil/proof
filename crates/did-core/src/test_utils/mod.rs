@@ -29,7 +29,6 @@ impl TestKeyRingSigner {
     }
 }
 
-#[allow(async_fn_in_trait)]
 impl KeyRing for TestKeyRingSigner {
     async fn active_key(&self, op: &KeyOperation) -> Result<Jwk> {
         self.keyring.active_key(op).await
@@ -40,7 +39,6 @@ impl KeyRing for TestKeyRingSigner {
     }
 }
 
-#[allow(async_fn_in_trait)]
 impl Signer for TestKeyRingSigner {
     fn supported_algorithms(&self) -> Vec<Algorithm> {
         self.signer.supported_algorithms()

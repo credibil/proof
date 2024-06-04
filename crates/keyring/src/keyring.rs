@@ -49,7 +49,6 @@ where
 }
 
 /// `KeyRing` implementation
-#[allow(async_fn_in_trait)]
 impl<K> KeyRing for EphemeralKeyRing<K>
 where
     K: KeyPair + Send + Sync,

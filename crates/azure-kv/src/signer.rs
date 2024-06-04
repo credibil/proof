@@ -1,11 +1,11 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
+use did_core::error::Err;
+use did_core::{tracerr, Algorithm, KeyOperation, Result, Signer};
 use ecdsa::signature::Verifier;
 use ecdsa::{Signature, VerifyingKey};
 use reqwest::Url;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use did_core::error::Err;
-use did_core::{tracerr, Algorithm, KeyOperation, Result, Signer};
 
 use crate::key_bundle::JsonWebKey;
 use crate::keyring::{az_to_jwk, AzureKeyRing};
@@ -30,7 +30,6 @@ impl AzureSigner {
 }
 
 /// Implementation of the [`Signer`] trait for Azure Key Vault.
-#[allow(async_fn_in_trait)]
 impl Signer for AzureSigner {
     /// Type of signature algorithm.
     fn supported_algorithms(&self) -> Vec<Algorithm> {

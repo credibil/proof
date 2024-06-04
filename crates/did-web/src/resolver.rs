@@ -1,10 +1,10 @@
-use reqwest::Url;
 use did_core::{
     DidDocument, DocumentMetadata, KeyRing, Resolution, ResolutionMetadata, Resolver, Result,
     Signer, DID_CONTEXT,
 };
+use reqwest::Url;
 
-use crate::web::Registrar;
+use crate::Registrar;
 
 /// A Resolver is responsible for resolving a DID to a DID document. This implementation will make
 /// a resolution request to an http end point to retrieve a DID document.
@@ -20,7 +20,6 @@ use crate::web::Registrar;
 ///
 /// The DID document with the ID corresponding to the supplied DID or an error response if
 /// resolution failed.
-#[allow(async_fn_in_trait)]
 impl<K> Resolver for Registrar<K>
 where
     K: KeyRing + Signer + Send + Sync,
