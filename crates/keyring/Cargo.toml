@@ -5,9 +5,8 @@ authors.workspace = true
 edition.workspace = true
 version.workspace = true
 
-# [lib]
-# name = "keyring"
-# crate-type = ["cdylib", "rlib"]
+[lints]
+workspace = true
 
 [dependencies]
 base64ct = "1.6.0"

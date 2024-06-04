@@ -122,7 +122,7 @@ pub(super) mod endpoint_serialization {
 
     use super::{Endpoint, Result};
 
-    pub(crate) fn serialize<S>(value: &[Endpoint], serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(value: &[Endpoint], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -138,7 +138,7 @@ pub(super) mod endpoint_serialization {
     }
 
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Endpoint>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Endpoint>, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -159,10 +159,10 @@ pub(super) mod endpoint_serialization {
             where
                 E: de::Error,
             {
-                match Endpoint::from_str(value) {
-                    Ok(res) => Ok(vec![res]),
-                    Err(_) => Err(de::Error::invalid_type(de::Unexpected::Str(value), &self)),
-                }
+                Endpoint::from_str(value).map_or_else(
+                    |_| Err(de::Error::invalid_type(de::Unexpected::Str(value), &self)),
+                    |res| Ok(vec![res]),
+                )
             }
 
             fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>

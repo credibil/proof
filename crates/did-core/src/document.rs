@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::document::context::{context_serialization, Context};
+use crate::document::context::{serialization, Context};
 use crate::document::service::Service;
 use crate::document::verification_method::{KeyPurpose, VerificationMethod, VmRelationship};
 use crate::error::Err;
@@ -31,7 +31,7 @@ pub struct DidDocument {
     pub id: String,
     /// The JSON-LD Context is either a string or a list containing any combination of strings
     /// and/or ordered maps.
-    #[serde(rename = "@context", with = "context_serialization")]
+    #[serde(rename = "@context", with = "serialization")]
     pub context: Vec<Context>,
     /// A DID controller is an entity that is authorized to make changes to a DID document. It is a
     /// DID or list of DIDs and is optional.

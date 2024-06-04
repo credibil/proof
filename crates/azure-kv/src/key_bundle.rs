@@ -103,59 +103,74 @@ pub struct JsonWebKey {
     /// Elliptic curve name. For valid values, see [`JwkCurve`].
     #[serde(rename = "crv")]
     pub curve_name: Option<String>,
+
     /// RSA private exponent, or the D component of an EC private key.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub d: Option<Vec<u8>>,
+
     /// RSA private key parameter.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub dp: Option<Vec<u8>>,
+
     /// RSA private key parameter.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub dq: Option<Vec<u8>>,
+
     /// RSA public exponent.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub e: Option<Vec<u8>>,
+
     /// Symmetric key.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub k: Option<Vec<u8>>,
+
     /// HSM Token, used with 'Bring Your Own Key'.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     #[serde(rename = "key_hsm")]
     pub t: Option<Vec<u8>>,
+
     /// Supported key operations.
     pub key_ops: Option<Vec<String>>,
+
     /// Key identifier.
     #[serde(rename = "kid")]
     pub id: Option<String>,
+
     /// JsonWebKey Key Type (kty), as defined in <https://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40>.
     #[serde(rename = "kty")]
     pub key_type: String,
+
     /// RSA modulus.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub n: Option<Vec<u8>>,
+
     /// RSA secret prime.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub p: Option<Vec<u8>>,
+
     /// RSA secret prime, with p < q.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub q: Option<Vec<u8>>,
+
     /// RSA private key parameter.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub qi: Option<Vec<u8>>,
+
     /// X component of an EC public key.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
     pub x: Option<Vec<u8>>,
+
     /// Y component of an EC public key.
     #[serde(serialize_with = "ser_base64_opt", deserialize_with = "deser_base64_opt")]
     #[serde(default)]
@@ -166,8 +181,8 @@ pub struct JsonWebKey {
 #[derive(Debug, Deserialize)]
 pub struct KeyList {
     pub value: Vec<KeyListItem>,
-    #[serde(rename = "nextLink")]
-    pub next_link: Option<String>,
+    // #[serde(rename = "nextLink")]
+    // pub next_link: Option<String>,
 }
 
 /// List item for a list of versions for a key.
@@ -175,8 +190,8 @@ pub struct KeyList {
 pub struct KeyListItem {
     pub kid: String,
     pub attributes: KeyAttributes,
-    pub managed: Option<bool>,
-    pub tags: Option<Map<String, Value>>,
+    // pub managed: Option<bool>,
+    // pub tags: Option<Map<String, Value>>,
 }
 
 #[allow(dead_code)]

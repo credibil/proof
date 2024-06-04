@@ -13,7 +13,7 @@ use crate::{tracerr, Result};
 pub struct ResolutionMetadata {
     /// The content type of the response. e.g. "application/did+ld+json".
     pub content_type: String,
-    /// An error code if the resolution failed. See https://www.w3.org/TR/did-spec-registries/#error
+    /// An error code if the resolution failed. See <https://www.w3.org/TR/did-spec-registries/#error>
     /// for a list of valid strings.
     pub error: Option<String>,
 }
@@ -84,7 +84,7 @@ pub struct DocumentMetadata {
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Resolution {
-    /// The context of the DID document. e.g. "https://w3id.org/did-resolution/v1"
+    /// The context of the DID document. e.g. <https://w3id.org/did-resolution/v1>
     #[serde(rename = "@context")]
     pub context: String,
 

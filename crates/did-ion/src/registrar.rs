@@ -1,3 +1,5 @@
+//! # ION Registration
+
 use olpc_cjson::CanonicalFormatter;
 use serde::Serialize;
 use did_core::error::Err;

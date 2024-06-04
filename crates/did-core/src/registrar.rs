@@ -15,10 +15,13 @@ pub enum OperationType {
     /// Create a new DID.
     #[default]
     Create,
+    
     /// Update an existing DID.
     Update,
+
     /// Deactivate a DID.
     Deactivate,
+
     /// Recover a deactivated DID.
     Recover,
 }
@@ -27,10 +30,10 @@ pub enum OperationType {
 impl std::fmt::Display for OperationType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self {
-            OperationType::Create => write!(f, "create"),
-            OperationType::Update => write!(f, "update"),
-            OperationType::Deactivate => write!(f, "deactivate"),
-            OperationType::Recover => write!(f, "recover"),
+            Self::Create => write!(f, "create"),
+            Self::Update => write!(f, "update"),
+            Self::Deactivate => write!(f, "deactivate"),
+            Self::Recover => write!(f, "recover"),
         }
     }
 }

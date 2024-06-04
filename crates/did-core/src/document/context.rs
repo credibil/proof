@@ -61,7 +61,7 @@ impl Serialize for Context {
     }
 }
 
-pub(crate) mod context_serialization {
+pub mod serialization {
     use std::collections::HashMap;
     use std::fmt;
     use std::marker::PhantomData;
@@ -72,7 +72,7 @@ pub(crate) mod context_serialization {
 
     use super::Context;
 
-    pub(crate) fn serialize<S>(value: &[Context], serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(value: &[Context], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -87,7 +87,7 @@ pub(crate) mod context_serialization {
         }
     }
 
-    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Context>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Context>, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -105,10 +105,10 @@ pub(crate) mod context_serialization {
             where
                 E: de::Error,
             {
-                match Context::from_str(value) {
-                    Ok(res) => Ok(vec![res]),
-                    Err(_) => Err(de::Error::invalid_type(de::Unexpected::Str(value), &self)),
-                }
+                Context::from_str(value).map_or_else(
+                    |_| Err(de::Error::invalid_type(de::Unexpected::Str(value), &self)),
+                    |res| Ok(vec![res]),
+                )
             }
 
             // Deserialize a sequence to Vec<Context>
@@ -165,7 +165,7 @@ mod tests {
 
     #[derive(Serialize, Deserialize)]
     struct Doc {
-        #[serde(with = "context_serialization", rename = "@context")]
+        #[serde(with = "serialization", rename = "@context")]
         pub context: Vec<Context>,
     }
 

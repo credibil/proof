@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use vercre_did::test_utils::TestKeyRingSigner;
 use vercre_did::{IonRegistrar, Resolver};
 

@@ -1,17 +1,19 @@
+//! # ION Core
+
 use std::fmt::Display;
 
 use argon2::Argon2;
 use base64ct::{Base64, Encoding};
 use chrono::{Duration, Utc};
-use olpc_cjson::CanonicalFormatter;
-use reqwest::{Response, Url};
-use serde::{Deserialize, Serialize};
 use did_core::error::Err;
 use did_core::hashing::{hash_data, rand_hex};
 use did_core::{
     tracerr, Action, DidDocument, Document, KeyRing, OperationType, Patch, Resolution, Result,
     Service, Signer, VerificationMethod,
 };
+use olpc_cjson::CanonicalFormatter;
+use reqwest::{Response, Url};
+use serde::{Deserialize, Serialize};
 
 use crate::registrar::check_delta;
 
@@ -22,18 +24,23 @@ pub(crate) struct Request {
     /// The type of DID operation requested.
     #[serde(rename = "type")]
     pub type_: OperationType,
+
     /// Suffix data appended to a DID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix_data: Option<SuffixData>,
+
     /// Optional additional suffix
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did_suffix: Option<String>,
+
     /// Reveal value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reveal_value: Option<String>,
+
     /// Delta information for updating a DID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delta: Option<Delta>,
+
     /// Signed data that can be attached to a DID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signed_data: Option<String>,
@@ -43,7 +50,10 @@ pub(crate) struct Request {
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SuffixData {
+    /// Hash of the delta used when updating a DID
     pub delta_hash: String,
+
+    /// Commitment for the Recovery key
     pub recovery_commitment: String,
 }
 
@@ -51,8 +61,11 @@ pub struct SuffixData {
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DidContent {
+    /// Public keys to be included in the DID document
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_keys: Option<Vec<VerificationMethod>>,
+
+    /// Services to be included in the DID document
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<Service>>,
 }
@@ -61,7 +74,10 @@ pub struct DidContent {
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Delta {
+    /// Commitment for the update key
     pub update_commitment: String,
+
+    /// Patches to be applied to the DID document
     pub patches: Vec<Patch>,
 }
 
@@ -69,7 +85,10 @@ pub struct Delta {
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct LongSegment {
+    /// DID suffix data
     pub suffix_data: SuffixData,
+
+    /// Delta information provided when updating the DID
     pub delta: Delta,
 }
 
@@ -77,12 +96,23 @@ pub struct LongSegment {
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Operation {
+    /// The type of DID operation
     #[serde(rename = "type")]
     pub type_: String,
+
+    /// The suffix data to be appended to the short-form DID
     pub suffix_data: SuffixData,
+
+    /// The DID suffix
     pub did_suffix: String,
+
+    /// Reveal value
     pub reveal_value: String,
+
+    /// The change to make 
     pub delta: Delta,
+
+    /// Signed data
     pub signed_data: String,
 }
 

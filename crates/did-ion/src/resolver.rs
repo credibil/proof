@@ -1,3 +1,5 @@
+//! # ION DID Resolver
+
 use did_core::{KeyRing, Resolution, Resolver, Result, Signer};
 
 use crate::ion::Registrar;

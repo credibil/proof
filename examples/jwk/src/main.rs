@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use vercre_did::{
     EphemeralKeyRing, EphemeralSigner, JwkRegistrar, Registrar, Secp256k1KeyPair, Signer,
 };

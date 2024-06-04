@@ -17,18 +17,23 @@ pub struct VerificationMethod {
     /// Syntax which can be a relative DID URL that is confined to the DID document. Relative URLs
     /// are assumed by default.
     pub id: String,
+
     /// The type of verification method. One that is registered in a DID specification registry.
-    /// https://www.w3.org/TR/did-spec-registries/
+    /// <https://www.w3.org/TR/did-spec-registries>
     #[serde(rename = "type")]
     pub type_: String,
+
     /// Identifier for the controller of the verification method. A DID.
     pub controller: String,
+
     /// The public key material of the verification method, if applicable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_jwk: Option<Jwk>,
+
     /// The public key material of the verification method, if applicable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_multibase: Option<String>,
+
     /// Account ID for block-chain based public keys.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub blockchain_account_id: Option<String>,
@@ -43,17 +48,21 @@ pub enum KeyPurpose {
     /// expected to be authenticated, for purposes such as logging into a website or engaging in
     /// any sort of challenge-response protocol.
     Authentication,
+
     /// The assertionMethod verification relationship is used to specify how the DID subject is
     /// expected to express claims, such as for the purposes of issuing a Verifiable Credential
     AssertionMethod,
+
     /// The capabilityInvocation verification relationship is used to specify a verification method
     /// that might be used by the DID subject to invoke a cryptographic capability, such as the
     /// authorization to update the DID Document.
     CapabilityInvocation,
+
     /// The capabilityDelegation verification relationship is used to specify a mechanism that might
     /// be used by the DID subject to delegate a cryptographic capability to another party, such as
     /// delegating the authority to access a specific HTTP API to a subordinate.
     CapabilityDelegation,
+
     /// The keyAgreement verification relationship is used to specify how an entity can generate
     /// encryption material in order to transmit confidential information intended for the DID
     /// subject, such as for the purposes of establishing a secure communication channel with the
@@ -64,11 +73,11 @@ pub enum KeyPurpose {
 impl Display for KeyPurpose {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KeyPurpose::Authentication => write!(f, "authentication"),
-            KeyPurpose::AssertionMethod => write!(f, "assertionMethod"),
-            KeyPurpose::CapabilityInvocation => write!(f, "capabilityInvocation"),
-            KeyPurpose::CapabilityDelegation => write!(f, "capabilityDelegation"),
-            KeyPurpose::KeyAgreement => write!(f, "keyAgreement"),
+            Self::Authentication => write!(f, "authentication"),
+            Self::AssertionMethod => write!(f, "assertionMethod"),
+            Self::CapabilityInvocation => write!(f, "capabilityInvocation"),
+            Self::CapabilityDelegation => write!(f, "capabilityDelegation"),
+            Self::KeyAgreement => write!(f, "keyAgreement"),
         }
     }
 }

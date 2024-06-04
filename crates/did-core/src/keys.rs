@@ -128,9 +128,9 @@ impl Jwk {
 impl std::fmt::Display for KeyOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KeyOperation::Sign => write!(f, "sign"),
-            KeyOperation::Update => write!(f, "update"),
-            KeyOperation::Recover => write!(f, "recover"),
+            Self::Sign => write!(f, "sign"),
+            Self::Update => write!(f, "update"),
+            Self::Recover => write!(f, "recover"),
         }
     }
 }
@@ -146,7 +146,7 @@ pub enum Algorithm {
 impl std::fmt::Display for Algorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Algorithm::Secp256k1 => write!(f, "ES256K"),
+            Self::Secp256k1 => write!(f, "ES256K"),
         }
     }
 }
@@ -157,7 +157,7 @@ impl Algorithm {
     #[must_use]
     pub fn cryptosuite(&self) -> String {
         match self {
-            Algorithm::Secp256k1 => "EcdsaSecp256k1VerificationKey2019".to_string(),
+            Self::Secp256k1 => "EcdsaSecp256k1VerificationKey2019".to_string(),
         }
     }
 }

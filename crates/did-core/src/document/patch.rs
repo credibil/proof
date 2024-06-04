@@ -160,11 +160,11 @@ pub enum Action {
 impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self {
-            Action::Replace => write!(f, "replace"),
-            Action::AddPublicKeys => write!(f, "add-public-keys"),
-            Action::RemovePublicKeys => write!(f, "remove-public-keys"),
-            Action::AddServices => write!(f, "add-services"),
-            Action::RemoveServices => write!(f, "remove-services"),
+            Self::Replace => write!(f, "replace"),
+            Self::AddPublicKeys => write!(f, "add-public-keys"),
+            Self::RemovePublicKeys => write!(f, "remove-public-keys"),
+            Self::AddServices => write!(f, "add-services"),
+            Self::RemoveServices => write!(f, "remove-services"),
         }
     }
 }
@@ -173,11 +173,11 @@ impl PartialEq for Action {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (Action::Replace, Action::Replace)
-                | (Action::AddPublicKeys, Action::AddPublicKeys)
-                | (Action::RemovePublicKeys, Action::RemovePublicKeys)
-                | (Action::AddServices, Action::AddServices)
-                | (Action::RemoveServices, Action::RemoveServices)
+            (Self::Replace, Self::Replace)
+                | (Self::AddPublicKeys, Self::AddPublicKeys)
+                | (Self::RemovePublicKeys, Self::RemovePublicKeys)
+                | (Self::AddServices, Self::AddServices)
+                | (Self::RemoveServices, Self::RemoveServices)
         )
     }
 }
@@ -198,43 +198,43 @@ pub struct Document {
 /// Create a patch `Document` from a DID document (for use in a DID create or replace)
 impl From<&DidDocument> for Document {
     fn from(doc: &DidDocument) -> Self {
-        let mut patch_doc = Document {
+        let mut patch_doc = Self {
             services: doc.service.clone(),
             ..Default::default()
         };
         let mut public_keys = Vec::new();
         for k in doc.verification_method.as_ref().unwrap_or(&Vec::<VerificationMethod>::new()) {
-            let relationship = VmRelationship::from(k);
+            // let relationship = VmRelationship::from(k);
             let vmp = VmWithPurpose {
                 verification_method: k.clone(),
                 ..Default::default()
             };
-            let mut purposes = Vec::new();
-            if let Some(auth) = &doc.authentication {
-                if auth.contains(&relationship) {
-                    purposes.push(KeyPurpose::Authentication);
-                }
-            }
-            if let Some(assert) = &doc.assertion_method {
-                if assert.contains(&relationship) {
-                    purposes.push(KeyPurpose::AssertionMethod);
-                }
-            }
-            if let Some(key) = &doc.key_agreement {
-                if key.contains(&relationship) {
-                    purposes.push(KeyPurpose::KeyAgreement);
-                }
-            }
-            if let Some(cap) = &doc.capability_delegation {
-                if cap.contains(&relationship) {
-                    purposes.push(KeyPurpose::CapabilityDelegation);
-                }
-            }
-            if let Some(cap) = &doc.capability_invocation {
-                if cap.contains(&relationship) {
-                    purposes.push(KeyPurpose::CapabilityInvocation);
-                }
-            }
+            // let mut purposes = Vec::new();
+            // if let Some(auth) = &doc.authentication {
+            //     if auth.contains(&relationship) {
+            //         purposes.push(KeyPurpose::Authentication);
+            //     }
+            // }
+            // if let Some(assert) = &doc.assertion_method {
+            //     if assert.contains(&relationship) {
+            //         purposes.push(KeyPurpose::AssertionMethod);
+            //     }
+            // }
+            // if let Some(key) = &doc.key_agreement {
+            //     if key.contains(&relationship) {
+            //         purposes.push(KeyPurpose::KeyAgreement);
+            //     }
+            // }
+            // if let Some(cap) = &doc.capability_delegation {
+            //     if cap.contains(&relationship) {
+            //         purposes.push(KeyPurpose::CapabilityDelegation);
+            //     }
+            // }
+            // if let Some(cap) = &doc.capability_invocation {
+            //     if cap.contains(&relationship) {
+            //         purposes.push(KeyPurpose::CapabilityInvocation);
+            //     }
+            // }
             public_keys.push(vmp);
         }
         patch_doc.public_keys = if public_keys.is_empty() {
@@ -290,8 +290,8 @@ pub struct Builder {
 impl Builder {
     /// Initiate the build of a patch by supplying the intended action. This will drive what
     /// subsequent functions will validate and the final validation on build.
-    pub fn new(action: Action) -> Builder {
-        Builder {
+    pub fn new(action: Action) -> Self {
+        Self {
             action,
             document: None,
             services: Vec::new(),
@@ -301,7 +301,7 @@ impl Builder {
     }
 
     /// Adds a patch `Document` to the patch. This is only valid for a replace action.
-    pub fn document(&mut self, document: &Document) -> Result<&Builder> {
+    pub fn document(&mut self, document: &Document) -> Result<&Self> {
         if self.action != Action::Replace {
             tracerr!(Err::InvalidPatch, "A document can only be added to a replace patch");
         }
@@ -310,7 +310,7 @@ impl Builder {
     }
 
     /// Adds a service to the patch. This is only valid for an add services action.
-    pub fn service(&mut self, service: &Service) -> Result<&Builder> {
+    pub fn service(&mut self, service: &Service) -> Result<&Self> {
         if self.action != Action::AddServices {
             tracerr!(Err::InvalidPatch, "A service can only be added to an add-services patch");
         }
@@ -319,7 +319,7 @@ impl Builder {
     }
 
     /// Adds a public key to the patch. Only valid for an add keys action.
-    pub fn public_key(&mut self, key: &VmWithPurpose) -> Result<&Builder> {
+    pub fn public_key(&mut self, key: &VmWithPurpose) -> Result<&Self> {
         if self.action != Action::AddPublicKeys {
             tracerr!(
                 Err::InvalidPatch,
@@ -327,7 +327,7 @@ impl Builder {
             );
         }
         // Check the key ID looks OK
-        Builder::check_key_id(&key.verification_method.id)?;
+        Self::check_key_id(&key.verification_method.id)?;
         // Check the purposes don't contain duplicates
         if let Some(purposes) = &key.purposes {
             let mut purpose_map = HashMap::new();
@@ -349,8 +349,8 @@ impl Builder {
     }
 
     /// Adds an ID to the patch. This is only valid for remove keys or remove services actions.
-    pub fn id(&mut self, id: &str) -> Result<&Builder> {
-        Builder::check_key_id(id)?;
+    pub fn id(&mut self, id: &str) -> Result<&Self> {
+        Self::check_key_id(id)?;
         if self.action != Action::RemovePublicKeys && self.action != Action::RemoveServices {
             tracerr!(
                 Err::InvalidPatch,
@@ -477,7 +477,7 @@ struct VmRelationshipSet {
 
 impl From<DidDocument> for VmRelationshipSet {
     fn from(doc: DidDocument) -> Self {
-        let mut p = VmRelationshipSet::default();
+        let mut p = Self::default();
         if let Some(auth) = doc.authentication {
             p.authentication = auth;
         }

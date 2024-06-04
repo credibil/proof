@@ -192,55 +192,55 @@ where
 
 impl From<Err> for Error {
     fn from(error: Err) -> Self {
-        Error(error.into())
+        Self(error.into())
     }
 }
 
 impl From<base64ct::Error> for Error {
-    fn from(err: base64ct::Error) -> Error {
-        Error(err.into())
+    fn from(err: base64ct::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<ecdsa::Error> for Error {
-    fn from(err: ecdsa::Error) -> Error {
-        Error(err.into())
+    fn from(err: ecdsa::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<multihash::Error> for Error {
-    fn from(err: multihash::Error) -> Error {
-        Error(err.into())
+    fn from(err: multihash::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<regex::Error> for Error {
-    fn from(err: regex::Error) -> Error {
-        Error(err.into())
+    fn from(err: regex::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<reqwest::Error> for Error {
-    fn from(err: reqwest::Error) -> Error {
-        Error(err.into())
+    fn from(err: reqwest::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Error {
-        Error(err.into())
+    fn from(err: serde_json::Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<std::string::FromUtf8Error> for Error {
-    fn from(err: std::string::FromUtf8Error) -> Error {
-        Error(err.into())
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        Self(err.into())
     }
 }
 
 impl From<url::ParseError> for Error {
-    fn from(err: url::ParseError) -> Error {
-        Error(err.into())
+    fn from(err: url::ParseError) -> Self {
+        Self(err.into())
     }
 }
 

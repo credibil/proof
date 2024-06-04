@@ -13,9 +13,12 @@ name = "azure-kv"
 repository = "https://github.com/vercre/vercre-did"
 version = "0.1.0"
 
-[lib]
-name = "azure_kv"
-crate-type = ["cdylib", "rlib"]
+# [lib]
+# name = "azure_kv"
+# crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
 
 [dependencies]
 asn1 = "0.15.5"

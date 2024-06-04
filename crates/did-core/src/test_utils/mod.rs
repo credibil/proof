@@ -21,7 +21,7 @@ pub struct TestKeyRingSigner {
 impl TestKeyRingSigner {
     /// Create a new keyring and signer.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             keyring: keyring::Test {},
             signer: signer::Test {},
