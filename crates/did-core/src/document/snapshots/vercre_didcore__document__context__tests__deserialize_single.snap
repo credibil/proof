@@ -1,0 +1,7 @@
+---
+source: did-core/src/document/context.rs
+assertion_line: 175
+expression: doc
+---
+"@context": "https://www.w3.org/ns/did/v1"
+

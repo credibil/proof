@@ -1,0 +1,23 @@
+[package]
+name = "keyring"
+description = "Azure Key Vault implementation of the vercre-did KeyRing and Signer traits"
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+
+# [lib]
+# name = "keyring"
+# crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+base64ct = "1.6.0"
+ecdsa = "0.16.9"
+k256 = { version = "0.13.3", features = ["jwk"] }
+rand = "0.8.5"
+serde_json = "1.0.111"
+sha2 = "0.10.8"
+tracing.workspace = true
+did-core = { version = "0.1.0", path = "../did-core" }
+
+[dev-dependencies]
+tokio = { version = "1.35.1", features = ["full"] }

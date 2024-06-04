@@ -27,16 +27,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'vercre-didion'",
+            "name": "Debug unit tests in library 'did-ion'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=vercre-didion"
+                    "--package=did-ion"
                 ],
                 "filter": {
-                    "name": "vercre-didion",
+                    "name": "did-ion",
                     "kind": "lib"
                 }
             },
@@ -67,16 +67,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'vercre-didweb'",
+            "name": "Debug unit tests in library 'did-web'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=vercre-didweb"
+                    "--package=did-web"
                 ],
                 "filter": {
-                    "name": "vercre-didweb",
+                    "name": "did-web",
                     "kind": "lib"
                 }
             },
@@ -106,16 +106,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'vercre-azurekv'",
+            "name": "Debug unit tests in library 'azure-kv'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=vercre-azurekv"
+                    "--package=azure-kv"
                 ],
                 "filter": {
-                    "name": "vercre-azurekv",
+                    "name": "azure-kv",
                     "kind": "lib"
                 }
             },

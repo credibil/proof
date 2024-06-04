@@ -1,7 +1,11 @@
 [toolchain]
+# channel = "stable"
 channel = "nightly"
 components = ["clippy", "rust-src", "rustfmt"]
-# targets = [
-#     "wasm32-unknown-unknown",
-#     "wasm32-wasi"
-# ]
+targets = [
+    "aarch64-apple-darwin",
+    "wasm32-wasi",
+    # "aarch64-apple-ios",
+    # "aarch64-linux-android",
+    # "x86_64-apple-ios",
+]

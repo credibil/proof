@@ -1,16 +1,14 @@
-use anyhow::bail;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    routing::{delete, get, get_service, patch, post},
-    Json, Router,
-};
-use serde::Deserialize;
 use std::sync::Arc;
+
+use anyhow::bail;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::routing::{delete, get, get_service, patch, post};
+use axum::{Json, Router};
+use serde::Deserialize;
 use tower_http::services::ServeDir;
-use vercre_did::{
-    test_utils::TestKeyRingSigner, DidDocument, Patch, Registrar, Service, WebRegistrar,
-};
+use vercre_did::test_utils::TestKeyRingSigner;
+use vercre_did::{DidDocument, Patch, Registrar, Service, WebRegistrar};
 
 // Application entry point.
 #[tokio::main]
@@ -79,8 +77,7 @@ struct CreateRequest {
 // curl --location 'http://localhost:3000/.well-known/test/did.json'
 // ```
 async fn create(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<CreateRequest>,
+    State(state): State<Arc<AppState>>, Json(req): Json<CreateRequest>,
 ) -> (StatusCode, Json<DidDocument>) {
     let domain = "localhost%3A3000";
     let controller = format!("did:web:{}", domain);
@@ -101,10 +98,7 @@ async fn create(
         Ok(_) => (StatusCode::CREATED, Json(doc)),
         Err(e) => {
             println!("Failed to write DID document to file: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DidDocument::default()),
-            );
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(DidDocument::default()));
         }
     }
 }
@@ -149,18 +143,14 @@ struct UpdateRequest {
 // '
 // ```
 async fn update(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<UpdateRequest>,
+    State(state): State<Arc<AppState>>, Json(req): Json<UpdateRequest>,
 ) -> (StatusCode, Json<DidDocument>) {
     // Use the DID to load the document from the file system.
     let doc = match get_doc(&req.did) {
         Ok(d) => d,
         Err(e) => {
             println!("Failed to load DID document: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DidDocument::default()),
-            );
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(DidDocument::default()));
         }
     };
 
@@ -168,10 +158,7 @@ async fn update(
         Ok(d) => d,
         Err(e) => {
             println!("Failed to update DID document: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DidDocument::default()),
-            );
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(DidDocument::default()));
         }
     };
 
@@ -180,10 +167,7 @@ async fn update(
         Ok(_) => (StatusCode::CREATED, Json(new_doc)),
         Err(e) => {
             println!("Failed to write DID document to file: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DidDocument::default()),
-            );
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(DidDocument::default()));
         }
     }
 }
@@ -207,8 +191,7 @@ struct DeactivateRequest {
 // '
 // ```
 async fn deactivate(
-    State(_state): State<Arc<AppState>>,
-    Json(req): Json<DeactivateRequest>,
+    State(_state): State<Arc<AppState>>, Json(req): Json<DeactivateRequest>,
 ) -> (StatusCode, ()) {
     match delete_doc(&req.did) {
         Ok(_) => (StatusCode::NO_CONTENT, ()),
@@ -231,10 +214,7 @@ fn put_doc(doc: &DidDocument) -> anyhow::Result<()> {
     let path = did_to_path(&doc.id)?;
     let parent = path.trim_end_matches("/did.json");
     std::fs::create_dir_all(parent)?;
-    std::fs::write(
-        path,
-        serde_json::to_string_pretty(&doc).expect("failed to serialize"),
-    )?;
+    std::fs::write(path, serde_json::to_string_pretty(&doc).expect("failed to serialize"))?;
     Ok(())
 }
 

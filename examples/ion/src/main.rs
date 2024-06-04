@@ -1,4 +1,5 @@
-use vercre_did::{test_utils::TestKeyRingSigner, IonRegistrar, Resolver};
+use vercre_did::test_utils::TestKeyRingSigner;
+use vercre_did::{IonRegistrar, Resolver};
 
 /// Calls an ION registrar that supports DID resolution to resolve a DID.
 ///

@@ -1,0 +1,7 @@
+---
+source: did-core/src/document/mod.rs
+assertion_line: 258
+expression: s
+---
+"{\"@context\":\"https://www.w3.org/ns/did/v1\",\"assertionMethod\":[\"371544b48d7d60d430c9c8b4af3745fa\"],\"authentication\":[\"371544b48d7d60d430c9c8b4af3745fa\"],\"controller\":\"did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA\",\"id\":\"did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA\",\"service\":[{\"id\":\"service1\",\"serviceEndpoint\":\"https://service1.example.com/\",\"type\":\"service1type\"}],\"verificationMethod\":[{\"controller\":\"did:ion:EiAscM5K0lfATv8GEqlR_RAVId0alzdcOgIRs-fBLXBWFA\",\"id\":\"371544b48d7d60d430c9c8b4af3745fa\",\"publicKeyJwk\":{\"crv\":\"secp256k1\",\"kty\":\"EC\",\"x\":\"smmFWI4qLfWztIzwurLCvjjw7guNZvN99ai2oTXGUtc\",\"y\":\"rxp_kiiXHitxLHe545cePsF0y_Mdv_dy6zY4ov_0q9g\"},\"type\":\"EcdsaSecp256k1VerificationKey2019\"}]}"
+

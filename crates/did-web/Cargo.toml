@@ -1,0 +1,15 @@
+[package]
+name = "did-web"
+description = "DID Web implementation in Rust"
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+
+# [lib]
+# crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+did-core = { version = "0.1.0", path = "../did-core" }
+reqwest = { version = "0.11.23", features = ["json"] }
+serde.workspace = true
+tracing.workspace = true

@@ -1,8 +1,8 @@
 [package]
 name = "ion"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 tokio = { version = "1.35.1", features = ["full"] }
-vercre-did = { path = "../..", features = ["didion"] }
+vercre-did = { path = "../..", features = ["did-ion"] }

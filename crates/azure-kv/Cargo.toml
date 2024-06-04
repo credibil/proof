@@ -1,0 +1,46 @@
+[package]
+authors = ["Credibil"]
+categories = [
+    "decentralized identity",
+    "privacy",
+    "security",
+    "verifiable credentials",
+]
+description = "Azure Key Vault implementation of the vercre-did KeyRing and Signer traits"
+edition = "2021"
+license = "MIT or Apache-2.0"
+name = "azure-kv"
+repository = "https://github.com/vercre/vercre-did"
+version = "0.1.0"
+
+[lib]
+name = "azure_kv"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+asn1 = "0.15.5"
+base64ct = { version = "1.6.0", default-features = false, features = ["std"] }
+bincode = "1.3.3"
+chrono = { version = "0.4.31", features = ["serde"] }
+did-core = { version = "0.1.0", path = "../did-core" }
+ecdsa = { version = "0.16.9", default-features = false, features = [
+    "arithmetic",
+    "der",
+    "signing",
+    "verifying",
+] }
+k256 = "0.13.3"
+num-bigint = "0.4.4"
+oauth2 = "4.4.2"
+reqwest = { version = "0.11.23", features = ["json"] }
+secp256k1 = { version = "0.28.1", features = ["rand-std", "hashes-std"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10.8"
+thiserror = "1.0.56"
+tokio = "1.35.1"
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1.35.1", features = ["full"] }
+uuid = { version = "1.6.1", features = ["v4"] }

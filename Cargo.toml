@@ -1,51 +1,77 @@
 [package]
 name = "vercre-did"
-version = "0.1.0"
-authors = ["Credibil"]
 description = """
 Decentralized Identifier (DID) utilities for Rust. See features for implemented DID methods and key
 management or use core functionality to implement your own.
 """
-categories = ["decentralized identity", "privacy", "security", "verifiable credentials"]
-edition = "2021"
-license = "MIT or Apache-2.0"
-repository = "https://github.com/vercre/vercre-did"
+version.workspace = true
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
-[lib]
-name = "vercre_did"
-crate-type = ["cdylib", "rlib"]
+# [lib]
+# name = "vercre_did"
+# crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vercre-azurekv = { path = "vercre-azurekv", optional = true }
-vercre-didcore = { path = "vercre-didcore" }
-vercre-didion = { path = "vercre-didion", optional = true }
-vercre-didjwk = { path = "vercre-didjwk", optional = true }
-vercre-didweb = { path = "vercre-didweb", optional = true }
-vercre-ephemeral-keyring = { path = "vercre-ephemeral-keyring", optional = true }
+azure-kv = { path = "crates/azure-kv", optional = true }
+did-core = { path = "crates/did-core" }
+did-ion = { path = "crates/did-ion", optional = true }
+did-jwk = { path = "crates/did-jwk", optional = true }
+did-web = { path = "crates/did-web", optional = true }
+keyring = { path = "crates/keyring", optional = true }
 
 [features]
-azure-kv = ["dep:vercre-azurekv"] # Azure Key Vault as a key ring and signer
-didion = ["dep:vercre-didion"] # did:ion DID method
-didjwk = ["ephemeral-keyring", "dep:vercre-didjwk", "dep:vercre-ephemeral-keyring"] # did:jwk DID method. Uses ephemeral key ring and signer
-didweb = ["dep:vercre-didweb"] # did:web DID method
-ephemeral-keyring = ["dep:vercre-ephemeral-keyring"] # Ephemeral key ring and signer
+azure-kv = ["dep:azure-kv"] # Azure Key Vault as a key ring and signer
+did-ion = ["dep:did-ion"] # did:ion DID method
+did-jwk = [
+    "keyring",
+    "dep:did-jwk",
+    "dep:keyring",
+] # did:jwk DID method. Uses ephemeral key ring and signer
+did-web = ["dep:did-web"] # did:web DID method
+keyring = ["dep:keyring"] # Ephemeral key ring and signer
 
 [workspace]
 resolver = "2"
-members = [
-    "vercre-azurekv",
-    "vercre-didcore",
-    "vercre-didion",
-    "vercre-didjwk",
-    "vercre-didweb",
-    "vercre-ephemeral-keyring",
-    "examples/ion",
-    "examples/jwk",
-    "examples/universal-resolver",
-    "examples/web",
+members = ["crates/*", "examples/*"]
+
+[workspace.package]
+authors = ["Vercre"]
+categories = [
+    "decentralized identity",
+    "did",
+    "privacy",
+    "security",
+    "verifiable credentials",
 ]
+edition = "2021"
+exclude = [".*", "/docs", "snapshots/"]
+homepage = "https://vercre.io"
+keywords = ["credentials", "decentralized", "identity", "openid", "verifiable"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/vercre/vercre"
+rust-version = "1.80"
+version = "0.1.0"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unused_extern_crates = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
 
 [workspace.dependencies]
-serde = { version = "1.0.195", default-features = false, features = ["derive", "std"] }
-serde_json = { version = "1.0.111", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.195", default-features = false, features = [
+    "derive",
+    "std",
+] }
+serde_json = { version = "1.0.111", default-features = false, features = [
+    "alloc",
+] }
 tracing = "0.1.40"
