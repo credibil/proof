@@ -16,12 +16,12 @@ repository.workspace = true
 # crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-azure-kv = { path = "crates/azure-kv", optional = true }
-did-core = { path = "crates/did-core" }
-did-ion = { path = "crates/did-ion", optional = true }
-did-jwk = { path = "crates/did-jwk", optional = true }
-did-web = { path = "crates/did-web", optional = true }
-keyring = { path = "crates/keyring", optional = true }
+did-core.workspace = true
+azure-kv = { workspace = true, optional = true }
+did-ion = { workspace = true, optional = true }
+did-jwk = { workspace = true, optional = true }
+did-web = { workspace = true, optional = true }
+keyring = { workspace = true, optional = true }
 
 [features]
 azure-kv = ["dep:azure-kv"] # Azure Key Vault as a key ring and signer
@@ -75,3 +75,9 @@ serde_json = { version = "1.0.111", default-features = false, features = [
     "alloc",
 ] }
 tracing = "0.1.40"
+azure-kv = { path = "crates/azure-kv" }
+did-core = { path = "crates/did-core" }
+did-ion = { path = "crates/did-ion" }
+did-jwk = { path = "crates/did-jwk" }
+did-web = { path = "crates/did-web" }
+keyring = { path = "crates/keyring" }

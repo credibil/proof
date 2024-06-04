@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use vercre_did::test_utils::TestKeyRingSigner;
+use did_core::test_utils::{self, TestKeyRingSigner};
 use vercre_did::{IonRegistrar, Resolver};
 
 /// Calls an ION registrar that supports DID resolution to resolve a DID.
@@ -31,8 +31,8 @@ async fn main() {
     let resolution_url =
         std::env::var("ION_RESOLUTION_URL").expect("ION_RESOLUTION_URL must be set");
     let keyring = TestKeyRingSigner {
-        keyring: vercre_did::test_utils::keyring::Test {},
-        signer: vercre_did::test_utils::signer::Test {},
+        keyring: test_utils::keyring::Test {},
+        signer: test_utils::signer::Test {},
     };
     let anchor = false;
     let network = Option::<String>::None;

@@ -7,9 +7,9 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{delete, get, get_service, patch, post};
 use axum::{Json, Router};
+use did_core::test_utils::TestKeyRingSigner;
 use serde::Deserialize;
 use tower_http::services::ServeDir;
-use vercre_did::test_utils::TestKeyRingSigner;
 use vercre_did::{DidDocument, Patch, Registrar, Service, WebRegistrar};
 
 // Application entry point.

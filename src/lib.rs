@@ -1,7 +1,7 @@
 #[cfg(feature = "azure-kv")]
 pub use azure_kv;
 pub use did_core::{
-    test_utils, DidDocument, Patch, Registrar, Resolution, Resolver, Service, Signer,
+     DidDocument, Patch, Registrar, Resolution, Resolver, Service, Signer,
 };
 #[cfg(feature = "did-ion")]
 pub use did_ion::ion::Registrar as IonRegistrar;
