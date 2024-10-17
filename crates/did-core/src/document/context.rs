@@ -121,12 +121,9 @@ pub mod serialization {
                 while let Some(curr) = seq.next_element::<serde_json::Value>()? {
                     match curr {
                         serde_json::Value::String(s) => {
-                            let Ok(res) = Context::from_str(&s) else {
-                                return Err(de::Error::invalid_type(
-                                    de::Unexpected::Str(&s),
-                                    &self,
-                                ));
-                            };
+                            let res = Context::from_str(&s).map_err(|_| {
+                                de::Error::invalid_type(de::Unexpected::Str(&s), &self)
+                            })?;
                             deser.push(res);
                         }
                         serde_json::Value::Object(o) => {

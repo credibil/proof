@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
-use vercre_did::{
-    EphemeralKeyRing, EphemeralSigner, JwkRegistrar, Registrar, Secp256k1KeyPair, Signer,
-};
+use did_core::{Registrar, Signer};
+use did_jwk::Registrar as JwkRegistrar;
+use keyring::{EphemeralKeyRing, EphemeralSigner, Secp256k1KeyPair};
 
 #[tokio::main]
 async fn main() {

@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use vercre_did::Resolution;
+use did_core::Resolution;
 
 /// Calls an ION resolver to resolve a DID.
 ///

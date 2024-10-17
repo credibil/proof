@@ -7,5 +7,8 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-vercre-did = { path = "../..", features = ["did-jwk"]}
+did-core.workspace = true
+did-jwk.workspace = true
+keyring.workspace = true
 tokio = { version = "1.35.1", features = ["full"] }
+vercre-did = { path = "../..", features = ["did-jwk"] }

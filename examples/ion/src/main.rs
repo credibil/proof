@@ -1,7 +1,8 @@
 #![allow(missing_docs)]
 
 use did_core::test_utils::{self, TestKeyRingSigner};
-use vercre_did::{IonRegistrar, Resolver};
+use did_core::Resolver;
+use did_ion::Registrar as IonRegistrar;
 
 /// Calls an ION registrar that supports DID resolution to resolve a DID.
 ///

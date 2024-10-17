@@ -8,5 +8,6 @@ workspace = true
 
 [dependencies]
 did-core.workspace = true
+did-ion.workspace = true
 tokio = { version = "1.35.1", features = ["full"] }
 vercre-did = { path = "../..", features = ["did-ion"] }
