@@ -32,10 +32,6 @@ TODO: Support for DID-Key is planned, but not yet implemented.
 
 The following specific Keyring and Signer implementations have been implemented and can be included by using the relevant feature flag.
 
-### Azure Key Vault with Secp256k1 Keys
-
-`features = ["azure-kv"]`
-
 ## Specification
 
 This repository attempts to conform to the W3C recommendation for [Decentralized Identifiers (DIDs) v1.0](https://www.w3.org/TR/did-core/). Feedback on non-compliance is welcome.

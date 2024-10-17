@@ -14,6 +14,9 @@ repository.workspace = true
 # [lib]
 # crate-type = ["cdylib", "rlib"]
 
+# [[example]]
+# name = "did-web"
+
 [dependencies]
 anyhow.workspace = true
 base64ct.workspace = true
@@ -27,30 +30,18 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror = "1.0"
 url = "2.5.2"
-# vercre-core.workspace = true
 vercre-infosec.workspace = true
 
 [dev-dependencies]
+axum = "0.7.7"
 insta = { version = "1.40.0", features = ["filters", "json", "redactions", "yaml"] }
 tokio.workspace = true
-
-# did-core.workspace = true
-# azure-kv = { workspace = true, optional = true }
-# did-ion = { workspace = true, optional = true }
-# did-jwk = { workspace = true, optional = true }
-# did-web = { workspace = true, optional = true }
-# keyring = { workspace = true, optional = true }
+tower-http = { version = "0.6.1", features = ["fs"] }
 
 [features]
-azure-kv = [] # = ["dep:azure-kv"] 
-did-ion = []  # = ["dep:did-ion"]
-did-jwk = []  # = [ "keyring", "dep:did-jwk", "dep:keyring"] 
-did-web = []  # = ["dep:did-web"] 
-keyring = []  # = ["dep:keyring"]
 
 [workspace]
 resolver = "2"
-members = ["crates/*", "examples/*"]
 
 [workspace.package]
 authors = ["Vercre"]
@@ -82,16 +73,10 @@ nursery = "warn"
 
 [workspace.dependencies]
 anyhow = "1.0.89"
-azure-kv = { path = "crates/azure-kv" }
 base64ct = { version = "1.6.0", features = ["std"] }
 chrono = { version = "0.4.38", features = ["serde"] }
-did-core = { path = "crates/did-core" }
-did-ion = { path = "crates/did-ion" }
-did-jwk = { path = "crates/did-jwk" }
-did-web = { path = "crates/did-web" }
-keyring = { path = "crates/keyring" }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = { version = "1.0.128", features = ["alloc"] }
-tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.40"
 vercre-infosec = { git = "https://github.com/vercre/infosec.git" }

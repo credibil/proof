@@ -11,18 +11,18 @@
 
 use std::sync::LazyLock;
 
+use base64ct::{Base64UrlUnpadded, Encoding};
 use regex::Regex;
 use serde_json::json;
 
-use super::DidKey;
+use super::DidJwk;
 use crate::document::{CreateOptions, MethodType};
 use crate::error::Error;
 use crate::resolution::{ContentType, Metadata, Options, Resolved};
-use crate::{DidOperator, DidResolver, PublicKeyJwk, KeyPurpose};
+use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
 
-static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("^did:key:(?<identifier>z[a-km-zA-HJ-NP-Z1-9]+)$").expect("should compile")
-});
+static DID_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^did:jwk:(?<jwk>[A-Za-z0-9-=—]+)$").expect("should compile"));
 
 struct Operator(MethodType);
 impl DidOperator for Operator {
@@ -34,17 +34,19 @@ impl DidOperator for Operator {
     }
 }
 
-impl DidKey {
+impl DidJwk {
     pub fn resolve(did: &str, _: Option<Options>, _: &impl DidResolver) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {
-            return Err(Error::InvalidDid("DID is not a valid did:key".into()));
+            return Err(Error::InvalidDid("DID is not a valid did:jwk".into()));
         };
-        let multikey = &caps["identifier"];
+        // let enc = &caps["jwk"];
 
-        let op = Operator(MethodType::Multikey {
-            public_key_multibase: multikey.to_string(),
-        });
+        let decoded = Base64UrlUnpadded::decode_vec(&caps["jwk"])
+            .map_err(|e| Error::InvalidDid(format!("issue decoding key: {e}")))?;
+        let jwk = serde_json::from_slice(&decoded)
+            .map_err(|e| Error::InvalidDid(format!("issue deserializing key: {e}")))?;
+        let op = Operator(MethodType::JsonWebKey { public_key_jwk: jwk });
 
         // per the spec, use the create operation to generate a DID document
         let options = CreateOptions {
@@ -59,11 +61,11 @@ impl DidKey {
             metadata: Metadata {
                 content_type: ContentType::DidLdJson,
                 additional: Some(json!({
-                    "pattern": "^did:key:z[a-km-zA-HJ-NP-Z1-9]+$",
+                    "pattern": "^did:jwk:[A-Za-z0-9-=—]+$",
                     "did": {
                         "didString": did,
                         "methodSpecificId": did[8..],
-                        "method": "key"
+                        "method": "jwk"
                     }
                 })),
                 ..Metadata::default()
@@ -81,7 +83,7 @@ mod test {
     use super::*;
     use crate::document::Document;
 
-    const DID: &str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
+    const DID: &str = "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ";
 
     struct MockResolver;
     impl DidResolver for MockResolver {
@@ -92,7 +94,7 @@ mod test {
 
     #[tokio::test]
     async fn resolve() {
-        let resolved = DidKey::resolve(DID, None, &MockResolver).expect("should resolve");
+        let resolved = DidJwk::resolve(DID, None, &MockResolver).expect("should resolve");
         assert_snapshot!("resolved", resolved);
     }
 }
