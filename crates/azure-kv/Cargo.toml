@@ -18,7 +18,7 @@ workspace = true
 
 [dependencies]
 base64ct = { version = "1.6.0", default-features = false, features = ["std"] }
-chrono = { version = "0.4.31", features = ["serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
 did-core = { version = "0.1.0", path = "../did-core" }
 ecdsa = { version = "0.16.9", default-features = false, features = [
     "arithmetic",
@@ -26,15 +26,15 @@ ecdsa = { version = "0.16.9", default-features = false, features = [
     "signing",
     "verifying",
 ] }
-k256 = "0.13.3"
+k256 = "0.13.4"
 oauth2 = "4.4.2"
-reqwest = { version = "0.11.23", features = ["json"] }
+reqwest = { version = "0.12.8", features = ["json"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10.8"
-tokio = "1.35.1"
+tokio = "1.40.0"
 tracing.workspace = true
 
 [dev-dependencies]
-tokio = { version = "1.35.1", features = ["full"] }
-uuid = { version = "1.6.1", features = ["v4"] }
+tokio = { version = "1.40.0", features = ["full"] }
+uuid = { version = "1.11.0", features = ["v4"] }

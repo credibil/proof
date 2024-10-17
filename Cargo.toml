@@ -90,8 +90,8 @@ did-ion = { path = "crates/did-ion" }
 did-jwk = { path = "crates/did-jwk" }
 did-web = { path = "crates/did-web" }
 keyring = { path = "crates/keyring" }
-serde = { version = "1.0.195", features = ["derive"] }
-serde_json = { version = "1.0.111", features = ["alloc"] }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = { version = "1.0.128", features = ["alloc"] }
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.40"
 vercre-infosec = { git = "https://github.com/vercre/infosec.git" }
