@@ -16,6 +16,8 @@ use crate::document::{CreateOptions, Document, MethodType, PublicKeyFormat, Veri
 use crate::error::Error;
 use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
 
+// TODO: request public key from DidOperator for each verification relationship
+
 impl DidWeb {
     #[allow(dead_code)]
     pub fn create(
