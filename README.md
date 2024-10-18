@@ -1,11 +1,12 @@
 # Decentralized Identifier (DID) Tools
 
-This crate provides a set of tools and utilities for working with a subset of 
-[Decentralized Identifiers (DIDs)](https://www.w3.org/TR/did-core/).
+This crate provides a set of tools and utilities for working with the subset of 
+[Decentralized Identifiers (DIDs)](https://www.w3.org/TR/did-core/) used in
+ `vercre-vc` and `vercre-dwn`.
 
 ## Supported Methods
 
-The crate supports the following DID methods (used by `vercre-vc` and `vercre-dwn`):
+The crate supports:
 
 - [did:key](https://w3c-ccg.github.io/did-method-key/)
 - [did:web](https://w3c-ccg.github.io/did-method-web/)
@@ -15,8 +16,11 @@ with plans to support [did:dht](https://did-dht.com/) in the near future.
 
 ## Usage
 
-The library supports basic DID resolution and document creation. It does not (yet) support
-publishing a `did:web` document to a web server.
+At this point, the library supports basic DID resolution and document creation. 
+
+While we plan to add support for publishing `did:web` and `did:dht` documents,
+it will be just that: support. The end-to-end process of publishing requires 
+additional infrastructure and is out of scope for this library.
 
 ## Additional
 
