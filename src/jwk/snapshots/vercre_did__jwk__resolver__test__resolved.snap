@@ -12,7 +12,7 @@ expression: resolved
       "method": "jwk",
       "methodSpecificId": "eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ"
     },
-    "pattern": "did:jwk:[-A-Za-z0-9+/=]|=[^=]|={3,}$"
+    "pattern": "^did:jwk:[A-Za-z0-9-=—]+$"
   },
   "document": {
     "@context": [

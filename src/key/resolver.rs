@@ -18,7 +18,7 @@ use super::DidKey;
 use crate::document::{CreateOptions, MethodType};
 use crate::error::Error;
 use crate::resolution::{ContentType, Metadata, Options, Resolved};
-use crate::{DidOperator, DidResolver, PublicKeyJwk, KeyPurpose};
+use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:key:(?<identifier>z[a-km-zA-HJ-NP-Z1-9]+)$").expect("should compile")
