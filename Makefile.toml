@@ -3,15 +3,6 @@
 
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
-# AZURE_TENANT_ID
-# AZURE_CLIENT_ID
-# AZURE_CLIENT_SECRET
-# AZURE_KEY_VAULT
-# ION_CHALLENGE_URL
-# ION_OPERATION_URL
-# ION_RESOLUTION_URL
-# RUST_LOG
-env_files = [".env"]
 
 [config]
 default_to_workspace = true
@@ -35,8 +26,13 @@ dependencies = ["clean"]
 
 [tasks.test]
 command = "cargo"
-args = ["nextest", "run"]
-dependencies = ["clean"]
+args = ["nextest", "run", "--no-fail-fast"]
+# dependencies = ["testdocs"]
+env = { RUSTFLAGS = "-Dwarnings" }
+
+[tasks.testdocs]
+command = "cargo"
+args = ["test", "doc"]
 env = { RUSTFLAGS = "-Dwarnings" }
 
 # -----------------------------------------------------------------------------
@@ -48,8 +44,6 @@ command = "cargo"
 args = ["fmt", "--all"]
 install_crate = "rustfmt"
 
-# clippy::all = correctness, suspicious, style, complexity, perf
-# not using (yet) -Dclippy::restriction
 [tasks.lint]
 command = "cargo"
 args = ["clippy"]
@@ -61,7 +55,8 @@ args = ["update"]
 
 [tasks.upgrade]
 command = "cargo"
-args = ["update"]
+args = ["upgrade"]
+install_crate = "cargo-edit"
 
 [tasks.audit]
 command = "cargo"
@@ -89,37 +84,17 @@ command = "cargo"
 args = ["semver-checks"]
 install_crate = "cargo-semver-checks"
 
-[tasks.pre-pub]
-run_task = { name = [
-  "pre-pub-core",
-  "pre-pub-vci",
-  "pre-pub-vp",
-  "pre-pub-wallet",
-], parallel = true }
-
-[tasks.pre-pub-core]
+[tasks.dry-run]
 command = "cargo"
-args = ["publish", "--allow-dirty", "--dry-run", "--package", "vercre-core"]
-
-[tasks.pre-pub-vci]
-command = "cargo"
-args = ["publish", "--allow-dirty", "--dry-run", "--package", "vercre-vci"]
-
-[tasks.pre-pub-vp]
-command = "cargo"
-args = ["publish", "--allow-dirty", "--dry-run", "--package", "vercre-vp"]
-
-[tasks.pre-pub-wallet]
-command = "cargo"
-args = ["publish", "--allow-dirty", "--dry-run", "--package", "vercre-wallet"]
+args = ["publish", "--allow-dirty", "--dry-run"]
 
 # args = release level: one of `release`, `major`, `minor`, `patch`, `alpha`, `beta`, `rc`
 [tasks.release]
 command = "cargo"
-args = ["${0}"]
+args = ["release", "${@}"]
 install_crate = "cargo-release"
 
 [tasks.publish]
 command = "cargo"
-args = ["${0}", "--execute"]
+args = ["release", "${@}", "--execute"]
 install_crate = "cargo-release"
