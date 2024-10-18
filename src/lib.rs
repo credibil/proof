@@ -18,6 +18,7 @@
 mod core;
 mod document;
 mod error;
+mod jwk;
 mod key;
 mod resolution;
 mod web;
@@ -28,8 +29,12 @@ pub use error::Error;
 pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
+use vercre_infosec::PublicKeyJwk;
 
 pub use crate::document::Document;
+
+const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
+const X25519_CODEC: [u8; 2] = [0xec, 0x01];
 
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -52,4 +57,33 @@ pub trait DidResolver: Send + Sync {
     ///
     /// Returns an error if the DID URL cannot be resolved.
     fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send + Sync;
+}
+
+/// DidOperator is used by implementers to provide material required for DID
+/// document operations — creation, update, etc.
+pub trait DidOperator: Send + Sync {
+    /// Provides verification material to be used for the specified
+    /// verification method.
+    fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
+}
+
+/// The purpose the requested key material will be used for.
+pub enum KeyPurpose {
+    /// The document's `verification_method` field.
+    VerificationMethod,
+
+    /// The document's `authentication` field.
+    Authentication,
+
+    /// The document's `assertion_method` field.
+    AssertionMethod,
+
+    /// The document's `key_agreement` field.
+    KeyAgreement,
+
+    /// The document's `capability_invocation` field.
+    CapabilityInvocation,
+
+    /// The document's `capability_delegation` field.
+    CapabilityDelegation,
 }

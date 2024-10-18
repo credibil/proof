@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{key, web, DidResolver};
+use crate::{jwk, key, web, DidResolver};
 
 /// Resolve a DID to a DID document.
 ///
@@ -39,6 +39,7 @@ pub async fn resolve(
 
     let result = match method {
         "key" => key::DidKey::resolve(did, opts, resolver),
+        "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
         "web" => web::DidWeb::resolve(did, opts, resolver).await,
         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };

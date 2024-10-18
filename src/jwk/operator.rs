@@ -7,55 +7,33 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use curve25519_dalek::edwards::CompressedEdwardsY;
-use multibase::Base;
 use serde_json::json;
 
-use super::DidKey;
+use super::DidJwk;
 use crate::core::Kind;
 use crate::document::{
     CreateOptions, Document, MethodType, PublicKey, PublicKeyFormat, VerificationMethod,
 };
 use crate::error::Error;
-use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
+use crate::{DidOperator, KeyPurpose};
 
-impl DidKey {
+impl DidJwk {
     pub fn create(op: impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
         let Some(verifying_key) = op.verification(KeyPurpose::VerificationMethod) else {
             return Err(Error::Other(anyhow!("no verification key")));
         };
-        let key_bytes = Base64UrlUnpadded::decode_vec(&verifying_key.x)
-            .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
 
-        let mut multi_bytes = ED25519_CODEC.to_vec();
-        multi_bytes.extend_from_slice(&key_bytes);
-        let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-        let did = format!("did:key:{multikey}");
-
-        let (context, public_key) = if options.public_key_format == PublicKeyFormat::Multikey
-            || options.public_key_format == PublicKeyFormat::Ed25519VerificationKey2020
-        {
-            (
-                Kind::String("https://w3id.org/security/data-integrity/v1".into()),
-                PublicKey::Multibase(multikey.clone()),
-            )
-        } else {
-            let verif_type = &options.public_key_format;
-            (
-                Kind::Object(json!({
-                    "publicKeyJwk": {
-                        "@id": "https://w3id.org/security#publicKeyJwk",
-                        "@type": "@json"
-                    },
-                    verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
-                })),
-                PublicKey::Jwk(verifying_key),
-            )
-        };
+        let serialized = serde_json::to_vec(&verifying_key)
+            .map_err(|e| Error::Other(anyhow!("issue serializing key: {e}")))?;
+        let encoded = Base64UrlUnpadded::encode_string(&serialized);
+        let did = format!("did:jwk:{encoded}");
 
         // key agreement
         // <https://w3c-ccg.github.io/did-method-key/#encryption-method-creation-algorithm>
         let key_agreement = if options.enable_encryption_key_derivation {
+            let key_bytes = Base64UrlUnpadded::decode_vec(&verifying_key.x)
+                .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
+
             // derive an X25519 public encryption key from the Ed25519 key
             let edwards_y = CompressedEdwardsY::from_slice(&key_bytes).map_err(|e| {
                 Error::InvalidPublicKey(format!("public key is not Edwards Y: {e}"))
@@ -67,21 +45,12 @@ impl DidKey {
             };
             let x25519_bytes = edwards_pt.to_montgomery().to_bytes();
 
-            // base58B encode the raw key
-            let mut multi_bytes = vec![];
-            multi_bytes.extend_from_slice(&X25519_CODEC);
-            multi_bytes.extend_from_slice(&x25519_bytes);
-            let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-            let method_type = match options.public_key_format {
-                PublicKeyFormat::Multikey => MethodType::Multikey {
-                    public_key_multibase: multikey.clone(),
-                },
-                _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),
-            };
+            let mut jwk = verifying_key.clone();
+            jwk.x = Base64UrlUnpadded::encode_string(&x25519_bytes);
+            let method_type = MethodType::JsonWebKey { public_key_jwk: jwk };
 
             Some(vec![Kind::Object(VerificationMethod {
-                id: format!("{did}#{multikey}"),
+                id: format!("{did}#key-1"),
                 controller: did.clone(),
                 method_type,
                 ..VerificationMethod::default()
@@ -90,7 +59,19 @@ impl DidKey {
             None
         };
 
-        let kid = format!("{did}#{multikey}");
+        let verif_type = &options.public_key_format;
+        let (context, public_key) = (
+            Kind::Object(json!({
+                "publicKeyJwk": {
+                    "@id": "https://w3id.org/security#publicKeyJwk",
+                    "@type": "@json"
+                },
+                verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
+            })),
+            PublicKey::Jwk(verifying_key),
+        );
+
+        let kid = format!("{did}#key-0");
 
         let method_type = match options.public_key_format {
             PublicKeyFormat::Multikey => MethodType::Multikey {
@@ -140,7 +121,7 @@ mod test {
         options.enable_encryption_key_derivation = true;
 
         let op = Operator;
-        let res = DidKey::create(op, options).expect("should create");
+        let res = DidJwk::create(op, options).expect("should create");
 
         let json = serde_json::to_string_pretty(&res).expect("should serialize");
         println!("{json}");

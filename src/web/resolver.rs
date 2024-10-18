@@ -62,12 +62,6 @@ impl DidWeb {
         //    SHOULD utilize [RFC8484] in order to prevent tracking of the identity
         //    being resolved.
 
-        // // per the spec, use the create operation to generate a DID document
-        // let options = CreateOptions {
-        //     enable_encryption_key_derivation: true,
-        //     ..CreateOptions::default()
-        // };
-
         Ok(Resolved {
             context: "https://w3id.org/did-resolution/v1".into(),
             metadata: Metadata {

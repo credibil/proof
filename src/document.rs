@@ -16,8 +16,7 @@ use vercre_infosec::{Curve, KeyType};
 
 use crate::core::{Kind, Quota};
 use crate::error::Error;
-
-const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
+use crate::ED25519_CODEC;
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -62,14 +61,17 @@ pub struct Document {
 
     /// The `authentication` verification relationship is used to specify how
     /// the DID subject is expected to be authenticated, for purposes such
-    /// as logging into a website or engaging in any sort of
-    /// challenge-response protocol. <https://www.w3.org/TR/did-core/#authentication>
+    /// as logging into a website or in any sort of challenge-response
+    /// protocol.
+    ///
+    /// <https://www.w3.org/TR/did-core/#authentication>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<Vec<Kind<VerificationMethod>>>,
 
     /// The `assertion_method` verification relationship is used to specify how
     /// the DID subject is expected to express claims, such as for the
     /// purposes of issuing a Verifiable Credential.
+    ///
     /// <https://www.w3.org/TR/did-core/#assertion>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assertion_method: Option<Vec<Kind<VerificationMethod>>>,
@@ -78,14 +80,18 @@ pub struct Document {
     /// entity can generate encryption material in order to transmit
     /// confidential information intended for the DID subject, such as for
     /// the purposes of establishing a secure communication channel with the
-    /// recipient. <https://www.w3.org/TR/did-core/#key-agreement>
+    /// recipient.
+    ///
+    /// <https://www.w3.org/TR/did-core/#key-agreement>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key_agreement: Option<Vec<Kind<VerificationMethod>>>,
 
     /// The `capability_invocation` verification relationship is used to specify
     /// a verification method that might be used by the DID subject to
     /// invoke a cryptographic capability, such as the authorization to
-    /// update the DID Document. <https://www.w3.org/TR/did-core/#capability-invocation>
+    /// update the DID Document.
+    ///
+    /// <https://www.w3.org/TR/did-core/#capability-invocation>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capability_invocation: Option<Vec<Kind<VerificationMethod>>>,
 
@@ -93,6 +99,7 @@ pub struct Document {
     /// a mechanism that might be used by the DID subject to delegate a
     /// cryptographic capability to another party, such as delegating the
     /// authority to access a specific HTTP API to a subordinate.
+    ///
     /// <https://www.w3.org/TR/did-core/#capability-delegation>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
@@ -101,7 +108,9 @@ pub struct Document {
     /// document. This typically does not change between invocations of the
     /// resolve and resolveRepresentation functions unless the DID document
     /// changes. If resolution is unsuccessful, this output MUST be an
-    /// empty. <https://w3c.github.io/did-core/#dfn-diddocumentmetadata>
+    /// empty.
+    ///
+    /// <https://w3c.github.io/did-core/#dfn-diddocumentmetadata>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub did_document_metadata: Option<DocumentMetadata>,
 }
@@ -177,6 +186,7 @@ pub enum MethodType {
     /// Key is encoded as a Multibase. The Multikey data model is a specific
     /// type of verification method that encodes key types into a single
     /// binary stream that is then encoded as a Multibase value.
+    ///
     /// <https://w3c.github.io/controller-document/#multikey>
     #[serde(alias = "Ed25519VerificationKey2020")]
     Multikey {
@@ -187,6 +197,7 @@ pub enum MethodType {
     /// Key is JWK. The JSON Web Key (JWK) data model is a specific type of
     /// verification method that uses the JWK specification [RFC7517] to encode
     /// key types into a set of parameters.
+    ///
     /// <https://w3c.github.io/controller-document/#jsonwebkey>
     #[serde(alias = "JsonWebKey2020")]
     #[serde(alias = "EcdsaSecp256k1VerificationKey2019")]
@@ -243,11 +254,9 @@ impl MethodType {
             Self::JsonWebKey { public_key_jwk } => {
                 let key_bytes = Base64UrlUnpadded::decode_vec(&public_key_jwk.x)
                     .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-                let mut multi_bytes = vec![];
-                multi_bytes.extend_from_slice(&ED25519_CODEC);
+                let mut multi_bytes = ED25519_CODEC.to_vec();
                 multi_bytes.extend_from_slice(&key_bytes);
                 let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
-
                 Ok(multibase)
             }
         }
@@ -261,6 +270,7 @@ pub enum PublicKeyFormat {
     /// Key is encoded as a Multibase. The Multikey data model is a specific
     /// type of verification method that encodes key types into a single
     /// binary stream that is then encoded as a Multibase value.
+    ///
     /// <https://w3c.github.io/controller-document/#multikey>
     #[default]
     Multikey,
@@ -268,10 +278,12 @@ pub enum PublicKeyFormat {
     /// Key is JWK. The JSON Web Key (JWK) data model is a specific type of
     /// verification method that uses the JWK specification [RFC7517] to encode
     /// key types into a set of parameters.
+    ///
     /// <https://w3c.github.io/controller-document/#jsonwebkey>
     JsonWebKey,
 
-    /// Key is ED2559 Verification Key
+    /// Key is ED2559 Verification Key.
+    ///
     /// <https://w3id.org/security/suites/ed25519-2020/v1>
     Ed25519VerificationKey2020,
 
