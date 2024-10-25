@@ -80,3 +80,6 @@ serde_json = { version = "1.0.132", features = ["alloc"] }
 tokio = { version = "1.41.0", features = ["full"] }
 tracing = "0.1.40"
 vercre-infosec = { git = "https://github.com/vercre/infosec.git" }
+
+[patch."https://github.com/vercre/infosec.git"]
+vercre-infosec = { path = "../infosec" }

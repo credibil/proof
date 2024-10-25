@@ -273,37 +273,6 @@ impl Display for PublicKeyFormat {
     }
 }
 
-pub(crate) fn to_jwk(multi_key: &str) -> crate::Result<PublicKeyJwk> {
-    let (_, key_bytes) = multibase::decode(multi_key)
-        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-    if key_bytes.len() - 2 != 32 {
-        return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
-    }
-    if key_bytes[0..2] != ED25519_CODEC {
-        return Err(Error::InvalidPublicKey("not Ed25519".into()));
-    }
-
-    Ok(PublicKeyJwk {
-        kty: KeyType::Okp,
-        crv: Curve::Ed25519,
-        x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
-        ..PublicKeyJwk::default()
-    })
-}
-
-/// Converts a JWK public key to Multibase format.
-///
-/// # Errors
-pub(crate) fn to_multibase(jwk: &PublicKeyJwk) -> crate::Result<String> {
-    let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)
-        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-    let mut multi_bytes = vec![];
-    multi_bytes.extend_from_slice(&ED25519_CODEC);
-    multi_bytes.extend_from_slice(&key_bytes);
-    let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-    Ok(multibase)
-}
 
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.
@@ -391,6 +360,43 @@ impl Default for CreateOptions {
             additional: None,
         }
     }
+}
+
+// TODO: find a home for these conversion functions
+
+/// Converts a Multibase public key to Jwk format.
+///
+/// # Errors
+pub(crate) fn to_jwk(multi_key: &str) -> crate::Result<PublicKeyJwk> {
+    let (_, key_bytes) = multibase::decode(multi_key)
+        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
+    if key_bytes.len() - 2 != 32 {
+        return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
+    }
+    if key_bytes[0..2] != ED25519_CODEC {
+        return Err(Error::InvalidPublicKey("not Ed25519".into()));
+    }
+
+    Ok(PublicKeyJwk {
+        kty: KeyType::Okp,
+        crv: Curve::Ed25519,
+        x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
+        ..PublicKeyJwk::default()
+    })
+}
+
+/// Converts a JWK public key to Multibase format.
+///
+/// # Errors
+pub(crate) fn to_multibase(jwk: &PublicKeyJwk) -> crate::Result<String> {
+    let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)
+        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
+    let mut multi_bytes = vec![];
+    multi_bytes.extend_from_slice(&ED25519_CODEC);
+    multi_bytes.extend_from_slice(&key_bytes);
+    let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
+
+    Ok(multibase)
 }
 
 #[cfg(test)]
