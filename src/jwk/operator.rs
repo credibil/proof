@@ -12,7 +12,7 @@ use serde_json::json;
 use super::DidJwk;
 use crate::core::Kind;
 use crate::document::{
-    CreateOptions, Document, MethodType, PublicKey, PublicKeyFormat, VerificationMethod,
+    self, CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod,
 };
 use crate::error::Error;
 use crate::{DidOperator, KeyPurpose};
@@ -60,25 +60,22 @@ impl DidJwk {
         };
 
         let verif_type = &options.public_key_format;
-        let (context, public_key) = (
-            Kind::Object(json!({
-                "publicKeyJwk": {
-                    "@id": "https://w3id.org/security#publicKeyJwk",
-                    "@type": "@json"
-                },
-                verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
-            })),
-            PublicKey::Jwk(verifying_key),
-        );
+        let context = Kind::Object(json!({
+            "publicKeyJwk": {
+                "@id": "https://w3id.org/security#publicKeyJwk",
+                "@type": "@json"
+            },
+            verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
+        }));
 
         let kid = format!("{did}#key-0");
 
         let method_type = match options.public_key_format {
             PublicKeyFormat::Multikey => MethodType::Multikey {
-                public_key_multibase: public_key.multibase().unwrap(),
+                public_key_multibase: document::to_multibase(&verifying_key)?,
             },
             _ => MethodType::JsonWebKey {
-                public_key_jwk: public_key.jwk().unwrap(),
+                public_key_jwk: verifying_key,
             },
         };
 

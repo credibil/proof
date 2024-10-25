@@ -225,40 +225,7 @@ impl MethodType {
     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
         match self {
             Self::JsonWebKey { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::Multikey { public_key_multibase } => {
-                let (_, key_bytes) = multibase::decode(public_key_multibase)
-                    .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-                if key_bytes.len() - 2 != 32 {
-                    return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
-                }
-                if key_bytes[0..2] != ED25519_CODEC {
-                    return Err(Error::InvalidPublicKey("not Ed25519".into()));
-                }
-
-                Ok(PublicKeyJwk {
-                    kty: KeyType::Okp,
-                    crv: Curve::Ed25519,
-                    x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
-                    ..PublicKeyJwk::default()
-                })
-            }
-        }
-    }
-
-    /// Converts a JWK public key to Multibase format.
-    ///
-    /// # Errors
-    pub fn multibase(&self) -> crate::Result<String> {
-        match self {
-            Self::Multikey { public_key_multibase } => Ok(public_key_multibase.clone()),
-            Self::JsonWebKey { public_key_jwk } => {
-                let key_bytes = Base64UrlUnpadded::decode_vec(&public_key_jwk.x)
-                    .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-                let mut multi_bytes = ED25519_CODEC.to_vec();
-                multi_bytes.extend_from_slice(&key_bytes);
-                let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
-                Ok(multibase)
-            }
+            Self::Multikey { public_key_multibase } => to_jwk(public_key_multibase),
         }
     }
 }
@@ -306,69 +273,36 @@ impl Display for PublicKeyFormat {
     }
 }
 
-/// Cryptographic curve type.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub enum PublicKey {
-    /// Public key encoded as a Multibase.
-    #[serde(rename = "publicKeyMultibase")]
-    Multibase(String),
+pub(crate) fn to_jwk(multi_key: &str) -> crate::Result<PublicKeyJwk> {
+    let (_, key_bytes) = multibase::decode(multi_key)
+        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
+    if key_bytes.len() - 2 != 32 {
+        return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
+    }
+    if key_bytes[0..2] != ED25519_CODEC {
+        return Err(Error::InvalidPublicKey("not Ed25519".into()));
+    }
 
-    /// Public key encoded as a JWK.
-    #[serde(rename = "publicKeyJwk")]
-    Jwk(PublicKeyJwk),
+    Ok(PublicKeyJwk {
+        kty: KeyType::Okp,
+        crv: Curve::Ed25519,
+        x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
+        ..PublicKeyJwk::default()
+    })
 }
 
-impl Default for PublicKey {
-    fn default() -> Self {
-        Self::Multibase(String::new())
-    }
-}
+/// Converts a JWK public key to Multibase format.
+///
+/// # Errors
+pub(crate) fn to_multibase(jwk: &PublicKeyJwk) -> crate::Result<String> {
+    let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)
+        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
+    let mut multi_bytes = vec![];
+    multi_bytes.extend_from_slice(&ED25519_CODEC);
+    multi_bytes.extend_from_slice(&key_bytes);
+    let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-impl PublicKey {
-    /// Converts a Multibase public key to JWK format.
-    ///
-    /// # Errors
-    pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
-        match self {
-            Self::Jwk(jwk) => Ok(jwk.clone()),
-            Self::Multibase(multi_key) => {
-                let (_, key_bytes) = multibase::decode(multi_key)
-                    .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-                if key_bytes.len() - 2 != 32 {
-                    return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
-                }
-                if key_bytes[0..2] != ED25519_CODEC {
-                    return Err(Error::InvalidPublicKey("not Ed25519".into()));
-                }
-
-                Ok(PublicKeyJwk {
-                    kty: KeyType::Okp,
-                    crv: Curve::Ed25519,
-                    x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
-                    ..PublicKeyJwk::default()
-                })
-            }
-        }
-    }
-
-    /// Converts a JWK public key to Multibase format.
-    ///
-    /// # Errors
-    pub fn multibase(&self) -> crate::Result<String> {
-        match self {
-            Self::Multibase(multibase) => Ok(multibase.clone()),
-            Self::Jwk(jwk) => {
-                let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)
-                    .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-                let mut multi_bytes = vec![];
-                multi_bytes.extend_from_slice(&ED25519_CODEC);
-                multi_bytes.extend_from_slice(&key_bytes);
-                let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-                Ok(multibase)
-            }
-        }
-    }
+    Ok(multibase)
 }
 
 /// DID document metadata. This typically does not change unless the DID
@@ -472,13 +406,11 @@ mod tests {
             ..PublicKeyJwk::default()
         };
 
-        let public_key =
-            PublicKey::Multibase("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss".into());
+        let converted_jwk =
+            to_jwk("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss").expect("should convert");
+        assert_eq!(jwk, converted_jwk);
 
-        assert_eq!(
-            "z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss",
-            public_key.multibase().unwrap()
-        );
-        assert_eq!(jwk, public_key.jwk().unwrap());
+        let converted_multi = to_multibase(&converted_jwk).expect("should convert");
+        assert_eq!("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss", converted_multi);
     }
 }

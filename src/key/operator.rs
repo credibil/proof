@@ -13,7 +13,7 @@ use serde_json::json;
 use super::DidKey;
 use crate::core::Kind;
 use crate::document::{
-    CreateOptions, Document, MethodType, PublicKey, PublicKeyFormat, VerificationMethod,
+    CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod,
 };
 use crate::error::Error;
 use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
@@ -32,25 +32,19 @@ impl DidKey {
 
         let did = format!("did:key:{multikey}");
 
-        let (context, public_key) = if options.public_key_format == PublicKeyFormat::Multikey
+        let context = if options.public_key_format == PublicKeyFormat::Multikey
             || options.public_key_format == PublicKeyFormat::Ed25519VerificationKey2020
         {
-            (
-                Kind::String("https://w3id.org/security/data-integrity/v1".into()),
-                PublicKey::Multibase(multikey.clone()),
-            )
+            Kind::String("https://w3id.org/security/data-integrity/v1".into())
         } else {
             let verif_type = &options.public_key_format;
-            (
-                Kind::Object(json!({
-                    "publicKeyJwk": {
-                        "@id": "https://w3id.org/security#publicKeyJwk",
-                        "@type": "@json"
-                    },
-                    verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
-                })),
-                PublicKey::Jwk(verifying_key),
-            )
+            Kind::Object(json!({
+                "publicKeyJwk": {
+                    "@id": "https://w3id.org/security#publicKeyJwk",
+                    "@type": "@json"
+                },
+                verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
+            }))
         };
 
         // key agreement
@@ -94,10 +88,10 @@ impl DidKey {
 
         let method_type = match options.public_key_format {
             PublicKeyFormat::Multikey => MethodType::Multikey {
-                public_key_multibase: public_key.multibase().unwrap(),
+                public_key_multibase: multikey.clone(),
             },
             _ => MethodType::JsonWebKey {
-                public_key_jwk: public_key.jwk().unwrap(),
+                public_key_jwk: verifying_key,
             },
         };
 
