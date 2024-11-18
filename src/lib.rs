@@ -50,13 +50,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// For example, a DID resolver for `did:web` would fetch the DID document from
 /// the specified URL. A DID resolver for `did:dht`should forward the request to
 /// a remote DID resolver for the DHT network.
-pub trait DidResolver: Send {
+pub trait DidResolver: Send + Sync {
     /// Resolve the DID URL to a DID Document.
     ///
     /// # Errors
     ///
     /// Returns an error if the DID URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send;
+    fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send + Sync;
 }
 
 /// DidOperator is used by implementers to provide material required for DID
