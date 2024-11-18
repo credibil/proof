@@ -32,7 +32,7 @@ use crate::{jwk, key, web, DidResolver};
 /// Returns a [DID resolution](https://www.w3.org/TR/did-core/#did-resolution-metadata)
 /// error as specified.
 pub async fn resolve(
-    did: &str, opts: Option<Options>, resolver: &impl DidResolver,
+    did: &str, opts: Option<Options>, resolver: impl DidResolver,
 ) -> crate::Result<Resolved> {
     // use DID-specific resolver
     let method = did.split(':').nth(1).unwrap_or_default();
@@ -63,7 +63,7 @@ pub async fn resolve(
 ///
 /// # Errors
 pub async fn dereference(
-    did_url: &str, opts: Option<Options>, resolver: &impl DidResolver,
+    did_url: &str, opts: Option<Options>, resolver: impl DidResolver,
 ) -> crate::Result<Dereferenced> {
     // extract DID from DID URL
     let url = url::Url::parse(did_url)
@@ -286,6 +286,7 @@ mod test {
 
     use super::*;
 
+    #[derive(Clone)]
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
@@ -305,7 +306,7 @@ mod test {
         const DID_URL: &str = "did:web:demo.credibil.io#key-0";
 
         let dereferenced =
-            dereference(DID_URL, None, &MockResolver).await.expect("should dereference");
+            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_web", dereferenced);
     }
 
@@ -314,7 +315,7 @@ mod test {
         const DID_URL: &str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
 
         let dereferenced =
-            dereference(DID_URL, None, &MockResolver).await.expect("should dereference");
+            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_key", dereferenced);
     }
 }

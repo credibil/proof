@@ -25,7 +25,7 @@ static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 
 impl DidWeb {
     pub async fn resolve(
-        did: &str, _: Option<Options>, resolver: &impl DidResolver,
+        did: &str, _: Option<Options>, resolver: impl DidResolver,
     ) -> crate::Result<Resolved> {
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:web".to_string()));
@@ -90,6 +90,7 @@ mod test {
     use super::*;
     use crate::document::Document;
 
+    #[derive(Clone)]
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
@@ -102,7 +103,7 @@ mod test {
     async fn resolve_normal() {
         const DID_URL: &str = "did:web:demo.credibil.io";
 
-        let resolved = DidWeb::resolve(DID_URL, None, &MockResolver).await.expect("should resolve");
+        let resolved = DidWeb::resolve(DID_URL, None, MockResolver).await.expect("should resolve");
         assert_snapshot!("document", resolved.document);
         assert_snapshot!("metadata", resolved.metadata);
     }

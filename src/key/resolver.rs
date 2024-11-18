@@ -36,7 +36,7 @@ impl DidOperator for Operator {
 }
 
 impl DidKey {
-    pub fn resolve(did: &str, _: Option<Options>, _: &impl DidResolver) -> crate::Result<Resolved> {
+    pub fn resolve(did: &str, _: Option<Options>, _: impl DidResolver) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:key".into()));
@@ -85,6 +85,7 @@ mod test {
     // const DID: &str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
     const DID: &str = "did:key:z6Mkj8Jr1rg3YjVWWhg7ahEYJibqhjBgZt1pDCbT4Lv7D4HX";
 
+    #[derive(Clone)]
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
@@ -94,7 +95,7 @@ mod test {
 
     #[tokio::test]
     async fn resolve() {
-        let resolved = DidKey::resolve(DID, None, &MockResolver).expect("should resolve");
+        let resolved = DidKey::resolve(DID, None, MockResolver).expect("should resolve");
         println!("{}", serde_json::to_string_pretty(&resolved).unwrap());
         // assert_snapshot!("resolved", resolved);
     }

@@ -35,7 +35,7 @@ impl DidOperator for Operator {
 }
 
 impl DidJwk {
-    pub fn resolve(did: &str, _: Option<Options>, _: &impl DidResolver) -> crate::Result<Resolved> {
+    pub fn resolve(did: &str, _: Option<Options>, _: impl DidResolver) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:jwk".into()));
@@ -85,6 +85,7 @@ mod test {
 
     const DID: &str = "did:jwk:eyJrdHkiOiJFQyIsImNydiI6InNlY3AyNTZrMSIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ";
 
+    #[derive(Clone)]
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
@@ -94,7 +95,7 @@ mod test {
 
     #[tokio::test]
     async fn resolve() {
-        let resolved = DidJwk::resolve(DID, None, &MockResolver).expect("should resolve");
+        let resolved = DidJwk::resolve(DID, None, MockResolver).expect("should resolve");
         assert_snapshot!("resolved", resolved);
     }
 }
