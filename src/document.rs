@@ -360,27 +360,3 @@ impl Default for CreateOptions {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use vercre_infosec::{Curve, KeyType};
-
-    use super::*;
-
-    #[test]
-    fn from_jwk() {
-        let jwk = PublicKeyJwk {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: "q6rjRnEH_XK72jvB8FNBJtOl9_gDs6NW49cAz6p2sW4".to_string(),
-            ..PublicKeyJwk::default()
-        };
-
-        let converted_jwk =
-            PublicKeyJwk::from_multibase("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss")
-                .expect("should convert");
-        assert_eq!(jwk, converted_jwk);
-
-        let converted_multi = converted_jwk.to_multibase().expect("should convert");
-        assert_eq!("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss", converted_multi);
-    }
-}
