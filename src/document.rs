@@ -6,17 +6,13 @@
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 
-use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vercre_infosec::jose::jwk::PublicKeyJwk;
-use vercre_infosec::{Curve, KeyType};
 
 use crate::core::{Kind, Quota};
 use crate::error::Error;
-use crate::ED25519_CODEC;
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -225,7 +221,10 @@ impl MethodType {
     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
         match self {
             Self::JsonWebKey { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::Multikey { public_key_multibase } => to_jwk(public_key_multibase),
+            Self::Multikey { public_key_multibase } => {
+                PublicKeyJwk::from_multibase(public_key_multibase)
+                    .map_err(|e| Error::InvalidPublicKey(e.to_string()))
+            }
         }
     }
 }
@@ -272,7 +271,6 @@ impl Display for PublicKeyFormat {
         }
     }
 }
-
 
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.
@@ -362,45 +360,10 @@ impl Default for CreateOptions {
     }
 }
 
-// TODO: find a home for these conversion functions
-
-/// Converts a Multibase public key to Jwk format.
-///
-/// # Errors
-pub(crate) fn to_jwk(multi_key: &str) -> crate::Result<PublicKeyJwk> {
-    let (_, key_bytes) = multibase::decode(multi_key)
-        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-    if key_bytes.len() - 2 != 32 {
-        return Err(Error::InvalidPublicKeyLength("key is not 32 bytes long".into()));
-    }
-    if key_bytes[0..2] != ED25519_CODEC {
-        return Err(Error::InvalidPublicKey("not Ed25519".into()));
-    }
-
-    Ok(PublicKeyJwk {
-        kty: KeyType::Okp,
-        crv: Curve::Ed25519,
-        x: Base64UrlUnpadded::encode_string(&key_bytes[2..]),
-        ..PublicKeyJwk::default()
-    })
-}
-
-/// Converts a JWK public key to Multibase format.
-///
-/// # Errors
-pub(crate) fn to_multibase(jwk: &PublicKeyJwk) -> crate::Result<String> {
-    let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)
-        .map_err(|e| Error::InvalidPublicKey(format!("issue decoding key: {e}")))?;
-    let mut multi_bytes = vec![];
-    multi_bytes.extend_from_slice(&ED25519_CODEC);
-    multi_bytes.extend_from_slice(&key_bytes);
-    let multibase = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-    Ok(multibase)
-}
-
 #[cfg(test)]
 mod tests {
+    use vercre_infosec::{Curve, KeyType};
+
     use super::*;
 
     #[test]
@@ -413,10 +376,11 @@ mod tests {
         };
 
         let converted_jwk =
-            to_jwk("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss").expect("should convert");
+            PublicKeyJwk::from_multibase("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss")
+                .expect("should convert");
         assert_eq!(jwk, converted_jwk);
 
-        let converted_multi = to_multibase(&converted_jwk).expect("should convert");
+        let converted_multi = converted_jwk.to_multibase().expect("should convert");
         assert_eq!("z6Mkr1NtupNezZtcUAMxJ79HPex6ZTR9RnGh8xfV257ZQdss", converted_multi);
     }
 }

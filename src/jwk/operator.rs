@@ -11,9 +11,7 @@ use serde_json::json;
 
 use super::DidJwk;
 use crate::core::Kind;
-use crate::document::{
-    self, CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod,
-};
+use crate::document::{CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod};
 use crate::error::Error;
 use crate::{DidOperator, KeyPurpose};
 
@@ -72,7 +70,7 @@ impl DidJwk {
 
         let method_type = match options.public_key_format {
             PublicKeyFormat::Multikey => MethodType::Multikey {
-                public_key_multibase: document::to_multibase(&verifying_key)?,
+                public_key_multibase: verifying_key.to_multibase()?,
             },
             _ => MethodType::JsonWebKey {
                 public_key_jwk: verifying_key,

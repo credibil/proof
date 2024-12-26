@@ -166,7 +166,7 @@ mod test {
         let mut csprng = OsRng;
         let signing_key: SigningKey = SigningKey::generate(&mut csprng);
         let secret = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
-        println!("signing: {secret}");
+        println!("secret: {secret}");
 
         signing_key.verifying_key().to_bytes().to_vec()
     }

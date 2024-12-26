@@ -28,15 +28,15 @@ rand = "0.8.5"
 regex = "1.11.1"
 serde.workspace = true
 serde_json.workspace = true
-thiserror = "1.0"
-url = "2.5.2"
+thiserror = "2.0"
+url = "2.5.4"
 vercre-infosec.workspace = true
 
 [dev-dependencies]
-axum = "0.7.7"
-insta = { version = "1.40.0", features = ["filters", "json", "redactions", "yaml"] }
+axum = "0.7.9"
+insta = { version = "1.41.1", features = ["filters", "json", "redactions", "yaml"] }
 tokio.workspace = true
-tower-http = { version = "0.6.1", features = ["fs"] }
+tower-http = { version = "0.6.2", features = ["fs"] }
 
 [features]
 
@@ -72,14 +72,14 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-anyhow = "1.0.91"
+anyhow = "1.0.95"
 base64ct = { version = "1.6.0", features = ["std"] }
-chrono = { version = "0.4.38", features = ["serde"] }
-serde = { version = "1.0.213", features = ["derive"] }
-serde_json = { version = "1.0.132", features = ["alloc"] }
-tokio = { version = "1.41.0", features = ["full"] }
-tracing = "0.1.40"
+chrono = { version = "0.4.39", features = ["serde"] }
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = { version = "1.0.134", features = ["alloc"] }
+tokio = { version = "1.42.0", features = ["full"] }
+tracing = "0.1.41"
 vercre-infosec = { git = "https://github.com/vercre/infosec.git" }
 
-# [patch."https://github.com/vercre/infosec.git"]
-# vercre-infosec = { path = "../infosec" }
+[patch."https://github.com/vercre/infosec.git"]
+vercre-infosec = { path = "../infosec" }
