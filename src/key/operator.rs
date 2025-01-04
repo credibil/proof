@@ -6,15 +6,13 @@
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use curve25519_dalek::edwards::CompressedEdwardsY;
+use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH};
 use multibase::Base;
 use serde_json::json;
 
 use super::DidKey;
 use crate::core::Kind;
-use crate::document::{
-    CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod,
-};
+use crate::document::{CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod};
 use crate::error::Error;
 use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
 
@@ -50,16 +48,13 @@ impl DidKey {
         // key agreement
         // <https://w3c-ccg.github.io/did-method-key/#encryption-method-creation-algorithm>
         let key_agreement = if options.enable_encryption_key_derivation {
-            // derive an X25519 public encryption key from the Ed25519 key
-            let edwards_y = CompressedEdwardsY::from_slice(&key_bytes).map_err(|e| {
-                Error::InvalidPublicKey(format!("public key is not Edwards Y: {e}"))
+            let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] = key_bytes.try_into().map_err(|_| {
+                Error::InvalidPublicKey(format!("public key is not {PUBLIC_KEY_LENGTH} bytes"))
             })?;
-            let Some(edwards_pt) = edwards_y.decompress() else {
-                return Err(Error::InvalidPublicKey(
-                    "Edwards Y cannot be decompressed to point".into(),
-                ));
-            };
-            let x25519_bytes = edwards_pt.to_montgomery().to_bytes();
+            let verifier = VerifyingKey::from_bytes(&verifier_bytes).map_err(|e| {
+                Error::InvalidPublicKey(format!("public key is not correct size: {e}"))
+            })?;
+            let x25519_bytes = verifier.to_montgomery().to_bytes();
 
             // base58B encode the raw key
             let mut multi_bytes = vec![];
@@ -163,8 +158,7 @@ mod test {
     #[allow(dead_code)]
     pub fn generate() -> Vec<u8> {
         // TODO: pass in public key
-        let mut csprng = OsRng;
-        let signing_key: SigningKey = SigningKey::generate(&mut csprng);
+        let signing_key = SigningKey::generate(&mut OsRng);
         let secret = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
         println!("secret: {secret}");
 
