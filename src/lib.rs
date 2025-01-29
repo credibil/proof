@@ -29,6 +29,7 @@ pub use error::Error;
 pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
+pub use web::DidWeb;
 use vercre_infosec::PublicKeyJwk;
 
 pub use crate::document::Document;

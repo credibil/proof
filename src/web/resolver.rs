@@ -24,9 +24,7 @@ static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl DidWeb {
-    pub async fn resolve(
-        did: &str, _: Option<Options>, resolver: impl DidResolver,
-    ) -> crate::Result<Resolved> {
+    pub fn url(did: &str) -> crate::Result<String> {
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:web".to_string()));
         };
@@ -50,6 +48,15 @@ impl DidWeb {
 
         // 5. Append /did.json to complete the URL.
         url = format!("{url}/did.json");
+
+        Ok(url)
+    }
+
+    pub async fn resolve(
+        did: &str, _: Option<Options>, resolver: impl DidResolver,
+    ) -> crate::Result<Resolved> {
+        // Steps 1-5. Generate the URL to fetch the DID document.
+        let url = Self::url(did)?;
 
         // 6. Perform an HTTP GET request to the URL using an agent that can
         //    successfully negotiate a secure HTTPS connection, which enforces the
