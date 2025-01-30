@@ -25,14 +25,14 @@ mod web;
 
 use std::future::Future;
 
+pub use document::{CreateOptions, Document};
 pub use error::Error;
 pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
+pub use key::DidKey;
 pub use web::DidWeb;
-use vercre_infosec::PublicKeyJwk;
-
-pub use crate::document::Document;
+pub use vercre_infosec::{Curve, KeyType, PublicKeyJwk};
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
