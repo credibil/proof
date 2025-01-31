@@ -20,7 +20,7 @@ use crate::resolution::{ContentType, Metadata, Options, Resolved};
 use crate::DidResolver;
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("^did:web:(?<identifier>[a-zA-Z1-9.-:%]+)$").expect("should compile")
+    Regex::new("^did:web:(?<identifier>[a-zA-Z1-9.\\-:%]+)$").expect("should compile")
 });
 
 impl DidWeb {
@@ -113,5 +113,12 @@ mod test {
         let resolved = DidWeb::resolve(DID_URL, None, MockResolver).await.expect("should resolve");
         assert_snapshot!("document", resolved.document);
         assert_snapshot!("metadata", resolved.metadata);
+    }
+
+    #[test]
+    fn should_construct_url() {
+        let did = "did:web:domain.with-hypens.computer";
+        let url = DidWeb::url(did).expect("should construct URL");
+        assert_eq!(url, "https://domain.with-hypens.computer/.well-known/did.json");
     }
 }
