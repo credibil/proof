@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 
 use chrono::{DateTime, Utc};
+use credibil_infosec::jose::jwk::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use vercre_infosec::jose::jwk::PublicKeyJwk;
 
 use crate::core::{Kind, Quota};
 use crate::error::Error;
@@ -359,4 +359,3 @@ impl Default for CreateOptions {
         }
     }
 }
-

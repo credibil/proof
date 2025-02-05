@@ -106,7 +106,7 @@ impl DidJwk {
 mod test {
     use ed25519_dalek::SigningKey;
     use rand::rngs::OsRng;
-    use vercre_infosec::{Curve, KeyType, PublicKeyJwk};
+    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 
     use super::*;
 

@@ -47,16 +47,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'vercre-didkey'",
+            "name": "Debug unit tests in library 'credibil-didkey'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=vercre-didkey"
+                    "--package=credibil-didkey"
                 ],
                 "filter": {
-                    "name": "vercre-didkey",
+                    "name": "credibil-didkey",
                     "kind": "lib"
                 }
             },

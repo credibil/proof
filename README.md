@@ -2,7 +2,7 @@
 
 This crate provides a set of tools and utilities for working with the subset of 
 [Decentralized Identifiers (DIDs)](https://www.w3.org/TR/did-core/) used in
- `vercre-vc` and `vercre-dwn`.
+ `credibil-vc` and `credibil-dwn`.
 
 ## Supported Methods
 

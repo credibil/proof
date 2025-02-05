@@ -2,7 +2,7 @@
 
 //! # DID Resolver
 //!
-//! This crate provides common utilities for the Vercre project and is not
+//! This crate provides common utilities for the Credibil project and is not
 //! intended to be used directly.
 //!
 //! The crate provides a DID Resolver trait and a set of default implementations
@@ -25,14 +25,14 @@ mod web;
 
 use std::future::Future;
 
+pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::{CreateOptions, Document};
 pub use error::Error;
+pub use key::DidKey;
 pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
-pub use key::DidKey;
 pub use web::DidWeb;
-pub use vercre_infosec::{Curve, KeyType, PublicKeyJwk};
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
