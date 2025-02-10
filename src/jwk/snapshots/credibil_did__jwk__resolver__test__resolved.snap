@@ -1,6 +1,6 @@
 ---
 source: src/jwk/resolver.rs
-assertion_line: 98
+assertion_line: 99
 expression: resolved
 ---
 {
