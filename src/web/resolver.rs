@@ -15,43 +15,21 @@ use regex::Regex;
 use serde_json::json;
 
 use super::DidWeb;
+use crate::DidResolver;
 use crate::error::Error;
 use crate::resolution::{ContentType, Metadata, Options, Resolved};
-use crate::DidResolver;
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:web:(?<identifier>[a-zA-Z1-9.\\-:%]+)$").expect("should compile")
 });
 
 impl DidWeb {
-    pub fn url(did: &str) -> crate::Result<String> {
-        let Some(caps) = DID_REGEX.captures(did) else {
-            return Err(Error::InvalidDid("DID is not a valid did:web".to_string()));
-        };
-        let identifier = &caps["identifier"];
-
-        // 1. Replace ":" with "/" in the method specific identifier to obtain the fully
-        //    qualified domain name and optional path.
-        let domain = identifier.replace(':', "/");
-
-        // 2. If the domain contains a port percent decode the colon.
-        let domain = domain.replace("%3A", ":");
-
-        // 3. Generate an HTTPS URL to the expected location of the DID document by
-        //    prepending https://.
-        let mut url = format!("https://{domain}");
-
-        // 4. If no path has been specified in the URL, append /.well-known.
-        if !identifier.contains(':') {
-            url = format!("{url}/.well-known");
-        }
-
-        // 5. Append /did.json to complete the URL.
-        url = format!("{url}/did.json");
-
-        Ok(url)
-    }
-
+    /// Resolve a `did:web` DID URL to a DID document.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the DID URL is invalid or the DID document cannot be
+    /// found.
     pub async fn resolve(
         did: &str, _: Option<Options>, resolver: impl DidResolver,
     ) -> crate::Result<Resolved> {
@@ -86,6 +64,40 @@ impl DidWeb {
             document: Some(document),
             ..Resolved::default()
         })
+    }
+
+    /// Convert a `did:web` URL to an HTTP URL pointing to the location of the
+    /// DID document.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the DID URL is not a valid `did:web` URL.
+    pub fn url(did: &str) -> crate::Result<String> {
+        let Some(caps) = DID_REGEX.captures(did) else {
+            return Err(Error::InvalidDid("DID is not a valid did:web".to_string()));
+        };
+        let identifier = &caps["identifier"];
+
+        // 1. Replace ":" with "/" in the method specific identifier to obtain the fully
+        //    qualified domain name and optional path.
+        let domain = identifier.replace(':', "/");
+
+        // 2. If the domain contains a port percent decode the colon.
+        let domain = domain.replace("%3A", ":");
+
+        // 3. Generate an HTTPS URL to the expected location of the DID document by
+        //    prepending https://.
+        let mut url = format!("https://{domain}");
+
+        // 4. If no path has been specified in the URL, append /.well-known.
+        if !identifier.contains(':') {
+            url = format!("{url}/.well-known");
+        }
+
+        // 5. Append /did.json to complete the URL.
+        url = format!("{url}/did.json");
+
+        Ok(url)
     }
 }
 

@@ -40,7 +40,7 @@ const X25519_CODEC: [u8; 2] = [0xec, 0x01];
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// `DidResolver` is used to proxy the resolution of a DID document. Resolution
+/// [`DidResolver`] is used to proxy the resolution of a DID document. Resolution
 /// can either be local as in the case of `did:key`, or remote as in the case of
 /// `did:web` or `did:dht`.
 ///
@@ -60,7 +60,7 @@ pub trait DidResolver: Send + Clone {
     fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send;
 }
 
-/// DidOperator is used by implementers to provide material required for DID
+/// [`DidOperator`] is used by implementers to provide material required for DID
 /// document operations — creation, update, etc.
 pub trait DidOperator: Send + Sync {
     /// Provides verification material to be used for the specified

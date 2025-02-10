@@ -17,8 +17,8 @@ use serde_json::json;
 use super::DidKey;
 use crate::document::{CreateOptions, MethodType};
 use crate::error::Error;
-use crate::resolution::{ContentType, Metadata, Options, Resolved};
-use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
+use crate::resolution::{ContentType, Metadata, Resolved};
+use crate::{DidOperator, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:key:(?<identifier>z[a-km-zA-HJ-NP-Z1-9]+)$").expect("should compile")
@@ -32,11 +32,15 @@ impl DidOperator for Operator {
             _ => panic!("unsupported purpose"),
         }
     }
-    
 }
 
 impl DidKey {
-    pub fn resolve(did: &str, _: Option<Options>, _: impl DidResolver) -> crate::Result<Resolved> {
+    /// Resolve the provided `did:key` URL to a DID Document.
+    /// 
+    /// # Errors
+    /// 
+    /// Will fail if the DID is not a valid `did:key` URL.
+    pub fn resolve(did: &str) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:key".into()));
@@ -53,7 +57,7 @@ impl DidKey {
             ..CreateOptions::default()
         };
 
-        let document = Self::create(op, options).map_err(|e| Error::InvalidDid(e.to_string()))?;
+        let document = Self::create(&op, options).map_err(|e| Error::InvalidDid(e.to_string()))?;
 
         Ok(Resolved {
             context: "https://w3id.org/did-resolution/v1".into(),
@@ -77,25 +81,14 @@ impl DidKey {
 
 #[cfg(test)]
 mod test {
-    // use insta::assert_json_snapshot as assert_snapshot;
-
     use super::*;
-    use crate::document::Document;
 
     // const DID: &str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
     const DID: &str = "did:key:z6Mkj8Jr1rg3YjVWWhg7ahEYJibqhjBgZt1pDCbT4Lv7D4HX";
 
-    #[derive(Clone)]
-    struct MockResolver;
-    impl DidResolver for MockResolver {
-        async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            Ok(Document::default())
-        }
-    }
-
     #[tokio::test]
     async fn resolve() {
-        let resolved = DidKey::resolve(DID, None, MockResolver).expect("should resolve");
+        let resolved = DidKey::resolve(DID).expect("should resolve");
         println!("{}", serde_json::to_string_pretty(&resolved).unwrap());
         // assert_snapshot!("resolved", resolved);
     }

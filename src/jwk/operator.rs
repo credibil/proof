@@ -16,7 +16,7 @@ use crate::error::Error;
 use crate::{DidOperator, KeyPurpose};
 
 impl DidJwk {
-    pub fn create(op: impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
+    pub fn create(op: &impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
         let Some(verifying_key) = op.verification(KeyPurpose::VerificationMethod) else {
             return Err(Error::Other(anyhow!("no verification key")));
         };
@@ -104,9 +104,9 @@ impl DidJwk {
 
 #[cfg(test)]
 mod test {
+    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
     use ed25519_dalek::SigningKey;
     use rand::rngs::OsRng;
-    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 
     use super::*;
 
@@ -116,7 +116,7 @@ mod test {
         options.enable_encryption_key_derivation = true;
 
         let op = Operator;
-        let res = DidJwk::create(op, options).expect("should create");
+        let res = DidJwk::create(&op, options).expect("should create");
 
         let json = serde_json::to_string_pretty(&res).expect("should serialize");
         println!("{json}");
