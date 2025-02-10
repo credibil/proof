@@ -1,6 +1,6 @@
 ---
-source: crates/did/src/resolution.rs
-assertion_line: 304
+source: src/resolution.rs
+assertion_line: 319
 expression: dereferenced
 ---
 {

@@ -38,7 +38,7 @@ pub async fn resolve(
     let method = did.split(':').nth(1).unwrap_or_default();
 
     let result = match method {
-        "key" => key::DidKey::resolve(did, opts, resolver),
+        "key" => key::DidKey::resolve(did),
         "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
         "web" => web::DidWeb::resolve(did, opts, resolver).await,
         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
@@ -54,7 +54,7 @@ pub async fn resolve(
             },
             ..Resolved::default()
         });
-    };
+    }
 
     result
 }
@@ -73,7 +73,7 @@ pub async fn dereference(
     // resolve DID document
     let method = did_url.split(':').nth(1).unwrap_or_default();
     let resolution = match method {
-        "key" => key::DidKey::resolve(&did, opts, resolver)?,
+        "key" => key::DidKey::resolve(&did)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };

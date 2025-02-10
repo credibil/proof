@@ -6,7 +6,7 @@
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH};
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
 use multibase::Base;
 use serde_json::json;
 
@@ -14,10 +14,16 @@ use super::DidKey;
 use crate::core::Kind;
 use crate::document::{CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod};
 use crate::error::Error;
-use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
+use crate::{DidOperator, ED25519_CODEC, KeyPurpose, X25519_CODEC};
 
 impl DidKey {
-    pub fn create(op: impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
+    /// Create a DID Document from the verifying key provided by [`DidOperator`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the supplied verifying key is not found or not a
+    /// valid format.
+    pub fn create(op: &impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
         let Some(verifying_key) = op.verification(KeyPurpose::VerificationMethod) else {
             return Err(Error::Other(anyhow!("no verification key")));
         };
@@ -83,7 +89,7 @@ impl DidKey {
 
         let method_type = match options.public_key_format {
             PublicKeyFormat::Multikey => MethodType::Multikey {
-                public_key_multibase: multikey.clone(),
+                public_key_multibase: multikey,
             },
             _ => MethodType::JsonWebKey {
                 public_key_jwk: verifying_key,
@@ -107,19 +113,13 @@ impl DidKey {
             ..Document::default()
         })
     }
-
-    #[allow(dead_code)]
-    pub fn read(_did: &str, _: CreateOptions) -> crate::Result<Document> {
-        // self.resolve(did, options)
-        unimplemented!("read")
-    }
 }
 
 #[cfg(test)]
 mod test {
+    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
     use ed25519_dalek::SigningKey;
     use rand::rngs::OsRng;
-    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 
     use super::*;
 
@@ -129,7 +129,7 @@ mod test {
         options.enable_encryption_key_derivation = true;
 
         let op = Operator;
-        let res = DidKey::create(op, options).expect("should create");
+        let res = DidKey::create(&op, options).expect("should create");
 
         let json = serde_json::to_string_pretty(&res).expect("should serialize");
         println!("{json}");

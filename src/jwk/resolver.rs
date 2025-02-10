@@ -54,7 +54,7 @@ impl DidJwk {
             ..CreateOptions::default()
         };
 
-        let document = Self::create(op, options).map_err(|e| Error::InvalidDid(e.to_string()))?;
+        let document = Self::create(&op, options).map_err(|e| Error::InvalidDid(e.to_string()))?;
 
         Ok(Resolved {
             context: "https://w3id.org/did-resolution/v1".into(),

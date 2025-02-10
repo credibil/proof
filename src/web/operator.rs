@@ -14,14 +14,18 @@ use super::DidWeb;
 use crate::core::Kind;
 use crate::document::{CreateOptions, Document, MethodType, PublicKeyFormat, VerificationMethod};
 use crate::error::Error;
-use crate::{DidOperator, KeyPurpose, ED25519_CODEC, X25519_CODEC};
+use crate::{DidOperator, ED25519_CODEC, KeyPurpose, X25519_CODEC};
 
 // TODO: request public key from DidOperator for each verification relationship
 
 impl DidWeb {
-    #[allow(dead_code)]
+    /// Create a new DID Document from the provided `did:web` DID URL.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the DID URL is not a valid or the verifying key is invalid.
     pub fn create(
-        url: &str, op: impl DidOperator, options: CreateOptions,
+        url: &str, op: &impl DidOperator, options: CreateOptions,
     ) -> crate::Result<Document> {
         // create identifier from url
         let url =
@@ -118,28 +122,18 @@ impl DidWeb {
         })
     }
 
-    #[allow(dead_code)]
-    pub fn read(_did: &str, _: CreateOptions) -> crate::Result<Document> {
-        // self.create(did, options)
-        unimplemented!("read")
-    }
-
-    #[allow(dead_code)]
-    pub fn update(_did: &str, _: CreateOptions) -> crate::Result<Document> {
-        unimplemented!("This DID Method does not support updating the DID Document")
-    }
-
-    #[allow(dead_code)]
-    pub fn deactivate(_did: &str, _: CreateOptions) -> crate::Result<()> {
-        unimplemented!("This DID Method does not support deactivating the DID Document")
-    }
+    // #[allow(dead_code)]
+    // pub fn read(_did: &str, _: CreateOptions) -> crate::Result<Document> {
+    //     // self.create(did, options)
+    //     unimplemented!("read")
+    // }
 }
 
 #[cfg(test)]
 mod test {
+    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
     use ed25519_dalek::SigningKey;
     use rand::rngs::OsRng;
-    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 
     use super::*;
 
@@ -169,7 +163,7 @@ mod test {
         options.enable_encryption_key_derivation = true;
 
         let op = MockOperator;
-        let res = DidWeb::create(url, op, options).expect("should create");
+        let res = DidWeb::create(url, &op, options).expect("should create");
 
         let json = serde_json::to_string_pretty(&res).expect("should serialize");
         println!("{json}");
@@ -182,7 +176,7 @@ mod test {
         options.enable_encryption_key_derivation = true;
 
         let op = MockOperator;
-        let res = DidWeb::create(url, op, options).expect("should create");
+        let res = DidWeb::create(url, &op, options).expect("should create");
 
         let json = serde_json::to_string_pretty(&res).expect("should serialize");
         println!("{json}");

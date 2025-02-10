@@ -12,5 +12,7 @@
 pub mod operator;
 pub mod resolver;
 
+/// `DidKey` provides a type for implementing `did:key` operation and 
+/// resolution methods. 
 #[allow(clippy::module_name_repetitions)]
 pub struct DidKey;
