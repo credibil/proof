@@ -32,10 +32,10 @@ impl DidWeb {
             Url::parse(url).map_err(|e| Error::InvalidDid(format!("issue parsing url: {e}")))?;
         let host = url.host_str().ok_or(Error::InvalidDid("no host in url".into()))?;
         let mut did = format!("did:web:{host}");
-        if let Some(path) = url.path().strip_prefix('/')
-            && !path.is_empty()
-        {
-            did = format!("{did}:{}", path.replace('/', ":"));
+        if let Some(path) = url.path().strip_prefix('/') {
+            if !path.is_empty() {
+                did = format!("{did}:{}", path.replace('/', ":"));
+            }
         }
 
         // get DID controller's verification key
