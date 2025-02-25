@@ -38,7 +38,7 @@ N/A
 
 ### Changed
 
-Renamed from `dwn-node` to `credibil-dwn` and republished.
+N/A
 
 ### Fixed
 
