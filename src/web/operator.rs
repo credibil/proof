@@ -1,6 +1,6 @@
 //! # DID Web Operations
 //!
-//! Implements Create, Read, Update, Delete (CRUD) operations for DID Key.
+//! Implements Create, Read, Update, Delete (CRUD) operations for DID Web.
 //!
 //! See <https://w3c-ccg.github.io/did-method-web>
 

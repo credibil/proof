@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{jwk, key, web, DidResolver};
+use crate::{jwk, key, web, webvh, DidResolver};
 
 /// Resolve a DID to a DID document.
 ///
@@ -25,7 +25,7 @@ use crate::{jwk, key, web, DidResolver};
 /// - Ignores accept header.
 /// - Only returns application/did+ld+json.
 /// - did:key support for ed25519
-/// - did:web support for .well-known and path based DIDs.
+/// - did:web and did:webvh support for .well-known and path based DIDs.
 ///
 /// # Errors
 ///
@@ -41,6 +41,7 @@ pub async fn resolve(
         "key" => key::DidKey::resolve(did),
         "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
         "web" => web::DidWeb::resolve(did, opts, resolver).await,
+        "webvh" => webvh::DidWebVh::resolve(did, opts, resolver).await,
         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -75,6 +76,7 @@ pub async fn dereference(
     let resolution = match method {
         "key" => key::DidKey::resolve(&did)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
+        "webvh" => webvh::DidWebVh::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -265,6 +267,10 @@ pub enum ContentType {
     // /// The JSON-LD Media Type.
     // #[serde(rename = "application/ld+json")]
     // LdJson,
+
+    /// JSON list document.
+    #[serde(rename = "text/jsonl")]
+    JsonL,
 }
 
 /// Metadata about the `content_stream`. If `content_stream` is a DID document,
@@ -317,5 +323,14 @@ mod test {
         let dereferenced =
             dereference(DID_URL, None, MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_key", dereferenced);
+    }
+
+    #[tokio::test]
+    async fn deref_webvh() {
+        const DID_URL: &str = "did:webvh:demo.credibil.io#key-0";
+
+        let dereferenced =
+            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
+        assert_snapshot!("deref_webvh", dereferenced);
     }
 }
