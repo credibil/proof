@@ -5,31 +5,31 @@
     "https://identity.foundation/.well-known/did-configuration/v1",
     "https://identity.foundation/linked-vp/contexts/v1"
   ],
-  "id": "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example",
+  "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
   "authentication": [
-    "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+    "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
   ],
   "assertionMethod": [
-    "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+    "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
   ],
   "verificationMethod": [
     {
-      "id": "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv",
-      "controller": "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example",
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv",
+      "controller": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
       "type": "Multikey",
       "publicKeyMultibase": "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
     }
   ],
   "service": [
     {
-      "id": "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example#domain",
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#domain",
       "type": "LinkedDomains",
-      "serviceEndpoint": "https://domain.example"
+      "serviceEndpoint": "https://credibil.io"
     },
     {
-      "id": "did:tdw:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.example#whois",
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#whois",
       "type": "LinkedVerifiablePresentation",
-      "serviceEndpoint": "https://domain.example/.well-known/whois.vc"
+      "serviceEndpoint": "https://credibil.io/.well-known/whois.vc"
     }
   ]
 }

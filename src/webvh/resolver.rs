@@ -122,7 +122,30 @@ impl DidWebVh {
 
 #[cfg(test)]
 mod test {
+    use anyhow::anyhow;
+    use insta::assert_json_snapshot as assert_snapshot;
+
+    use crate::{Document, dereference};
+
     use super::*;
+
+    #[derive(Clone)]
+    struct MockResolver;
+    impl DidResolver for MockResolver {
+        async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
+            serde_json::from_slice(include_bytes!("./did-v3.json"))
+                .map_err(|e| anyhow!("issue deserializing document: {e}"))
+        }
+    }
+
+    #[tokio::test]
+    async fn deref_webvh() {
+        const DID_URL: &str = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+
+        let dereferenced =
+            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
+        assert_snapshot!("deref_webvh", dereferenced);
+    }
 
     #[test]
     fn should_construct_default_url() {

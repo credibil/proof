@@ -324,13 +324,4 @@ mod test {
             dereference(DID_URL, None, MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_key", dereferenced);
     }
-
-    #[tokio::test]
-    async fn deref_webvh() {
-        const DID_URL: &str = "did:webvh:demo.credibil.io#key-0";
-
-        let dereferenced =
-            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
-        assert_snapshot!("deref_webvh", dereferenced);
-    }
 }
