@@ -78,7 +78,7 @@ impl DidWebVh {
     /// Example:
     /// 
     /// ```rust
-    /// use credibil_did::webvh::DidWebVh;
+    /// use credibil_did::DidWebVh;
     /// 
     ///     let did = "did:webvh:z6Mk3vz:credibil.io";
     ///     let url = DidWebVh::url(did, None).unwrap();
