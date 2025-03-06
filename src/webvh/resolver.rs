@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 use serde_json::json;
 
-use super::DidWebVh;
+use super::{DidLogEntry, DidWebVh};
 use crate::{
     ContentType, DidResolver, Error, Metadata,
     resolution::{Options, Resolved},
@@ -34,7 +34,7 @@ impl DidWebVh {
         did: &str, options: Option<Options>, resolver: impl DidResolver,
     ) -> crate::Result<Resolved> {
         // Steps 1-7. Generate the URL to fetch the DID list document.
-        let url = Self::url(did)?;
+        let url = Self::url(did, None)?;
 
         // 8. The content type for the did.jsonl file SHOULD be text/jsonl.
         if let Some(opts) = options {
@@ -72,19 +72,30 @@ impl DidWebVh {
     }
 
     /// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
-    /// DID list document.
+    /// DID list document (default) or another location where the root path is
+    /// a conversion from the DID to an HTTP URL.
+    /// 
+    /// Example:
+    /// 
+    /// ```rust
+    /// use credibil_did::webvh::DidWebVh;
+    /// 
+    ///     let did = "did:webvh:z6Mk3vz:credibil.io";
+    ///     let url = DidWebVh::url(did, None).unwrap();
+    ///     assert_eq!(url, "https://credibil.io/.well-known/did.jsonl");
+    ///     let url = DidWebVh::url(did, Some("/issuer.json")).unwrap();
+    ///     assert_eq!(url, "https://credibil.io/.well-known/issuer.json");
+    ///     // Get the DID Controller's Verifiable Presentation
+    ///     let _vp_url = DidWebVh::url(did, Some("/whois"));
+    /// ```
     ///
     /// # Errors
     ///
     /// Will fail if the DID URL is invalid.
     ///
-    /// TODO: Extend for witnesses URL.
-    /// TODO: Extend for resolving a DID path (such as <did>/whois or
-    /// <did>/path/to/file).
-    ///
     /// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
     ///
-    pub fn url(did: &str) -> crate::Result<String> {
+    pub fn url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
         let Some(caps) = DID_REGEX.captures(did) else {
             return Err(Error::InvalidDid("DID is not a valid did:webvh".to_string()));
         };
@@ -112,11 +123,25 @@ impl DidWebVh {
         // 6. Prepend `https://` to the domain to generate the URL.
         let url = format!("https://{domain}");
 
-        // 7. Append `/did.jsonl` to the URL to complete it.
-        // TODO: witness and path extensions to be catered for here.
-        let url = format!("{url}/did.jsonl");
+        // 7. Append `/did.jsonl` (default) or the specified file sub-path to
+        // the URL to complete it.
+        let fp = file_path.unwrap_or("/did.jsonl");
+        let url = format!("{url}{fp}");
 
         Ok(url)
+    }
+
+    /// Primary verification of the contents of the `did.jsonl` file.
+    /// 
+    /// To use this function, read the contents of the `did.jsonl` file into a
+    /// vector of `DidLogEntry` structs and pass to this function.
+    /// 
+    /// # Errors
+    /// 
+    /// Will fail if the log entries are invalid.
+    /// 
+    pub fn verify_log(_log: Vec<DidLogEntry>) -> crate::Result<()> {
+        todo!()
     }
 }
 
@@ -150,21 +175,21 @@ mod test {
     #[test]
     fn should_construct_default_url() {
         let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer";
-        let url = DidWebVh::url(did).unwrap();
+        let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/.well-known/did.jsonl");
     }
 
     #[test]
     fn should_construct_path_url() {
         let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer:dids:issuer";
-        let url = DidWebVh::url(did).unwrap();
+        let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
     #[test]
     fn should_construct_port_url() {
         let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer%3A8080";
-        let url = DidWebVh::url(did).unwrap();
+        let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");
     }
 }

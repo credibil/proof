@@ -37,7 +37,7 @@ nursery = "warn"
 [dependencies]
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 credibil-infosec = "0.1.1"
 curve25519-dalek = "4.1.3"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
@@ -54,3 +54,6 @@ axum = "0.8.1"
 insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["fs"] }
+
+[patch.crates-io]
+credibil-infosec = { git = "https://github.com/credibil/infosec", branch = "proof" }
