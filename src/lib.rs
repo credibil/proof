@@ -32,7 +32,7 @@ pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
 pub use web::DidWeb;
-pub use webvh::{DidWebVh, DidWebVhUrl};
+pub use webvh::DidWebVh;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
@@ -66,6 +66,15 @@ pub trait DidOperator: Send + Sync {
     /// Provides verification material to be used for the specified
     /// verification method.
     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
+
+    /// Provides an authorization key for the control (create, update,
+    /// deactivate) of the DID document.
+    /// 
+    /// Default implementation returns `None` since not all DID methods
+    /// require authorization.
+    fn authorization(&self) -> Option<PublicKeyJwk> {
+        None
+    }
 }
 
 /// The purpose the requested key material will be used for.
