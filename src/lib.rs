@@ -32,7 +32,7 @@ pub use resolution::{
     dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
 };
 pub use web::DidWeb;
-pub use webvh::DidWebVh;
+pub use webvh::{DidWebVh, DidWebVhUrl};
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];

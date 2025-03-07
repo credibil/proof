@@ -86,7 +86,11 @@ impl DidWebVh {
     ///     let url = DidWebVh::url(did, Some("/issuer.json")).unwrap();
     ///     assert_eq!(url, "https://credibil.io/.well-known/issuer.json");
     ///     // Get the DID Controller's Verifiable Presentation
-    ///     let _vp_url = DidWebVh::url(did, Some("/whois"));
+    ///     let vp_url = DidWebVh::url(did, Some("/whois")).unwrap();
+    ///     assert_eq!(vp_url, "https://credibil.io/.well-known/whois");
+    ///     // Get a witness file
+    ///     let witness_url = DidWebVh::url(did, Some("/did-witness.json")).unwrap();
+    ///     assert_eq!(witness_url, "https://credibil.io/.well-known/did-witness.json");
     /// ```
     ///
     /// # Errors
@@ -100,20 +104,20 @@ impl DidWebVh {
             return Err(Error::InvalidDid("DID is not a valid did:webvh".to_string()));
         };
         // 1. Remove the literal `did:webvh:` prefix from the DID URL.
-        let scid_and_identifier = &caps["identifier"];
+        let scid_and_fqdn = &caps["identifier"];
 
         // 2. Remove the `SCID` by removing the text up to and including the
         // first `:` character.
-        let Some(identifier) = scid_and_identifier.split_once(':').map(|x| x.1) else {
+        let Some(fqdn) = scid_and_fqdn.split_once(':').map(|x| x.1) else {
             return Err(Error::InvalidDid("DID is not a valid did:webvh - no SCID".to_string()));
         };
 
-        // 3. Replace `:` with `/` in the method-specific identifier to obtain
+        // 3. Replace `:` with `/` in the domain part of the identifier to obtain
         // the fully qualified domain name and optional path.
-        let mut domain = identifier.replace(':', "/");
+        let mut domain = fqdn.replace(':', "/");
 
         // 4. If there is no optional path, append `/.well-known` to the URL.
-        if !identifier.contains(':') {
+        if !fqdn.contains(':') {
             domain.push_str("/.well-known");
         }
 
@@ -174,21 +178,21 @@ mod test {
 
     #[test]
     fn should_construct_default_url() {
-        let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer";
+        let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer";
         let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/.well-known/did.jsonl");
     }
 
     #[test]
     fn should_construct_path_url() {
-        let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer:dids:issuer";
+        let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer:dids:issuer";
         let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
     #[test]
     fn should_construct_port_url() {
-        let did = "did:webvh:z6Mk3vz:domain.with-hyphens.computer%3A8080";
+        let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer%3A8080";
         let url = DidWebVh::url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");
     }
