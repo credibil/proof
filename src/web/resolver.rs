@@ -20,7 +20,7 @@ use crate::error::Error;
 use crate::resolution::{ContentType, Metadata, Options, Resolved};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("^did:web:(?<identifier>[a-zA-Z1-9.\\-:%]+)$").expect("should compile")
+    Regex::new("^did:web:(?<identifier>[a-zA-Z0-9.\\-:%]+)$").expect("should compile")
 });
 
 impl DidWeb {
