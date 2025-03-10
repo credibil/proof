@@ -3,6 +3,8 @@
 //! A DID Document is a JSON-LD document that contains information related to a
 //! DID.
 
+pub mod builders;
+
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 
@@ -29,7 +31,7 @@ pub struct Document {
     /// organization, physical thing, digital thing, logical thing, etc.
     pub id: String,
 
-    /// A set of URIs taht are other identifiers for the subject of the above
+    /// A set of URIs that are other identifiers for the subject of the above
     /// DID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub also_known_as: Option<Vec<String>>,

@@ -1,4 +1,4 @@
-//! # DID Resolver
+//! # DID Operations and Resolver
 //!
 //! This crate provides common utilities for the Credibil project and is not
 //! intended to be used directly.
@@ -26,6 +26,7 @@ use std::future::Future;
 
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::{CreateOptions, Document};
+pub use document::builders::*;
 pub use error::Error;
 pub use key::DidKey;
 pub use resolution::{
@@ -70,8 +71,11 @@ pub trait DidOperator: Send + Sync {
     /// Provides an authorization key for the control (create, update,
     /// deactivate) of the DID document.
     /// 
-    /// Default implementation returns `None` since not all DID methods
-    /// require authorization.
+    /// Used to generate key identifiers using a multibase value derived from
+    /// the public key.
+    /// 
+    /// Default implementation returns `None` in which case a hardcoded string
+    /// is used: `key-0`.
     fn authorization(&self) -> Option<PublicKeyJwk> {
         None
     }
