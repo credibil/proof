@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use crate::{core::{Kind, Quota}, ED25519_CODEC};
 
-use super::{Document, MethodType, PublicKeyFormat, VerificationMethod};
+use super::{Document, DocumentMetadata, MethodType, PublicKeyFormat, Service, VerificationMethod};
 
 /// A builder for creating a DID Document.
 #[derive(Default)]
@@ -43,6 +43,8 @@ impl DocumentBuilder {
     }
 
     /// Add a controller.
+    /// 
+    /// Chain to add multiple controllers.
     #[must_use]
     pub fn controller(mut self, controller: &str) -> Self {
         match self.doc.controller {
@@ -59,6 +61,15 @@ impl DocumentBuilder {
                 self.doc.controller = Some(Quota::One(controller.to_string()));
             }
         }
+        self
+    }
+
+    /// Add a service endpoint.
+    /// 
+    /// Chain to add multiple service endpoints.
+    #[must_use]
+    pub fn service(mut self, service: &Service) -> Self {
+        self.doc.service.get_or_insert(vec![]).push(service.clone());
         self
     }
 
@@ -120,6 +131,17 @@ impl DocumentBuilder {
             }
         }
         Ok(self)
+    }
+
+    /// Set default metadata with created timestamp and build the DID Document.
+    #[must_use]
+    pub fn build(mut self) -> Document {
+        let md = DocumentMetadata {
+            created: chrono::Utc::now(),
+            ..Default::default()
+        };
+        self.doc.did_document_metadata = Some(md);
+        self.doc
     }
 }
 

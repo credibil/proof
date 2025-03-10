@@ -92,8 +92,13 @@ impl DidWebVh {
         let _did_str = DidWebVhUrl::builder(url).build();
         todo!()
     }
-}
 
+    /// Converts a `did:webvh` DID document to a `did:web` DID document.
+    #[must_use]
+    pub fn convert_to_web(_vh_doc: &Document) -> Document {
+        todo!()
+    }
+}
 
 #[cfg(test)]
 mod tests {
