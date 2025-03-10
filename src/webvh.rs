@@ -12,8 +12,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::Document;
 
-pub mod operator;
-pub mod resolver;
+mod create;
+mod url;
+mod resolve;
+
+pub use resolve::{resolve, verify_log};
 
 // pub (crate) const SCID_PLACEHOLDER: &'static str = "{SCID}";
 // pub (crate) const METHOD: &'static str = "webvh";
@@ -30,6 +33,9 @@ pub mod resolver;
 /// `DidWebVh` provides a type for implementing `did:webvh` operation and
 /// resolution methods.
 pub struct DidWebVh;
+
+/// A `DidLog` is a set of log entries for a DID document.
+pub type DidLog = Vec<DidLogEntry>;
 
 /// `DidLogEntry` is an entry in the `did.jsonl` log file denoting the
 /// sequential changes to a DID document.
@@ -55,6 +61,9 @@ pub struct DidLogEntry {
     pub proof: Proof,
 }
 
+/// Parameters for a DID log entry.
+/// 
+/// 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {

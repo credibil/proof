@@ -41,7 +41,7 @@ pub async fn resolve(
         "key" => key::DidKey::resolve(did),
         "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
         "web" => web::DidWeb::resolve(did, opts, resolver).await,
-        "webvh" => webvh::DidWebVh::resolve(did, opts, resolver).await,
+        "webvh" => webvh::resolve(did, opts, resolver).await,
         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -75,8 +75,9 @@ pub async fn dereference(
     let method = did_url.split(':').nth(1).unwrap_or_default();
     let resolution = match method {
         "key" => key::DidKey::resolve(&did)?,
+        "jwk" => jwk::DidJwk::resolve(&did, opts, resolver)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
-        "webvh" => webvh::DidWebVh::resolve(&did, opts, resolver).await?,
+        "webvh" => webvh::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -296,7 +297,7 @@ mod test {
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("web/did-ecdsa.json"))
+            serde_json::from_slice(include_bytes!("../web/did-ecdsa.json"))
                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
         }
     }

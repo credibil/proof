@@ -3,8 +3,6 @@
 //! A DID Document is a JSON-LD document that contains information related to a
 //! DID.
 
-pub mod builders;
-
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 
@@ -286,34 +284,34 @@ impl Display for PublicKeyFormat {
 pub struct DocumentMetadata {
     /// Timestamp of the Create operation.
     /// An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
-    created: DateTime<Utc>,
+    pub created: DateTime<Utc>,
 
     /// Timestamp of the last Update operation. Omitted if an Update operation
     /// has never been performed. May be the same value as the `created`
     /// property when the difference between the two timestamps is less than
     /// one second. An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
     #[serde(skip_serializing_if = "Option::is_none")]
-    updated: Option<DateTime<Utc>>,
+    pub updated: Option<DateTime<Utc>>,
 
     /// MUST be set to true if the DID has been deactivated. Optional if the DID
     /// has not been deactivated.
     #[serde(skip_serializing_if = "Option::is_none")]
-    deactivated: Option<bool>,
+    pub deactivated: Option<bool>,
 
     /// May be set if the document version is not the latest. Indicates the
     /// timestamp of the next Update operation as an XMLSCHEMA11-2
     /// (RFC3339).
-    next_update: Option<DateTime<Utc>>,
+    pub next_update: Option<DateTime<Utc>>,
 
     /// Used to indicate the version of the last Update operation. SHOULD be
     /// set.
     #[serde(skip_serializing_if = "Option::is_none")]
-    version_id: Option<String>,
+    pub version_id: Option<String>,
 
     /// MAY be set if the document version is not the latest. It indicates the
     /// version of the next Update operation.
     #[serde(skip_serializing_if = "Option::is_none")]
-    next_version_id: Option<String>,
+    pub next_version_id: Option<String>,
 
     /// Used when a DID method needs to define different forms of a DID that are
     /// logically equivalent. For example, when a DID takes one form prior to

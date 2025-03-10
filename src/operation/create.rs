@@ -1,7 +1,7 @@
-//! # DID Operations
+//! # DID Create Operation
 //!
-//! This crate provides helpers for DID operations that are independent of the
-//! DID method.
+//! This crate provides helpers for the DID "Create" operation that are
+//! independent of the DID method.
 //!
 //! See [Decentralized Identifiers (DIDs) v1.0](https://www.w3.org/TR/did-1.0/)
 //! for more information.
@@ -13,9 +13,14 @@ use credibil_infosec::PublicKeyJwk;
 use multibase::Base;
 use serde_json::Value;
 
-use crate::{core::{Kind, Quota}, ED25519_CODEC};
+use crate::{
+    ED25519_CODEC, KeyPurpose,
+    core::{Kind, Quota},
+};
 
-use super::{Document, DocumentMetadata, MethodType, PublicKeyFormat, Service, VerificationMethod};
+use crate::document::{
+    Document, DocumentMetadata, MethodType, PublicKeyFormat, Service, VerificationMethod,
+};
 
 /// A builder for creating a DID Document.
 #[derive(Default)]
@@ -43,7 +48,7 @@ impl DocumentBuilder {
     }
 
     /// Add a controller.
-    /// 
+    ///
     /// Chain to add multiple controllers.
     #[must_use]
     pub fn controller(mut self, controller: &str) -> Self {
@@ -51,12 +56,12 @@ impl DocumentBuilder {
             Some(c) => match c {
                 Quota::One(cont) => {
                     self.doc.controller = Some(Quota::Many(vec![cont, controller.to_string()]));
-                },
+                }
                 Quota::Many(mut cont) => {
                     cont.push(controller.to_string());
                     self.doc.controller = Some(Quota::Many(cont));
-                },
-            }
+                }
+            },
             None => {
                 self.doc.controller = Some(Quota::One(controller.to_string()));
             }
@@ -65,7 +70,7 @@ impl DocumentBuilder {
     }
 
     /// Add a service endpoint.
-    /// 
+    ///
     /// Chain to add multiple service endpoints.
     #[must_use]
     pub fn service(mut self, service: &Service) -> Self {
@@ -82,21 +87,12 @@ impl DocumentBuilder {
         self
     }
 
-    /// Add a verification method.
-    ///
-    /// Chain to add multiple verification methods.
-    #[must_use]
-    pub fn verification_method(mut self, vm: &VerificationMethod) -> Self {
-        self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
-        self
-    }
-
     /// Add a verification relationship.
     ///
     /// Pass the ID of the verification method to associate with the
     /// relationship or a complete `VerificationMethod` instance if a standalone
     /// method is required.
-    /// 
+    ///
     /// Chain to add multiple relationships.
     ///
     /// # Errors
@@ -104,16 +100,16 @@ impl DocumentBuilder {
     /// If this method is used for key agreement, an error will occur if a
     /// standalone verification method is not used.
     pub fn verification_relationship(
-        mut self, relationship: &VerificationRelationship, vm: &Kind<VerificationMethod>,
+        mut self, relationship: &KeyPurpose, vm: &Kind<VerificationMethod>,
     ) -> anyhow::Result<Self> {
         match relationship {
-            VerificationRelationship::Authentication => {
+            KeyPurpose::Authentication => {
                 self.doc.authentication.get_or_insert(vec![]).push(vm.clone());
             }
-            VerificationRelationship::AssertionMethod => {
+            KeyPurpose::AssertionMethod => {
                 self.doc.assertion_method.get_or_insert(vec![]).push(vm.clone());
             }
-            VerificationRelationship::KeyAgreement => match vm {
+            KeyPurpose::KeyAgreement => match vm {
                 Kind::Object(vm) => {
                     self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm.clone()));
                 }
@@ -123,12 +119,22 @@ impl DocumentBuilder {
                     ));
                 }
             },
-            VerificationRelationship::CapabilityInvocation => {
+            KeyPurpose::CapabilityInvocation => {
                 self.doc.capability_invocation.get_or_insert(vec![]).push(vm.clone());
             }
-            VerificationRelationship::CapabilityDelegation => {
+            KeyPurpose::CapabilityDelegation => {
                 self.doc.capability_delegation.get_or_insert(vec![]).push(vm.clone());
             }
+            KeyPurpose::VerificationMethod => match vm {
+                Kind::Object(vm) => {
+                    self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
+                }
+                Kind::String(_) => {
+                    return Err(anyhow!(
+                        "verification method must be a standalone verification method"
+                    ));
+                }
+            },
         }
         Ok(self)
     }
@@ -143,27 +149,6 @@ impl DocumentBuilder {
         self.doc.did_document_metadata = Some(md);
         self.doc
     }
-}
-
-/// Verification relationships.
-///
-/// <https://www.w3.org/TR/did-1.0/#verification-relationships>
-#[derive(Debug, Clone)]
-pub enum VerificationRelationship {
-    /// <https://www.w3.org/TR/did-1.0/#authentication>
-    Authentication,
-
-    /// <https://www.w3.org/TR/did-1.0/#assertion>
-    AssertionMethod,
-
-    /// <https://www.w3.org/TR/did-1.0/#key-agreement>
-    KeyAgreement,
-
-    /// <https://www.w3.org/TR/did-1.0/#capability-invocation>
-    CapabilityInvocation,
-
-    /// <https://www.w3.org/TR/did-1.0/#capability-delegation>
-    CapabilityDelegation,
 }
 
 /// A builder for creating a verification method.

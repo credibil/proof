@@ -11,6 +11,28 @@ use crate::{CreateOptions, DidOperator, Document};
 
 use super::DidWebVh;
 
+impl DidWebVh {
+    /// Create a new DID Document from the provided HTTP URL.
+    /// 
+    /// (A DID URL will be constructed from the HTTP URL).
+    /// 
+    /// # Errors
+    /// 
+    /// Will fail if the DID URL is not a valid or the verifying key is invalid.
+    pub fn create(
+        url: &str, _op: &impl DidOperator, _options: CreateOptions,
+    ) -> crate::Result<Document> {
+        let _did_str = DidWebVhUrl::builder(url).build();
+        todo!()
+    }
+
+    /// Converts a `did:webvh` DID document to a `did:web` DID document.
+    #[must_use]
+    pub fn convert_to_web(_vh_doc: &Document) -> Document {
+        todo!()
+    }
+}
+
 /// `DidWebVhUrl` provides a type for constructing URLs for the `did:webvh`
 /// method.
 pub struct DidWebVhUrl {
@@ -76,28 +98,6 @@ impl DidWebVhUrl {
     //         self.scid = Some("".to_string());
     //     }
     // }
-}
-
-impl DidWebVh {
-    /// Create a new DID Document from the provided HTTP URL.
-    /// 
-    /// (A DID URL will be constructed from the HTTP URL).
-    /// 
-    /// # Errors
-    /// 
-    /// Will fail if the DID URL is not a valid or the verifying key is invalid.
-    pub fn create(
-        url: &str, _op: &impl DidOperator, _options: CreateOptions,
-    ) -> crate::Result<Document> {
-        let _did_str = DidWebVhUrl::builder(url).build();
-        todo!()
-    }
-
-    /// Converts a `did:webvh` DID document to a `did:web` DID document.
-    #[must_use]
-    pub fn convert_to_web(_vh_doc: &Document) -> Document {
-        todo!()
-    }
 }
 
 #[cfg(test)]

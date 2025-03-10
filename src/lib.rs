@@ -17,23 +17,20 @@ mod core;
 pub mod document;
 mod error;
 mod jwk;
-mod key;
-mod resolution;
-mod web;
-mod webvh;
+pub mod key;
+mod operation;
+pub mod web;
+pub mod webvh;
 
 use std::future::Future;
 
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::{CreateOptions, Document};
-pub use document::builders::*;
+pub use operation::create::*;
 pub use error::Error;
-pub use key::DidKey;
-pub use resolution::{
+pub use operation::resolve::{
     ContentType, Dereferenced, Metadata, Options, Resolved, Resource, dereference, resolve,
 };
-pub use web::DidWeb;
-pub use webvh::DidWebVh;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
@@ -74,8 +71,7 @@ pub trait DidOperator: Send + Sync {
     /// Used to generate key identifiers using a multibase value derived from
     /// the public key.
     /// 
-    /// Default implementation returns `None` in which case a hardcoded string
-    /// is used: `key-0`.
+    /// Default implementation returns `None`.
     fn authorization(&self) -> Option<PublicKeyJwk> {
         None
     }
