@@ -114,7 +114,9 @@ pub struct Document {
 }
 
 /// Services are used to express ways of communicating with the DID subject or
-/// associated entities. They can be any type of service the DID subject wants
+/// associated entities.
+/// 
+/// They can be any type of service the DID subject wants
 /// to advertise, including decentralized identity management services for
 /// further discovery, authentication, authorization, or interaction.
 ///
@@ -143,7 +145,9 @@ pub struct Service {
 
 /// A DID document can express verification methods, such as cryptographic
 /// public keys, which can be used to authenticate or authorize interactions
-/// with the DID subject or associated parties. For example, a cryptographic
+/// with the DID subject or associated parties.
+/// 
+/// For example, a cryptographic
 /// public key can be used as a verification method with respect to a digital
 /// signature; in such usage, it verifies that the signer could use the
 /// associated cryptographic private key. Verification methods might take many
