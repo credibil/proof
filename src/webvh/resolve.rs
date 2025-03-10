@@ -33,7 +33,7 @@ pub async fn resolve(
     did: &str, options: Option<Options>, resolver: impl DidResolver,
 ) -> crate::Result<Resolved> {
     // Steps 1-7. Generate the URL to fetch the DID list document.
-    let url = url(did, None)?;
+    let url = http_url(did, None)?;
 
     // 8. The content type for the did.jsonl file SHOULD be text/jsonl.
     if let Some(opts) = options {
@@ -80,7 +80,7 @@ pub async fn resolve(
 ///
 /// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
 ///
-fn url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
+fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
     let Some(caps) = DID_REGEX.captures(did) else {
         return Err(Error::InvalidDid("DID is not a valid did:webvh".to_string()));
     };
@@ -160,21 +160,21 @@ mod test {
     fn should_construct_default_url() {
         let did =
             "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer";
-        let url = url(did, None).unwrap();
+        let url = http_url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/.well-known/did.jsonl");
     }
 
     #[test]
     fn should_construct_path_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer:dids:issuer";
-        let url = url(did, None).unwrap();
+        let url = http_url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
     #[test]
     fn should_construct_port_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer%3A8080";
-        let url = url(did, None).unwrap();
+        let url = http_url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");
     }
 }
