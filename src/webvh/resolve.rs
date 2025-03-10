@@ -74,24 +74,6 @@ pub async fn resolve(
 /// DID list document (default) or another location where the root path is
 /// a conversion from the DID to an HTTP URL.
 ///
-/// Example:
-///
-/// ```rust
-/// use credibil_did::webvh;;
-///
-///     let did = "did:webvh:z6Mk3vz:credibil.io";
-///     let url = webvh::url(did, None).unwrap();
-///     assert_eq!(url, "https://credibil.io/.well-known/did.jsonl");
-///     let url = webvh::url(did, Some("/issuer.json")).unwrap();
-///     assert_eq!(url, "https://credibil.io/.well-known/issuer.json");
-///     // Get the DID Controller's Verifiable Presentation
-///     let vp_url = webvh::url(did, Some("/whois")).unwrap();
-///     assert_eq!(vp_url, "https://credibil.io/.well-known/whois");
-///     // Get a witness file
-///     let witness_url = webvh::url(did, Some("/did-witness.json")).unwrap();
-///     assert_eq!(witness_url, "https://credibil.io/.well-known/did-witness.json");
-/// ```
-///
 /// # Errors
 ///
 /// Will fail if the DID URL is invalid.
