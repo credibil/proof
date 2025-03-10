@@ -14,7 +14,7 @@
 // X25519KeyAgreementKey2019   crv: Ed25519 | secp256k1 | P-256 | P-384 | p-521
 
 mod core;
-mod document;
+pub mod document;
 mod error;
 mod jwk;
 mod key;
@@ -30,7 +30,7 @@ pub use document::builders::*;
 pub use error::Error;
 pub use key::DidKey;
 pub use resolution::{
-    dereference, resolve, ContentType, Dereferenced, Metadata, Options, Resolved, Resource,
+    ContentType, Dereferenced, Metadata, Options, Resolved, Resource, dereference, resolve,
 };
 pub use web::DidWeb;
 pub use webvh::DidWebVh;
