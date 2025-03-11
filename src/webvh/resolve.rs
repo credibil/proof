@@ -10,10 +10,8 @@ use regex::Regex;
 use serde_json::json;
 
 use super::DidLogEntry;
-use crate::{
-    ContentType, DidResolver, Error, Metadata,
-    operation::resolve::{Options, Resolved},
-};
+use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
+use crate::{DidResolver, Error};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:webvh:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")
@@ -134,7 +132,7 @@ mod test {
     use anyhow::anyhow;
     use insta::assert_json_snapshot as assert_snapshot;
 
-    use crate::{Document, dereference};
+    use crate::{Document, operation::resolve::dereference};
 
     use super::*;
 

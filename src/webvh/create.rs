@@ -4,7 +4,8 @@
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
-use crate::{core::Kind, document::{Service, VerificationMethod}, Document, DocumentBuilder, KeyPurpose};
+use crate::{core::Kind, document::{Service, VerificationMethod}, Document, KeyPurpose};
+use crate::operation::create::DocumentBuilder;
 
 use super::{BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness};
 

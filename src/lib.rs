@@ -18,22 +18,53 @@ pub mod document;
 mod error;
 mod jwk;
 pub mod key;
-mod operation;
+pub mod operation;
 pub mod web;
 pub mod webvh;
 
-use std::future::Future;
+use std::{future::Future, str::FromStr};
 
+use anyhow::anyhow;
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::{CreateOptions, Document};
-pub use operation::create::*;
 pub use error::Error;
-pub use operation::resolve::{
-    ContentType, Dereferenced, Metadata, Options, Resolved, Resource, dereference, resolve,
-};
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
+
+/// DID methods supported by this crate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Method {
+    /// The `did:jwk` method.
+    Jwk,
+
+    /// The `did:key` method.
+    Key,
+
+    /// The `did:web` method.
+    Web,
+
+    /// The `did:webvh` method.
+    WebVh,
+}
+
+impl FromStr for Method {
+    type Err = Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let parts = s.split(':').collect::<Vec<_>>();
+        if parts.len() != 2  || parts[0] != "did" {
+            return Err(Error::Other(anyhow!(format!("invalid did method string {}", s))));
+        }
+        match *parts.get(1).unwrap_or(&"unknown") {
+            "jwk" => Ok(Self::Jwk),
+            "key" => Ok(Self::Key),
+            "web" => Ok(Self::Web),
+            "webvh" => Ok(Self::WebVh),
+            _ => Err(Error::MethodNotSupported(s.to_string())),
+        }
+    }
+}
 
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -77,7 +108,7 @@ pub trait DidOperator: Send + Sync {
     }
 }
 
-/// The purpose the requested key material will be used for.
+/// The purpose key material will be used for.
 pub enum KeyPurpose {
     /// The document's `verification_method` field.
     VerificationMethod,
