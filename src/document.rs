@@ -11,7 +11,7 @@ use credibil_infosec::jose::jwk::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 use crate::error::Error;
 
 /// DID Document
@@ -44,7 +44,7 @@ pub struct Document {
     /// verification methods are to be considered equivalent to proofs provided
     /// by the DID subject.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub controller: Option<Quota<String>>,
+    pub controller: Option<OneMany<String>>,
 
     /// A set of services, that express ways of communicating with the DID
     /// subject or related entities.
@@ -138,7 +138,7 @@ pub struct Service {
 
     /// One or more endpoints for the service.
     #[allow(clippy::struct_field_names)]
-    pub service_endpoint: Quota<Kind<Value>>,
+    pub service_endpoint: OneMany<Kind<Value>>,
 }
 
 /// A DID document can express verification methods, such as cryptographic

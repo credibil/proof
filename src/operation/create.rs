@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use crate::{
     ED25519_CODEC, KeyPurpose,
-    core::{Kind, Quota},
+    core::{Kind, OneMany},
 };
 
 use crate::document::{
@@ -23,7 +23,7 @@ use crate::document::{
 };
 
 /// A builder for creating a DID Document.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct DocumentBuilder {
     // Document under construction
     doc: Document,
@@ -54,16 +54,16 @@ impl DocumentBuilder {
     pub fn controller(mut self, controller: &str) -> Self {
         match self.doc.controller {
             Some(c) => match c {
-                Quota::One(cont) => {
-                    self.doc.controller = Some(Quota::Many(vec![cont, controller.to_string()]));
+                OneMany::One(cont) => {
+                    self.doc.controller = Some(OneMany::Many(vec![cont, controller.to_string()]));
                 }
-                Quota::Many(mut cont) => {
+                OneMany::Many(mut cont) => {
                     cont.push(controller.to_string());
-                    self.doc.controller = Some(Quota::Many(cont));
+                    self.doc.controller = Some(OneMany::Many(cont));
                 }
             },
             None => {
-                self.doc.controller = Some(Quota::One(controller.to_string()));
+                self.doc.controller = Some(OneMany::One(controller.to_string()));
             }
         }
         self

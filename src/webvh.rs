@@ -16,19 +16,16 @@ mod create;
 mod url;
 mod resolve;
 
+pub use create::{CreateBuilder, CreateResult};
 pub use resolve::{resolve, verify_log};
 
-// pub (crate) const SCID_PLACEHOLDER: &'static str = "{SCID}";
-// pub (crate) const METHOD: &'static str = "webvh";
-// pub (crate) const VERSION: &'static str = "0.5";
-// pub (crate) const BASE_CONTEXT: [&'static str; 2] = [
-//     "https://www.w3.org/ns/did/v1",
-//     "https://w3id.org/security/multikey/v1",
-// ];
-
-// pub (crate) fn protocol() -> String {
-//     format!("did:{METHOD}:{VERSION}")
-// }
+pub (crate) const SCID_PLACEHOLDER: &str = "{SCID}";
+pub (crate) const METHOD: &str = "webvh";
+pub (crate) const VERSION: &str = "0.5";
+pub (crate) const BASE_CONTEXT: [&str; 2] = [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/multikey/v1",
+];
 
 /// `DidWebVh` provides a type for implementing `did:webvh` operation and
 /// resolution methods.
@@ -41,7 +38,7 @@ pub type DidLog = Vec<DidLogEntry>;
 /// sequential changes to a DID document.
 ///
 /// <https://identity.foundation/didwebvh/#the-did-log-file>
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DidLogEntry {
     /// DID version number starting at 1 and incrementing by one per DID
