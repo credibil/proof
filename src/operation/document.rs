@@ -1,6 +1,6 @@
-//! # DID Create Operation
+//! # DID Document helpers.
 //!
-//! This crate provides helpers for the DID "Create" operation that are
+//! This module provides helpers to create and manipulate DID Documents
 //! independent of the DID method.
 //!
 //! See [Decentralized Identifiers (DIDs) v1.0](https://www.w3.org/TR/did-1.0/)
@@ -23,7 +23,7 @@ use crate::document::{
 };
 
 /// A builder for creating a DID Document.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct DocumentBuilder {
     // Document under construction
     doc: Document,
@@ -87,7 +87,7 @@ impl DocumentBuilder {
         self
     }
 
-    /// Add a verification relationship.
+    /// Add a verification method.
     ///
     /// Pass the ID of the verification method to associate with the
     /// relationship or a complete `VerificationMethod` instance if a standalone
@@ -99,10 +99,10 @@ impl DocumentBuilder {
     ///
     /// If this method is used for key agreement, an error will occur if a
     /// standalone verification method is not used.
-    pub fn verification_relationship(
-        mut self, relationship: &KeyPurpose, vm: &Kind<VerificationMethod>,
+    pub fn verification_method(
+        mut self, vm: &Kind<VerificationMethod>, purpose: &KeyPurpose,
     ) -> anyhow::Result<Self> {
-        match relationship {
+        match purpose {
             KeyPurpose::Authentication => {
                 self.doc.authentication.get_or_insert(vec![]).push(vm.clone());
             }

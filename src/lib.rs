@@ -109,6 +109,7 @@ pub trait DidOperator: Send + Sync {
 }
 
 /// The purpose key material will be used for.
+#[derive(Clone)]
 pub enum KeyPurpose {
     /// The document's `verification_method` field.
     VerificationMethod,

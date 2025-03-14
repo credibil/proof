@@ -6,15 +6,19 @@
 //! 
 //! See: <https://identity.foundation/didwebvh/next/>
 
-use chrono::{DateTime, Utc};
-use credibil_infosec::proof::w3c::Proof;
-use serde::{Deserialize, Serialize};
-
-use crate::Document;
-
 mod create;
 mod url;
 mod resolve;
+
+use chrono::{DateTime, Utc};
+use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
+use multibase::Base;
+use serde::{Deserialize, Serialize};
+use sha2::Digest;
+use uuid::Uuid;
+
+use crate::Document;
+use super::Method;
 
 pub use create::{CreateBuilder, CreateResult};
 pub use resolve::{resolve, verify_log};
@@ -29,7 +33,14 @@ pub (crate) const BASE_CONTEXT: [&str; 2] = [
 
 /// `DidWebVh` provides a type for implementing `did:webvh` operation and
 /// resolution methods.
+#[derive(Clone, Debug)]
 pub struct DidWebVh;
+
+impl Into<Method> for DidWebVh {
+    fn into(self) -> Method {
+        Method::WebVh
+    }
+}
 
 /// A `DidLog` is a set of log entries for a DID document.
 pub type DidLog = Vec<DidLogEntry>;
@@ -55,7 +66,55 @@ pub struct DidLogEntry {
     pub state: Document,
 
     /// Signed data integrity proof.
-    pub proof: Proof,
+    /// 
+    /// Note that in the final construction of a DID log entry, the `proof` is
+    /// required. However, it is not required when constructing the hash of the
+    /// log entry so is made optional here to support the build algorithm.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proof: Option<Proof>,
+}
+
+impl DidLogEntry {
+    /// Generate a log entry hash.
+    pub fn hash(&self) -> anyhow::Result<String> {
+        let entry = serde_json_canonicalizer::to_string(self)?;
+        let digest = sha2::Sha256::digest(entry.as_bytes());
+        let hash = multibase::encode(Base::Base58Btc, digest.as_slice());
+        Ok(hash)
+    }
+
+    /// Construct a data integrity proof for the log entry.
+    pub async fn sign(&mut self, signer: &impl Signer) -> anyhow::Result<()> {
+        if signer.algorithm() != Algorithm::EdDSA {
+            return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
+        }
+        let vm = signer.verification_method().await?;
+
+        let config = Proof {
+            id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
+            type_: "DataIntegrityProof".to_string(),
+            cryptosuite: Some("eddsa-jcs-2022".to_string()),
+            verification_method: vm,
+            created: Some(Utc::now()),
+            proof_purpose: "authentication".to_string(),
+            ..Proof::default()
+        };
+        let config_data = serde_json_canonicalizer::to_string(&config)?;
+        let config_hash = sha2::Sha256::digest(config_data.as_bytes());
+
+        let data = serde_json_canonicalizer::to_string(self)?;
+        let data_hash = sha2::Sha256::digest(data.as_bytes());
+
+        let payload_bytes = [config_hash.as_slice(), data_hash.as_slice()].concat();
+        let signature = signer.sign(&payload_bytes).await;
+        let value = multibase::encode(Base::Base58Btc, signature);
+
+        let mut proof = config.clone();
+        proof.proof_value = Some(value);
+
+        self.proof = Some(proof);
+        Ok(())
+    }
 }
 
 /// Parameters for a DID log entry.
@@ -78,7 +137,7 @@ pub struct Parameters {
     /// Can the DID be renamed and hosted on a different domain?
     pub portable: bool,
 
-    /// Hashes of ublic keys that may be added to the update keys in subsequent
+    /// Hashes of public keys that may be added to the update keys in subsequent
     /// key rotation operations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_key_hashes: Option<Vec<String>>,
