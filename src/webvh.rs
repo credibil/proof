@@ -36,9 +36,9 @@ pub (crate) const BASE_CONTEXT: [&str; 2] = [
 #[derive(Clone, Debug)]
 pub struct DidWebVh;
 
-impl Into<Method> for DidWebVh {
-    fn into(self) -> Method {
-        Method::WebVh
+impl From<DidWebVh> for Method {
+    fn from(_: DidWebVh) -> Self {
+        Self::WebVh
     }
 }
 
@@ -76,6 +76,10 @@ pub struct DidLogEntry {
 
 impl DidLogEntry {
     /// Generate a log entry hash.
+    /// 
+    /// # Errors
+    /// 
+    /// Will return an error if the entry fails serialization.
     pub fn hash(&self) -> anyhow::Result<String> {
         let entry = serde_json_canonicalizer::to_string(self)?;
         let digest = sha2::Sha256::digest(entry.as_bytes());
@@ -84,6 +88,11 @@ impl DidLogEntry {
     }
 
     /// Construct a data integrity proof for the log entry.
+    /// 
+    /// # Errors
+    /// 
+    /// Will return an error if the signer algorithm is not `EdDSA` or if the
+    /// proof structure cannot be serialized.
     pub async fn sign(&mut self, signer: &impl Signer) -> anyhow::Result<()> {
         if signer.algorithm() != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));

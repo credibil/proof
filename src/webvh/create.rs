@@ -2,12 +2,20 @@
 //!
 use anyhow::bail;
 use chrono::Utc;
-use credibil_infosec::{proof::w3c::Proof, Signer};
+use credibil_infosec::{Signer, proof::w3c::Proof};
 use serde::{Deserialize, Serialize};
 
-use crate::{core::Kind, document::{Service, VerificationMethod}, operation::document::DocumentBuilder, Document, KeyPurpose};
+use crate::{
+    Document, KeyPurpose,
+    core::Kind,
+    document::{Service, VerificationMethod},
+    operation::document::DocumentBuilder,
+};
 
-use super::{url::parse_url, DidLogEntry, Parameters, Witness, BASE_CONTEXT, METHOD, SCID_PLACEHOLDER, VERSION};
+use super::{
+    BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness,
+    url::parse_url,
+};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -44,14 +52,11 @@ pub struct WithoutVerificationMethods;
 /// The `CreateBuilder` has verification methods.
 #[derive(Clone)]
 pub struct WithVerificationMethods;
-/// The `CreateBuilder` is without a document.
 
 impl<U, K, V> CreateBuilder<U, K, V> {
     /// Create a new `CreateBuilder`.
     #[must_use]
-    pub fn new()
-    -> CreateBuilder<WithoutUrl, WithoutUpdateKeys, WithoutVerificationMethods>
-    {
+    pub fn new() -> CreateBuilder<WithoutUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
         CreateBuilder {
             host_and_path: WithoutUrl,
             update_keys: WithoutUpdateKeys,
@@ -92,14 +97,12 @@ impl CreateBuilder<WithoutUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
     /// a `did:webvh` DID.
     pub fn url(
         self, url: &str,
-    ) -> anyhow::Result<
-        CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods>,
-    > {
+    ) -> anyhow::Result<CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods>> {
         let host_and_path = parse_url(url)?;
         let controller = format!("did:{METHOD}:{SCID_PLACEHOLDER}:{host_and_path}");
         let mut db = DocumentBuilder::new(&controller);
         for ctx in &BASE_CONTEXT {
-            db = db.context(&Kind::String(ctx.to_string()));
+            db = db.context(&Kind::String((*ctx).to_string()));
         }
         Ok(CreateBuilder {
             host_and_path: WithUrl,
@@ -129,9 +132,7 @@ impl CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
     /// Will fail if the update keys are empty.
     pub fn update_keys(
         self, update_keys: Vec<String>,
-    ) -> anyhow::Result<
-        CreateBuilder<WithUrl, WithUpdateKeys, WithoutVerificationMethods>,
-    > {
+    ) -> anyhow::Result<CreateBuilder<WithUrl, WithUpdateKeys, WithoutVerificationMethods>> {
         if update_keys.is_empty() {
             bail!("update keys must not be empty.");
         }
@@ -156,18 +157,17 @@ impl CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
     /// Add the first verification method to be included in the DID document.
     ///
     /// At least one verification method is required to build the output result.
-    /// 
+    ///
     /// It is recommended to use
     /// [`operation::document::VerificationMethodBuilder`] to construct a
     /// verification method.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will fail if the verification method infornation is invalid.
     pub fn verification_method(
         self, verification_method: &Kind<VerificationMethod>, purpose: &KeyPurpose,
     ) -> anyhow::Result<CreateBuilder<WithUrl, WithoutUpdateKeys, WithVerificationMethods>> {
-
         let db = self.db.verification_method(verification_method, purpose)?;
 
         Ok(CreateBuilder {
@@ -191,12 +191,14 @@ impl CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
 
 impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     /// Set the DID to be portable (defaults to not portable)
-    pub fn portable(mut self, portable: bool) -> Self {
+    #[must_use]
+    pub const fn portable(mut self, portable: bool) -> Self {
         self.portable = portable;
         self
     }
 
     /// Add a next key hash to the list of next key hashes if required.
+    #[must_use]
     pub fn next_key_hash(mut self, next_key_hash: String) -> Self {
         self.next_key_hashes.get_or_insert(vec![]).push(next_key_hash);
         self
@@ -229,7 +231,8 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
 
     /// Set the permissable cache time in seconds for the DID. Defaults to 0 if
     /// not set here.
-    pub fn ttl(mut self, ttl: u64) -> Self {
+    #[must_use]
+    pub const fn ttl(mut self, ttl: u64) -> Self {
         self.ttl = ttl;
         self
     }
@@ -237,13 +240,13 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     /// Add another verification method to be included in the DID document.
     ///
     /// This can be called multiple times to add more verification methods.
-    /// 
+    ///
     /// It is recommended to use
     /// [`operation::document::VerificationMethodBuilder`] to construct a
     /// verification method.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will fail if the verification method infornation is invalid.
     pub fn verification_method(
         mut self, verification_method: &Kind<VerificationMethod>, purpose: &KeyPurpose,
@@ -253,21 +256,29 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     }
 
     /// Add an optional service endpoint to the DID document.
-    /// 
+    ///
     /// This can be called multiple times to add more service endpoints.
+    #[must_use]
     pub fn service(mut self, service: &Service) -> Self {
         self.db = self.db.service(service);
         self
     }
 
     /// Add any additional context to the DID document.
-    /// 
+    ///
     /// There is no need to call this for the default contexts for this DID
     /// method - these will be added automatically. Use this to add any
     /// additional contexts required by your specific use case.
-
+    ///
     /// Build the `CreateResult`, providing a `Signer` to construct a data
     /// integrity proof.
+    /// 
+    /// # Errors
+    /// 
+    /// Will fail if secondary algorithms fail such as generating a hash of the
+    /// log entry to calculate the `SCID` or failing to replace the placeholder
+    /// `SCID` with the calculated one. Will also fail if the provided signer
+    /// fails to sign the log entry.
     pub async fn build(self, signer: &impl Signer) -> anyhow::Result<CreateResult> {
         // Construct a preliminary document.
         let doc = self.db.build();
@@ -285,10 +296,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         };
 
         // Construct an initial log entry.
-        let version_time = match &doc.did_document_metadata {
-            Some(meta) => meta.created,
-            None => Utc::now(),
-        };
+        let version_time = doc.did_document_metadata.as_ref().map_or_else(Utc::now, |m| m.created);
         let initial_log_entry = DidLogEntry {
             version_id: SCID_PLACEHOLDER.to_string(),
             version_time,
@@ -300,7 +308,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         // Create the SCID from the hash of the log entry with the `{SCID}`
         // placeholder.
         let initial_hash = initial_log_entry.hash()?;
-        params.scid = initial_hash.clone();
+        params.scid.clone_from(&initial_hash);
 
         // Make a log entry from the placeholder.
         let initial_string = serde_json::to_string(&initial_log_entry)?;
@@ -317,7 +325,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         Ok(CreateResult {
             did: entry.state.id.clone(),
             document: entry.state.clone(),
-            log: vec![entry] 
+            log: vec![entry],
         })
     }
 }
