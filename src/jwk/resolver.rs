@@ -46,7 +46,7 @@ impl DidJwk {
             .map_err(|e| Error::InvalidDid(format!("issue decoding key: {e}")))?;
         let jwk = serde_json::from_slice(&decoded)
             .map_err(|e| Error::InvalidDid(format!("issue deserializing key: {e}")))?;
-        let op = Operator(MethodType::JsonWebKey { public_key_jwk: jwk });
+        let op = Operator(MethodType::JsonWebKey2020 { public_key_jwk: jwk });
 
         // per the spec, use the create operation to generate a DID document
         let options = CreateOptions {

@@ -45,7 +45,7 @@ impl DidJwk {
 
             let mut jwk = verifying_key.clone();
             jwk.x = Base64UrlUnpadded::encode_string(&x25519_bytes);
-            let method_type = MethodType::JsonWebKey { public_key_jwk: jwk };
+            let method_type = MethodType::JsonWebKey2020 { public_key_jwk: jwk };
 
             Some(vec![Kind::Object(VerificationMethod {
                 id: format!("{did}#key-1"),
@@ -72,7 +72,7 @@ impl DidJwk {
             PublicKeyFormat::Multikey => MethodType::Multikey {
                 public_key_multibase: verifying_key.to_multibase()?,
             },
-            _ => MethodType::JsonWebKey {
+            _ => MethodType::JsonWebKey2020 {
                 public_key_jwk: verifying_key,
             },
         };

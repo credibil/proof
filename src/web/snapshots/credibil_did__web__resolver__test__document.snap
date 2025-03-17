@@ -1,6 +1,6 @@
 ---
 source: src/web/resolver.rs
-assertion_line: 126
+assertion_line: 125
 expression: resolved.document
 ---
 {
@@ -13,7 +13,7 @@ expression: resolved.document
     {
       "id": "did:web:demo.credibil.io#key-0",
       "controller": "did:web:demo.credibil.io",
-      "type": "JsonWebKey",
+      "type": "JsonWebKey2020",
       "publicKeyJwk": {
         "kty": "EC",
         "crv": "ES256K",
@@ -32,7 +32,7 @@ expression: resolved.document
     {
       "id": "did:web:demo.credibil.io#key-1",
       "controller": "did:web:demo.credibil.io",
-      "type": "JsonWebKey",
+      "type": "JsonWebKey2020",
       "publicKeyJwk": {
         "kty": "EC",
         "crv": "ES256K",

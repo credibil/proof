@@ -67,10 +67,10 @@ impl DidWeb {
                         public_key_multibase: multibase::encode(Base::Base58Btc, &multi_bytes),
                     }
                 }
-                PublicKeyFormat::JsonWebKey => {
+                PublicKeyFormat::JsonWebKey2020 => {
                     let mut jwk = verifying_key.clone();
                     jwk.x = Base64UrlUnpadded::encode_string(&x25519_bytes);
-                    MethodType::JsonWebKey { public_key_jwk: jwk }
+                    MethodType::JsonWebKey2020 { public_key_jwk: jwk }
                 }
 
                 _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),
@@ -96,7 +96,7 @@ impl DidWeb {
                     public_key_multibase: multibase::encode(Base::Base58Btc, &multi_bytes),
                 }
             }
-            PublicKeyFormat::JsonWebKey => MethodType::JsonWebKey {
+            PublicKeyFormat::JsonWebKey2020 => MethodType::JsonWebKey2020 {
                 public_key_jwk: verifying_key,
             },
             _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),

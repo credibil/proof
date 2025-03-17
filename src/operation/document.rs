@@ -8,13 +8,11 @@
 //!
 
 use anyhow::anyhow;
-use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::PublicKeyJwk;
-use multibase::Base;
 use serde_json::Value;
 
 use crate::{
-    ED25519_CODEC, KeyPurpose,
+    KeyPurpose,
     core::{Kind, OneMany},
 };
 
@@ -200,21 +198,36 @@ impl VerificationMethodBuilder {
     ///
     /// Will fail if required format is multibase but the public key cannot be
     /// decoded into bytes.
+    /// TODO: Is there a nicer way to handle this? This type mapping is
+    /// awkward.
     pub fn public_key_format(mut self, format: &PublicKeyFormat) -> anyhow::Result<Self> {
         self.method = match format {
             PublicKeyFormat::Multikey => {
                 // multibase encode the public key
-                let key_bytes = Base64UrlUnpadded::decode_vec(&self.vm_key.x)?;
-                let mut multi_bytes = ED25519_CODEC.to_vec();
-                multi_bytes.extend_from_slice(&key_bytes);
                 MethodType::Multikey {
-                    public_key_multibase: multibase::encode(Base::Base58Btc, &multi_bytes),
+                    public_key_multibase: self.vm_key.to_multibase()?,
                 }
             }
-            PublicKeyFormat::JsonWebKey => MethodType::JsonWebKey {
+            PublicKeyFormat::Ed25519VerificationKey2020 => {
+                // multibase encode the public key
+                MethodType::Ed25519VerificationKey2020 {
+                    public_key_multibase: self.vm_key.to_multibase()?,
+                }
+            }
+            PublicKeyFormat::X25519KeyAgreementKey2020 => {
+                // multibase encode the public key
+                MethodType::X25519KeyAgreementKey2020 {
+                    public_key_multibase: self.vm_key.to_multibase()?,
+                }
+            }
+            PublicKeyFormat::JsonWebKey2020 => MethodType::JsonWebKey2020 {
                 public_key_jwk: self.vm_key.clone(),
             },
-            _ => return Err(anyhow!("unsupported public key format")),
+            PublicKeyFormat::EcdsaSecp256k1VerificationKey2019 => {
+                MethodType::EcdsaSecp256k1VerificationKey2019 {
+                    public_key_jwk: self.vm_key.clone(),
+                }
+            }
         };
         Ok(self)
     }

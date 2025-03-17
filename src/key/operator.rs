@@ -91,7 +91,7 @@ impl DidKey {
             PublicKeyFormat::Multikey => MethodType::Multikey {
                 public_key_multibase: multikey,
             },
-            _ => MethodType::JsonWebKey {
+            _ => MethodType::JsonWebKey2020 {
                 public_key_jwk: verifying_key,
             },
         };
