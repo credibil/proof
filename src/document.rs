@@ -168,73 +168,55 @@ pub struct VerificationMethod {
     /// A DID that identifies the verification method.
     pub id: String,
 
+    /// The type of verification method. SHOULD be a registered type in the
+    /// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+    #[serde(rename = "type")]
+    pub type_: MethodType,
+
     /// The DID of the controller of the verification method.
     pub controller: String,
 
-    /// The verification method type. SHOULD be a registered type (in DID
-    /// Specification Registries).
+    /// The format of the public key material.
     #[serde(flatten)]
-    pub method_type: MethodType,
+    pub key: PublicKeyFormat,
 }
 
-/// Verification method types supported by this library. SHOULD be registered in
-/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+/// The format of the public key material.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(tag = "type")]
 #[serde(rename_all_fields = "camelCase")]
-pub enum MethodType {
-    /// Generic Multi-key format.
-    Multikey {
+#[serde(untagged)]
+pub enum PublicKeyFormat {
+    /// The key is encoded as a Multibase string.
+    PublicKeyMultibase {
         /// The public key encoded as a Multibase.
-        public_key_multibase: String,
+        public_key_multibase: String
     },
 
-    /// `ED25519` Verification key, version 2020.
-    Ed25519VerificationKey2020 {
-        /// The public key encoded as a Multibase.
-        public_key_multibase: String,
-    },
-
-    /// `X25519` Key Agreement Key, version 2020.
-    X25519KeyAgreementKey2020 {
-        /// The public key encoded as a Multibase.
-        public_key_multibase: String,
-    },
-
-    /// JSON Web Key (JWK), version 2020.
-    JsonWebKey2020 {
+    /// The key is encoded as a JWK.
+    PublicKeyJwk {
         /// The public key encoded as a JWK.
-        public_key_jwk: PublicKeyJwk,
-    },
-
-    /// Secp256k1 Verification Key, version 2019.
-    EcdsaSecp256k1VerificationKey2019 {
-        /// The public key encoded as a JWK.
-        public_key_jwk: PublicKeyJwk,
+        public_key_jwk: PublicKeyJwk
     },
 }
 
-impl Default for MethodType {
+impl Default for PublicKeyFormat {
     fn default() -> Self {
-        Self::Multikey {
+        Self::PublicKeyMultibase {
             public_key_multibase: String::new(),
         }
     }
 }
 
-impl MethodType {
+impl PublicKeyFormat {
     /// Converts a Multibase public key to JWK format.
     ///
     /// # Errors
     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
         match self {
-            Self::JsonWebKey2020 { public_key_jwk }
-            | Self::EcdsaSecp256k1VerificationKey2019 { public_key_jwk } => {
+            Self::PublicKeyJwk { public_key_jwk } => {
                 Ok(public_key_jwk.clone())
             }
-            Self::Multikey { public_key_multibase }
-            | Self::Ed25519VerificationKey2020 { public_key_multibase }
-            | Self::X25519KeyAgreementKey2020 { public_key_multibase } => {
+            Self::PublicKeyMultibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)
                     .map_err(|e| Error::InvalidPublicKey(e.to_string()))
             }
@@ -242,10 +224,11 @@ impl MethodType {
     }
 }
 
-/// Specify the verification method type.
-// TODO: Review the need for this enum. Awkward repeat of MethodType.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub enum PublicKeyFormat {
+/// Verification method types supported by this library. SHOULD be registered in
+/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all_fields = "camelCase")]
+pub enum MethodType {
     /// Generic Multi-key format.
     #[default]
     Multikey,
@@ -263,11 +246,7 @@ pub enum PublicKeyFormat {
     EcdsaSecp256k1VerificationKey2019,
 }
 
-// TODO: set context based on key format:
-// - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
-// - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
-
-impl Display for PublicKeyFormat {
+impl Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Multikey => write!(f, "Multikey"),
@@ -278,6 +257,108 @@ impl Display for PublicKeyFormat {
         }
     }
 }
+
+// /// Verification method types supported by this library. SHOULD be registered in
+// /// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+// #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+// #[serde(tag = "type")]
+// #[serde(rename_all_fields = "camelCase")]
+// pub enum MethodType {
+//     /// Generic Multi-key format.
+//     Multikey {
+//         /// The public key encoded as a Multibase.
+//         public_key_multibase: String,
+//     },
+
+//     /// `ED25519` Verification key, version 2020.
+//     Ed25519VerificationKey2020 {
+//         /// The public key encoded as a Multibase.
+//         public_key_multibase: String,
+//     },
+
+//     /// `X25519` Key Agreement Key, version 2020.
+//     X25519KeyAgreementKey2020 {
+//         /// The public key encoded as a Multibase.
+//         public_key_multibase: String,
+//     },
+
+//     /// JSON Web Key (JWK), version 2020.
+//     JsonWebKey2020 {
+//         /// The public key encoded as a JWK.
+//         public_key_jwk: PublicKeyJwk,
+//     },
+
+//     /// Secp256k1 Verification Key, version 2019.
+//     EcdsaSecp256k1VerificationKey2019 {
+//         /// The public key encoded as a JWK.
+//         public_key_jwk: PublicKeyJwk,
+//     },
+// }
+
+// impl Default for MethodType {
+//     fn default() -> Self {
+//         Self::Multikey {
+//             public_key_multibase: String::new(),
+//         }
+//     }
+// }
+
+// impl MethodType {
+//     /// Converts a Multibase public key to JWK format.
+//     ///
+//     /// # Errors
+//     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
+//         match self {
+//             Self::JsonWebKey2020 { public_key_jwk }
+//             | Self::EcdsaSecp256k1VerificationKey2019 { public_key_jwk } => {
+//                 Ok(public_key_jwk.clone())
+//             }
+//             Self::Multikey { public_key_multibase }
+//             | Self::Ed25519VerificationKey2020 { public_key_multibase }
+//             | Self::X25519KeyAgreementKey2020 { public_key_multibase } => {
+//                 PublicKeyJwk::from_multibase(public_key_multibase)
+//                     .map_err(|e| Error::InvalidPublicKey(e.to_string()))
+//             }
+//         }
+//     }
+// }
+
+// /// Specify the verification method type.
+// // TODO: Review the need for this enum. Awkward repeat of MethodType.
+// #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+// pub enum PublicKeyFormat {
+//     /// Generic Multi-key format.
+//     #[default]
+//     Multikey,
+
+//     /// `ED25519` Verification key, version 2020.
+//     Ed25519VerificationKey2020,
+
+//     /// `X25519` Key Agreement Key, version 2020.
+//     X25519KeyAgreementKey2020,
+
+//     /// JSON Web Key (JWK), version 2020.
+//     JsonWebKey2020,
+
+//     /// Secp256k1 Verification Key, version 2019.
+//     EcdsaSecp256k1VerificationKey2019,
+// }
+
+// // TODO: set context based on key format:
+// // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
+// // - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
+
+// impl Display for PublicKeyFormat {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+//         match self {
+//             Self::Multikey => write!(f, "Multikey"),
+//             Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
+//             Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
+//             Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
+//             Self::EcdsaSecp256k1VerificationKey2019 => write!(f, "EcdsaSecp256k1VerificationKey2019"),
+//         }
+//     }
+// }
 
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.
@@ -331,11 +412,12 @@ pub struct DocumentMetadata {
 }
 
 /// Options that can be provided when creating a DID document.
+// TODO: Remove this and use builders instead.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOptions {
-    /// Format to use for the the public key.
-    pub public_key_format: PublicKeyFormat,
+    /// Verification method type.
+    pub method_type: MethodType,
 
     /// Default context for the DID document. SHOULD be set to
     /// `"https://www.w3.org/ns/did/v1"`.
@@ -358,7 +440,7 @@ pub struct CreateOptions {
 impl Default for CreateOptions {
     fn default() -> Self {
         Self {
-            public_key_format: PublicKeyFormat::default(),
+            method_type: MethodType::default(),
             enable_experimental_public_key_types: false,
             default_context: "https://www.w3.org/ns/did/v1".to_string(),
             enable_encryption_key_derivation: false,

@@ -10,8 +10,8 @@ expression: dereferenced
   "contentStream": {
     "VerificationMethod": {
       "id": "did:web:demo.credibil.io#key-0",
-      "controller": "did:web:demo.credibil.io",
       "type": "JsonWebKey2020",
+      "controller": "did:web:demo.credibil.io",
       "publicKeyJwk": {
         "kty": "EC",
         "crv": "ES256K",

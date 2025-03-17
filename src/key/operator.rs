@@ -36,19 +36,22 @@ impl DidKey {
 
         let did = format!("did:key:{multikey}");
 
-        let context = if options.public_key_format == PublicKeyFormat::Multikey
-            || options.public_key_format == PublicKeyFormat::Ed25519VerificationKey2020
-        {
-            Kind::String("https://w3id.org/security/data-integrity/v1".into())
-        } else {
-            let verif_type = &options.public_key_format;
-            Kind::Object(json!({
-                "publicKeyJwk": {
-                    "@id": "https://w3id.org/security#publicKeyJwk",
-                    "@type": "@json"
-                },
-                verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
-            }))
+        let context = match options.method_type {
+            MethodType::Multikey
+            | MethodType::Ed25519VerificationKey2020
+            | MethodType::X25519KeyAgreementKey2020 => {
+                Kind::String("https://w3id.org/security/data-integrity/v1".into())
+            }
+            MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
+                let verif_type = &options.method_type;
+                Kind::Object(json!({
+                    "publicKeyJwk": {
+                        "@id": "https://w3id.org/security#publicKeyJwk",
+                        "@type": "@json"
+                    },
+                    verif_type.to_string(): format!("https://w3id.org/security#{verif_type}"),
+                }))
+            }
         };
 
         // key agreement
@@ -68,17 +71,25 @@ impl DidKey {
             multi_bytes.extend_from_slice(&x25519_bytes);
             let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-            let method_type = match options.public_key_format {
-                PublicKeyFormat::Multikey => MethodType::Multikey {
-                    public_key_multibase: multikey.clone(),
-                },
-                _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),
+            let key_format = match &options.method_type {
+                MethodType::Multikey
+                | MethodType::Ed25519VerificationKey2020
+                | MethodType::X25519KeyAgreementKey2020 => {
+                    // multibase encode the public key
+                    PublicKeyFormat::PublicKeyMultibase {
+                        public_key_multibase: multikey.clone(),
+                    }
+                }
+                MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
+                    return Err(Error::InvalidPublicKey("Unsupported public key format".into()));
+                }
             };
 
             Some(vec![Kind::Object(VerificationMethod {
                 id: format!("{did}#{multikey}"),
                 controller: did.clone(),
-                method_type,
+                type_: options.method_type.clone(),
+                key: key_format,
                 ..VerificationMethod::default()
             })])
         } else {
@@ -87,11 +98,13 @@ impl DidKey {
 
         let kid = format!("{did}#{multikey}");
 
-        let method_type = match options.public_key_format {
-            PublicKeyFormat::Multikey => MethodType::Multikey {
+        let key_format = match &options.method_type {
+            MethodType::Multikey
+            | MethodType::Ed25519VerificationKey2020
+            | MethodType::X25519KeyAgreementKey2020 => PublicKeyFormat::PublicKeyMultibase {
                 public_key_multibase: multikey,
             },
-            _ => MethodType::JsonWebKey2020 {
+            _ => PublicKeyFormat::PublicKeyJwk {
                 public_key_jwk: verifying_key,
             },
         };
@@ -102,7 +115,8 @@ impl DidKey {
             verification_method: Some(vec![VerificationMethod {
                 id: kid.clone(),
                 controller: did,
-                method_type,
+                type_: options.method_type,
+                key: key_format,
                 ..VerificationMethod::default()
             }]),
             authentication: Some(vec![Kind::String(kid.clone())]),

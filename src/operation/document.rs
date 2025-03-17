@@ -7,8 +7,11 @@
 //! for more information.
 //!
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
+use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::PublicKeyJwk;
+use curve25519_dalek::edwards::CompressedEdwardsY;
+use multibase::Base;
 use serde_json::Value;
 
 use crate::{
@@ -156,6 +159,7 @@ pub struct VerificationMethodBuilder {
     did: String,
     kid: String,
     method: MethodType,
+    format: PublicKeyFormat,
 }
 
 impl VerificationMethodBuilder {
@@ -192,7 +196,10 @@ impl VerificationMethodBuilder {
         Ok(self)
     }
 
-    /// Specify the public key format.
+    /// Specify the verification method type.
+    ///
+    /// To generate an `X25519` public encryption key from an `Ed25519` key, use
+    /// [`derive_key_agreement`] instead of this function.
     ///
     /// # Errors
     ///
@@ -200,34 +207,43 @@ impl VerificationMethodBuilder {
     /// decoded into bytes.
     /// TODO: Is there a nicer way to handle this? This type mapping is
     /// awkward.
-    pub fn public_key_format(mut self, format: &PublicKeyFormat) -> anyhow::Result<Self> {
-        self.method = match format {
-            PublicKeyFormat::Multikey => {
+    pub fn method_type(mut self, mtype: &MethodType) -> anyhow::Result<Self> {
+        self.method = mtype.clone();
+        self.format = match mtype {
+            MethodType::Multikey
+            | MethodType::Ed25519VerificationKey2020
+            | MethodType::X25519KeyAgreementKey2020 => {
                 // multibase encode the public key
-                MethodType::Multikey {
+                PublicKeyFormat::PublicKeyMultibase {
                     public_key_multibase: self.vm_key.to_multibase()?,
                 }
             }
-            PublicKeyFormat::Ed25519VerificationKey2020 => {
-                // multibase encode the public key
-                MethodType::Ed25519VerificationKey2020 {
-                    public_key_multibase: self.vm_key.to_multibase()?,
-                }
-            }
-            PublicKeyFormat::X25519KeyAgreementKey2020 => {
-                // multibase encode the public key
-                MethodType::X25519KeyAgreementKey2020 {
-                    public_key_multibase: self.vm_key.to_multibase()?,
-                }
-            }
-            PublicKeyFormat::JsonWebKey2020 => MethodType::JsonWebKey2020 {
-                public_key_jwk: self.vm_key.clone(),
-            },
-            PublicKeyFormat::EcdsaSecp256k1VerificationKey2019 => {
-                MethodType::EcdsaSecp256k1VerificationKey2019 {
+            MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
+                PublicKeyFormat::PublicKeyJwk {
                     public_key_jwk: self.vm_key.clone(),
                 }
             }
+        };
+        Ok(self)
+    }
+
+    /// Special case for specifying the public key format: derive a `X25519` key
+    /// agreement verification method from an `Ed25519` key.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if decoding or computing the Edwards Curve point fails.
+    pub fn derive_key_agreement(mut self) -> anyhow::Result<Self> {
+        // derive an X25519 public encryption key from the Ed25519 key
+        let key_bytes = Base64UrlUnpadded::decode_vec(&self.vm_key.x)?;
+        let edwards_y = CompressedEdwardsY::from_slice(&key_bytes)?;
+        let Some(edwards_point) = edwards_y.decompress() else {
+            bail!("Edwards Y cannot be decompressed to a point");
+        };
+        let x25519_bytes = edwards_point.to_montgomery().to_bytes();
+        self.method = MethodType::X25519KeyAgreementKey2020;
+        self.format = PublicKeyFormat::PublicKeyMultibase {
+            public_key_multibase: multibase::encode(Base::Base58Btc, x25519_bytes),
         };
         Ok(self)
     }
@@ -238,7 +254,8 @@ impl VerificationMethodBuilder {
         VerificationMethod {
             id: self.kid,
             controller: self.did,
-            method_type: self.method,
+            type_: self.method,
+            key: self.format,
             ..VerificationMethod::default()
         }
     }

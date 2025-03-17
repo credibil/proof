@@ -29,8 +29,8 @@ expression: resolved
     "verificationMethod": [
       {
         "id": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ#key-0",
-        "controller": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ",
         "type": "Multikey",
+        "controller": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ",
         "publicKeyMultibase": "z6MkgvBQYigJWBZPFRs4rrg2uANy7xiufGs5WRHE3u8KGSWF"
       }
     ],
@@ -43,8 +43,8 @@ expression: resolved
     "keyAgreement": [
       {
         "id": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ#key-1",
-        "controller": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ",
         "type": "JsonWebKey2020",
+        "controller": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IkVTMjU2SyIsIngiOiJKSnpQaTRxeTJydktTVk85RjItMDVWV2VYMm9oc3dYN1NUbzg3TUdxcVB3IiwieSI6IkMxUnRGbnFXOWxOTEI1ejcycG9uMTIzZHh2MWtEcVUzUWw1QjhzMFdjXzQifQ",
         "publicKeyJwk": {
           "kty": "EC",
           "crv": "ES256K",
