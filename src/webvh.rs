@@ -6,9 +6,10 @@
 //! 
 //! See: <https://identity.foundation/didwebvh/next/>
 
-mod create;
+pub mod create;
 mod url;
 mod resolve;
+mod validate;
 
 use chrono::{DateTime, Utc};
 use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
@@ -20,10 +21,14 @@ use uuid::Uuid;
 use crate::Document;
 use super::Method;
 
-pub use create::{CreateBuilder, CreateResult};
 pub use resolve::{resolve, verify_log};
 
-pub (crate) const SCID_PLACEHOLDER: &str = "{SCID}";
+/// Placeholder for the self-certifying identifier (SCID) in a DID URL.
+/// 
+/// Gets replaced by the generated SCID when constructing a DID document and
+/// log entry.
+pub const SCID_PLACEHOLDER: &str = "{SCID}";
+
 pub (crate) const METHOD: &str = "webvh";
 pub (crate) const VERSION: &str = "0.5";
 pub (crate) const BASE_CONTEXT: [&str; 2] = [

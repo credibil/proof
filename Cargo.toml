@@ -1,12 +1,59 @@
 [package]
-resolver = "2"
-authors = ["Credibil"]
 name = "credibil-did"
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+
+[dependencies]
+anyhow.workspace = true
+base64ct.workspace = true
+chrono = { version = "0.4.40", features = ["serde"] }
+credibil-infosec = "0.1.1"
+curve25519-dalek = "4.1.3"
+ed25519-dalek.workspace = true
+multibase.workspace = true
+rand = "0.8.5"
+regex = "1.11.1"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = { version = "1.0.139", features = ["alloc"] }
+serde_json_canonicalizer = "0.3.0"
+sha2.workspace = true
+thiserror = "2.0.11"
+url = "2.5.4"
+uuid = { version = "1.15.1", features = ["v4"] }
+
+[dev-dependencies]
+axum = "0.8.1"
+insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
+tokio = { version = "1.43.0", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["fs"] }
+test-signer = { path = "crates/test-signer" }
+
+[workspace]
+members = [
+    "crates/test-signer"
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["Credibil"]
 description = """
 Decentralized Identifier (DID) utilities for Rust. See features for implemented DID methods and key
 management or use core functionality to implement your own.
 """
-# categories = ["decentralized identity", "did"]
 edition = "2024"
 exclude = [".*", "/docs", "snapshots/"]
 homepage = "https://credibil.io"
@@ -17,46 +64,24 @@ repository = "https://github.com/credibil/credibil"
 rust-version = "1.85"
 version = "0.1.2"
 
-# [lib]
-# crate-type = ["cdylib", "rlib"]
-
-# [[example]]
-# name = "did-web"
-
-[features]
-
-[lints.rust]
+[workspace.lints.rust]
 missing_docs = "warn"
 unused_extern_crates = "warn"
 
-[lints.clippy]
+[workspace.lints.clippy]
 all = "warn"
 pedantic = "warn"
 nursery = "warn"
 
-[dependencies]
+[workspace.dependencies]
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
-chrono = { version = "0.4.40", features = ["serde"] }
+credibil-did = { path = "." } 
 credibil-infosec = "0.1.1"
-curve25519-dalek = "4.1.3"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 multibase = "0.9.1"
-rand = "0.8.5"
-regex = "1.11.1"
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", features = ["alloc"] }
-serde_json_canonicalizer = "0.3.0"
 sha2 = "0.10.8"
-thiserror = "2.0.11"
-url = "2.5.4"
-uuid = { version = "1.15.1", features = ["v4"] }
-
-[dev-dependencies]
-axum = "0.8.1"
-insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
-tokio = { version = "1.43.0", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["fs"] }
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 
 [patch.crates-io]
 credibil-infosec = { git = "https://github.com/credibil/infosec", branch = "proof" }

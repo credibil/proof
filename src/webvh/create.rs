@@ -13,8 +13,7 @@ use crate::{
 };
 
 use super::{
-    BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness,
-    url::parse_url,
+    url::parse_url, DidLogEntry, Parameters, Witness, BASE_CONTEXT, METHOD, SCID_PLACEHOLDER, VERSION
 };
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
@@ -73,6 +72,17 @@ impl<U, K, V> CreateBuilder<U, K, V> {
             db: DocumentBuilder::default(),
             proof: Proof::default(),
         }
+    }
+}
+
+impl<U, K, V> CreateBuilder<U, K, V> {
+    /// Retrieve the current document id (DID) from the builder.
+    /// 
+    /// Note this will have a preliminary value based on the `SCID` placeholder
+    /// and will be replaced during execution of the `build` method.
+    #[must_use]
+    pub fn did(&self) -> &str {
+        self.db.did()
     }
 }
 
@@ -153,7 +163,9 @@ impl CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
             proof: self.proof,
         })
     }
+}
 
+impl CreateBuilder<WithUrl, WithUpdateKeys, WithoutVerificationMethods> {
     /// Add the first verification method to be included in the DID document.
     ///
     /// At least one verification method is required to build the output result.
@@ -167,7 +179,7 @@ impl CreateBuilder<WithUrl, WithoutUpdateKeys, WithoutVerificationMethods> {
     /// Will fail if the verification method infornation is invalid.
     pub fn verification_method(
         self, verification_method: &Kind<VerificationMethod>, purpose: &KeyPurpose,
-    ) -> anyhow::Result<CreateBuilder<WithUrl, WithoutUpdateKeys, WithVerificationMethods>> {
+    ) -> anyhow::Result<CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods>> {
         let db = self.db.verification_method(verification_method, purpose)?;
 
         Ok(CreateBuilder {
@@ -209,7 +221,8 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     /// # Errors
     ///
     /// Will fail if the witness threshold is zero, the witness list is empty,
-    /// or the contribution (weight) of a witness is zero.
+    /// the contribution (weight) of a witness is zero, or the sum of
+    /// contributions would never reach the threshold.
     pub fn witness(mut self, witness: &Witness) -> anyhow::Result<Self> {
         if witness.threshold == 0 {
             bail!("witness threshold must be greater than zero.");
@@ -217,6 +230,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         if witness.witnesses.is_empty() {
             bail!("witness witness list must not be empty.");
         }
+        let mut total_weight = 0;
         for w in &witness.witnesses {
             if !w.id.starts_with("did:key:") {
                 bail!("witness id must be a 'did:key:'.");
@@ -224,6 +238,10 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
             if w.weight == 0 {
                 bail!("witness weight must be greater than zero.");
             }
+            total_weight += w.weight;
+        }
+        if total_weight < witness.threshold {
+            bail!("total witness weight must be greater than or equal to the threshold.");
         }
         self.witness = Some(witness.clone());
         Ok(self)
@@ -279,6 +297,10 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     /// log entry to calculate the `SCID` or failing to replace the placeholder
     /// `SCID` with the calculated one. Will also fail if the provided signer
     /// fails to sign the log entry.
+    /// 
+    /// The builder will construct the log entry (including the DID document)
+    /// and then validate it before returning. If validation fails an error will
+    /// be returned.
     pub async fn build(self, signer: &impl Signer) -> anyhow::Result<CreateResult> {
         // Construct a preliminary document.
         let doc = self.db.build();
@@ -321,6 +343,10 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
 
         // Sign (adds a proof to the log entry).
         entry.sign(signer).await?;
+
+        // Validate (without witness validation).
+        // let update_keys: Vec<&str> = params.update_keys.iter().map(std::string::String::as_str).collect();
+        // validate_entry(&entry, &update_keys, None)?;
 
         Ok(CreateResult {
             did: entry.state.id.clone(),

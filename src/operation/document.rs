@@ -150,6 +150,18 @@ impl DocumentBuilder {
         self.doc.did_document_metadata = Some(md);
         self.doc
     }
+
+    /// Retrieve the current `DID` from the builder.
+    /// 
+    /// Note that although the `DID` (document identifier) is called for in the
+    /// constructor of this builder, some DID methods may use temporary values
+    /// and replace the DID in the final document. Users of this function should
+    /// be aware of the DID method context in which it is used to determine the
+    /// reliability of the value.
+    #[must_use]
+    pub fn did(&self) -> &str {
+        &self.doc.id
+    }
 }
 
 /// A builder for creating a verification method.

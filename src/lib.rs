@@ -13,7 +13,7 @@
 // Ed25519VerificationKey2020 |             Ed25519VerificationKey2018 |
 // X25519KeyAgreementKey2019   crv: Ed25519 | secp256k1 | P-256 | P-384 | p-521
 
-mod core;
+pub mod core;
 pub mod document;
 mod error;
 mod jwk;
