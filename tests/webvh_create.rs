@@ -17,7 +17,7 @@ use credibil_did::{
 use multibase::Base;
 use serde_json::Value;
 use sha2::Digest;
-use test_signer::new_keyring;
+use kms::new_keyring;
 
 use credibil_did::webvh::SCID_PLACEHOLDER;
 

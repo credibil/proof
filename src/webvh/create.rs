@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    url::parse_url, DidLogEntry, Parameters, Witness, BASE_CONTEXT, METHOD, SCID_PLACEHOLDER, VERSION
+    url::parse_url, verify::validate_witness, DidLogEntry, Parameters, Witness, BASE_CONTEXT, METHOD, SCID_PLACEHOLDER, VERSION
 };
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
@@ -77,7 +77,7 @@ impl<U, K, V> CreateBuilder<U, K, V> {
 
 impl<U, K, V> CreateBuilder<U, K, V> {
     /// Retrieve the current document id (DID) from the builder.
-    /// 
+    ///
     /// Note this will have a preliminary value based on the `SCID` placeholder
     /// and will be replaced during execution of the `build` method.
     #[must_use]
@@ -224,25 +224,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     /// the contribution (weight) of a witness is zero, or the sum of
     /// contributions would never reach the threshold.
     pub fn witness(mut self, witness: &Witness) -> anyhow::Result<Self> {
-        if witness.threshold == 0 {
-            bail!("witness threshold must be greater than zero.");
-        }
-        if witness.witnesses.is_empty() {
-            bail!("witness witness list must not be empty.");
-        }
-        let mut total_weight = 0;
-        for w in &witness.witnesses {
-            if !w.id.starts_with("did:key:") {
-                bail!("witness id must be a 'did:key:'.");
-            }
-            if w.weight == 0 {
-                bail!("witness weight must be greater than zero.");
-            }
-            total_weight += w.weight;
-        }
-        if total_weight < witness.threshold {
-            bail!("total witness weight must be greater than or equal to the threshold.");
-        }
+        validate_witness(witness)?;
         self.witness = Some(witness.clone());
         Ok(self)
     }
@@ -290,17 +272,13 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
     ///
     /// Build the `CreateResult`, providing a `Signer` to construct a data
     /// integrity proof.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the `SCID` or failing to replace the placeholder
     /// `SCID` with the calculated one. Will also fail if the provided signer
     /// fails to sign the log entry.
-    /// 
-    /// The builder will construct the log entry (including the DID document)
-    /// and then validate it before returning. If validation fails an error will
-    /// be returned.
     pub async fn build(self, signer: &impl Signer) -> anyhow::Result<CreateResult> {
         // Construct a preliminary document.
         let doc = self.db.build();
@@ -324,7 +302,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
             version_time,
             parameters: params.clone(),
             state: doc.clone(),
-            proof: None,
+            proof: vec![],
         };
 
         // Create the SCID from the hash of the log entry with the `{SCID}`
@@ -343,10 +321,6 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
 
         // Sign (adds a proof to the log entry).
         entry.sign(signer).await?;
-
-        // Validate (without witness validation).
-        // let update_keys: Vec<&str> = params.update_keys.iter().map(std::string::String::as_str).collect();
-        // validate_entry(&entry, &update_keys, None)?;
 
         Ok(CreateResult {
             did: entry.state.id.clone(),

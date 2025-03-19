@@ -40,11 +40,11 @@ axum = "0.8.1"
 insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["fs"] }
-test-signer = { path = "crates/test-signer" }
+kms = { path = "crates/kms" }
 
 [workspace]
 members = [
-    "crates/test-signer"
+    "crates/kms"
 ]
 resolver = "2"
 

@@ -95,17 +95,6 @@ pub trait DidOperator: Send + Sync {
     /// Provides verification material to be used for the specified
     /// verification method.
     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
-
-    /// Provides an authorization key for the control (create, update,
-    /// deactivate) of the DID document.
-    /// 
-    /// Used to generate key identifiers using a multibase value derived from
-    /// the public key.
-    /// 
-    /// Default implementation returns `None`.
-    fn authorization(&self) -> Option<PublicKeyJwk> {
-        None
-    }
 }
 
 /// The purpose key material will be used for.

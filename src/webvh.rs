@@ -9,7 +9,7 @@
 pub mod create;
 mod url;
 mod resolve;
-mod validate;
+pub mod verify;
 
 use chrono::{DateTime, Utc};
 use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
@@ -74,9 +74,9 @@ pub struct DidLogEntry {
     /// 
     /// Note that in the final construction of a DID log entry, the `proof` is
     /// required. However, it is not required when constructing the hash of the
-    /// log entry so is made optional here to support the build algorithm.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof: Option<Proof>,
+    /// log entry so is made skippable here here to support the build algorithm.
+    #[serde(skip_serializing_if = "Vec::is_empty", default = "Vec::new")]
+    pub proof: Vec<Proof>,
 }
 
 impl DidLogEntry {
@@ -125,8 +125,7 @@ impl DidLogEntry {
 
         let mut proof = config.clone();
         proof.proof_value = Some(value);
-
-        self.proof = Some(proof);
+        self.proof.push(proof);
         Ok(())
     }
 }
