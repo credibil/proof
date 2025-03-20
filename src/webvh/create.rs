@@ -310,7 +310,8 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         let initial_hash = initial_log_entry.hash()?;
         params.scid.clone_from(&initial_hash);
 
-        // Make a log entry from the placeholder.
+        // Make a log entry from the placeholder, replacing the placeholder SCID
+        // with the calculated SCID (content hash).
         let initial_string = serde_json::to_string(&initial_log_entry)?;
         let replaced = initial_string.replace(SCID_PLACEHOLDER, &initial_hash);
         let mut entry = serde_json::from_str::<DidLogEntry>(&replaced)?;

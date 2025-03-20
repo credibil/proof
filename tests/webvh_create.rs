@@ -14,15 +14,15 @@ use credibil_did::{
         },
     },
 };
+use kms::new_keyring;
 use multibase::Base;
 use serde_json::Value;
 use sha2::Digest;
-use kms::new_keyring;
 
 use credibil_did::webvh::SCID_PLACEHOLDER;
 
-// Test the happy path of creating a new, minimal `did:webvh` document and
-// associated log entry.
+// Test the happy path of creating a new `did:webvh` document and associated log
+// entry. Should just work without errors.
 #[tokio::test]
 async fn create_success() {
     let domain_and_path = "https://credibil.io/issuers/example";
@@ -86,8 +86,44 @@ async fn create_success() {
     };
 
     let doc_builder = doc_builder.service(&service);
-    
+
     let result = doc_builder.build(&signer).await.expect("should build document");
     let log_entry = serde_json::to_string(&result.log[0]).expect("should serialize log entry");
     println!("{log_entry}");
 }
+
+// Create a minimal document and then verify the proof. Should verify without
+// errors.
+// #[tokio::test]
+// async fn proof() {
+//     let domain_and_path = "https://credibil.io/issuers/example";
+
+//     let update_multi =
+//         new_keyring().verifying_key_multibase().await.expect("should get multibase key");
+
+//     let signer = new_keyring();
+//     let auth_jwk = signer.verifying_key_jwk().await.expect("should get JWK key");
+
+//     let doc_builder: CreateBuilder<WithUrl, WithUpdateKeys, WithoutVerificationMethods> =
+//         CreateBuilder::<WithoutUrl, WithoutUpdateKeys, WithoutVerificationMethods>::new()
+//             .url(domain_and_path)
+//             .expect("should apply URL")
+//             .update_keys(vec![update_multi])
+//             .expect("should apply update keys");
+
+//     let vm_jwk = new_keyring().verifying_key_jwk().await.expect("should get JWK key");
+//     let vm = VerificationMethodBuilder::new(&vm_jwk)
+//         .key_id(doc_builder.did(), VmKeyId::Authorization(auth_jwk))
+//         .expect("should apply key ID")
+//         .method_type(&MethodType::Ed25519VerificationKey2020)
+//         .expect("should apply method type")
+//         .build();
+
+//     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
+//     let result = doc_builder
+//         .verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+//         .expect("should apply verification method")
+//         .build(&signer).await.expect("should build document");
+
+//     verify_proofs(&result.log[0], resolver);
+// }

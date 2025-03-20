@@ -80,7 +80,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// For example, a DID resolver for `did:web` would fetch the DID document from
 /// the specified URL. A DID resolver for `did:dht`should forward the request to
 /// a remote DID resolver for the DHT network.
-pub trait DidResolver: Send + Clone {
+pub trait DidResolver: Send + Sync + Clone {
     /// Resolve the DID URL to a DID Document.
     ///
     /// # Errors

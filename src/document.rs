@@ -189,13 +189,13 @@ pub enum PublicKeyFormat {
     /// The key is encoded as a Multibase string.
     PublicKeyMultibase {
         /// The public key encoded as a Multibase.
-        public_key_multibase: String
+        public_key_multibase: String,
     },
 
     /// The key is encoded as a JWK.
     PublicKeyJwk {
         /// The public key encoded as a JWK.
-        public_key_jwk: PublicKeyJwk
+        public_key_jwk: PublicKeyJwk,
     },
 }
 
@@ -208,18 +208,32 @@ impl Default for PublicKeyFormat {
 }
 
 impl PublicKeyFormat {
-    /// Converts a Multibase public key to JWK format.
+    /// Return the key as a JWK
     ///
     /// # Errors
+    /// Will return an error if the key is multibase encoded and cannot be
+    /// decoded.
     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
         match self {
-            Self::PublicKeyJwk { public_key_jwk } => {
-                Ok(public_key_jwk.clone())
-            }
+            Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
             Self::PublicKeyMultibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)
                     .map_err(|e| Error::InvalidPublicKey(e.to_string()))
             }
+        }
+    }
+
+    /// Return the key as a multibase string.
+    /// 
+    /// # Errors
+    /// Will return an error if the key is a JWK and cannot be encoded as a
+    /// multibase string.
+    pub fn multibase(&self) -> crate::Result<String> {
+        match self {
+            Self::PublicKeyJwk { public_key_jwk } => {
+                public_key_jwk.to_multibase().map_err(|e| Error::InvalidPublicKey(e.to_string()))
+            }
+            Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
         }
     }
 }
@@ -253,7 +267,9 @@ impl Display for MethodType {
             Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
             Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
             Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
-            Self::EcdsaSecp256k1VerificationKey2019 => write!(f, "EcdsaSecp256k1VerificationKey2019"),
+            Self::EcdsaSecp256k1VerificationKey2019 => {
+                write!(f, "EcdsaSecp256k1VerificationKey2019")
+            }
         }
     }
 }
