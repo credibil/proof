@@ -1,9 +1,12 @@
-//! # Keystore
+//! # Key management and basic provider implementations for testing.
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::{Algorithm, PublicKey, PublicKeyJwk, Receiver, SecretKey, SharedSecret, Signer};
-use ed25519_dalek::{PUBLIC_KEY_LENGTH, Signer as _, SigningKey};
+use credibil_did::{CreateOptions, DidOperator, DidResolver, Document, KeyPurpose, key::DidKey};
+use credibil_infosec::{
+    Algorithm, Curve, KeyType, PublicKey, PublicKeyJwk, Receiver, SecretKey, SharedSecret, Signer,
+};
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, Signer as _, SigningKey, VerifyingKey};
 use multibase::Base;
 use rand::rngs::OsRng;
 use sha2::Digest;
@@ -15,6 +18,7 @@ pub const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 pub struct Keyring {
     pub did: String,
     pub secret_key: String,
+    verifying_key: VerifyingKey,
 }
 
 pub fn new_keyring() -> Keyring {
@@ -29,6 +33,7 @@ pub fn new_keyring() -> Keyring {
     Keyring {
         did: format!("did:key:{verifying_multi}"),
         secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
+        verifying_key,
     }
 }
 
@@ -97,5 +102,30 @@ impl Receiver for Keyring {
 
         let secret_key = SecretKey::from(secret_key.to_bytes());
         secret_key.shared_secret(sender_public)
+    }
+}
+
+// TODO: Expand to support did:web and did:webvh methods
+impl DidResolver for Keyring {
+    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+        if !url.starts_with("did:key:") {
+            return Err(anyhow!("unsupported DID method"));
+        }
+        DidKey::create(self, CreateOptions::default()).map_err(|e| anyhow!(e))
+    }
+}
+
+// TODO: Expand to support did:web and did:webvh methods
+impl DidOperator for Keyring {
+    fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
+        match purpose {
+            KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
+                kty: KeyType::Okp,
+                crv: Curve::Ed25519,
+                x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
+                ..PublicKeyJwk::default()
+            }),
+            _ => panic!("unsupported purpose"),
+        }
     }
 }
