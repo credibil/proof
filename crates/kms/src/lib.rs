@@ -16,9 +16,10 @@ pub const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 
 #[derive(Default, Clone, Debug)]
 pub struct Keyring {
-    pub did: String,
-    pub secret_key: String,
+    did: String,
+    secret_key: String,
     verifying_key: VerifyingKey,
+    vm_secret_key: String,
 }
 
 pub fn new_keyring() -> Keyring {
@@ -30,10 +31,14 @@ pub fn new_keyring() -> Keyring {
     multi_bytes.extend_from_slice(&verifying_key.to_bytes());
     let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
 
+    // authorization key (Ed25519) - used for generating a verification method.
+    let vm_signing_key = SigningKey::generate(&mut OsRng);
+
     Keyring {
         did: format!("did:key:{verifying_multi}"),
         secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
         verifying_key,
+        vm_secret_key: Base64UrlUnpadded::encode_string(vm_signing_key.as_bytes()),
     }
 }
 
@@ -50,6 +55,20 @@ impl Keyring {
     pub async fn verifying_key_multibase(&self) -> anyhow::Result<String> {
         let key = self.verifying_key_jwk().await?;
         key.to_multibase()
+    }
+
+    // Generate an authorization key for use in creating a verification method
+    // identifier. 
+    pub fn auth_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
+        let auth_key = SigningKey::generate(&mut OsRng);
+        let key = auth_key.verifying_key().as_bytes().to_vec();
+        PublicKeyJwk::from_bytes(&key)
+    }
+
+    // Get a predicable public key to use in a verificatio method.
+    pub fn vm_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
+        let key = Base64UrlUnpadded::decode_vec(&self.vm_secret_key)?;
+        PublicKeyJwk::from_bytes(&key)
     }
 }
 

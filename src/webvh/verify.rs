@@ -88,7 +88,12 @@ pub async fn authorized_key(
     };
     match cs {
         Resource::VerificationMethod(vm) => {
-            if !log_entry.parameters.update_keys.contains(&vm.id) {
+            let parts = vm.id.split('#').collect::<Vec<&str>>();
+            if parts.len() != 2 {
+                bail!("verification method id has an unexpected format");
+            }
+            let key = parts[1].to_string();
+            if !log_entry.parameters.update_keys.contains(&key) {
                 bail!("verification method is not authorized to update the log entry");
             }
             Ok(vm)
