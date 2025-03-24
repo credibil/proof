@@ -21,7 +21,7 @@ use uuid::Uuid;
 use crate::Document;
 use super::Method;
 
-pub use resolve::{resolve, verify_log};
+pub use resolve::{resolve, resolve_log};
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 /// 
@@ -90,6 +90,27 @@ impl DidLogEntry {
         let digest = sha2::Sha256::digest(entry.as_bytes());
         let hash = multibase::encode(Base::Base58Btc, digest.as_slice());
         Ok(hash)
+    }
+
+    /// Verify the hash of the log entry.
+    /// 
+    /// # Errors
+    /// 
+    /// Will return an error if the version ID has an unexpected format or if
+    /// the hash does not match the hash computed from the previous log entry.
+    pub fn verify_hash(&self, previous_version: &str) -> anyhow::Result<()> {
+        let parts = self.version_id.split('-').collect::<Vec<&str>>();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("log entry version id has an unexpected format"));
+        }
+        let mut pre_version_entry = self.clone();
+        pre_version_entry.proof = Vec::new();
+        pre_version_entry.version_id = previous_version.to_string();
+        let hash = pre_version_entry.hash()?;
+        if hash != parts[1] {
+            return Err(anyhow::anyhow!("log entry hash does not match version id"));
+        }
+        Ok(())
     }
 
     /// Construct a data integrity proof for the log entry.

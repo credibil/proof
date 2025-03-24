@@ -33,12 +33,13 @@ const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
 
 /// DID methods supported by this crate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     /// The `did:jwk` method.
     Jwk,
 
     /// The `did:key` method.
+    #[default]
     Key,
 
     /// The `did:web` method.
@@ -53,7 +54,7 @@ impl FromStr for Method {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let parts = s.split(':').collect::<Vec<_>>();
-        if parts.len() != 2  || parts[0] != "did" {
+        if parts.len() < 2  || parts[0] != "did" {
             return Err(Error::Other(anyhow!(format!("invalid did method string {}", s))));
         }
         match *parts.get(1).unwrap_or(&"unknown") {

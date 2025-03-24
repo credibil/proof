@@ -152,7 +152,7 @@ impl DocumentBuilder {
     }
 
     /// Retrieve the current `DID` from the builder.
-    /// 
+    ///
     /// Note that although the `DID` (document identifier) is called for in the
     /// constructor of this builder, some DID methods may use temporary values
     /// and replace the DID in the final document. Users of this function should

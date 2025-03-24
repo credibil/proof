@@ -126,11 +126,6 @@ pub struct Options {
     /// [`accept`](https://www.w3.org/TR/did-spec-registries/#accept) resolution option.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept: Option<ContentType>,
-
-    // pub public_key_format: Option<String>,
-    /// Additional options.
-    #[serde(flatten)]
-    pub additional: Option<HashMap<String, Metadata>>,
 }
 
 /// The DID URL syntax supports parameters in the URL query component. Adding a
@@ -174,7 +169,7 @@ pub struct Parameters {
 }
 
 /// Returned by `resolve` DID methods.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Resolved {
     /// The DID resolution context.
@@ -194,7 +189,7 @@ pub struct Resolved {
 }
 
 /// `Dereferenced` contains the result of dereferencing a DID URL.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dereferenced {
     /// A metadata structure consisting of values relating to the results of the
@@ -216,7 +211,7 @@ pub struct Dereferenced {
 /// Resource represents the DID document resource returned as a result of DID
 /// dereferencing. The resource is a DID document or a subset of a DID document.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Resource {
     ///  DID `Document` resource.
     Document(Document),
@@ -235,7 +230,7 @@ impl Default for Resource {
 }
 
 /// DID document metadata.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     /// The Media Type of the returned resource.
@@ -258,7 +253,7 @@ pub struct Metadata {
 }
 
 /// The Media Type of the returned resource.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum ContentType {
     /// JSON-LD representation of a DID document.
     #[default]
@@ -277,7 +272,7 @@ pub enum ContentType {
 /// Metadata about the `content_stream`. If `content_stream` is a DID document,
 /// this MUST be `DidDocumentMetadata`. If dereferencing is unsuccessful, MUST
 /// be empty.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContentMetadata {
     /// The DID document metadata.
