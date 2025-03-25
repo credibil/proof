@@ -8,8 +8,8 @@
 
 pub mod create;
 pub mod update;
-mod url;
-mod resolve;
+pub mod url;
+pub mod resolve;
 pub mod verify;
 
 use chrono::{DateTime, Utc};
@@ -21,8 +21,6 @@ use uuid::Uuid;
 
 use crate::Document;
 use super::Method;
-
-pub use resolve::{resolve, resolve_log};
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 /// 

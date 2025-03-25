@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{operation::document::{DocumentBuilder, Update}, DidResolver, Document};
 
-use super::{DidLogEntry, WitnessEntry, resolve_log};
+use super::{DidLogEntry, WitnessEntry, resolve::resolve_log};
 
 /// Builder to update a DID document and associated log entry.
 ///

@@ -55,7 +55,7 @@ impl<O> DocumentBuilder<O> {
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub fn from(doc: Document) -> DocumentBuilder<Update> {
+    pub const fn from(doc: Document) -> DocumentBuilder<Update> {
         DocumentBuilder {
             operation: Update,
             doc,
