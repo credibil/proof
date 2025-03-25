@@ -25,20 +25,41 @@ use crate::document::{
 
 /// A builder for creating a DID Document.
 #[derive(Clone, Debug, Default)]
-pub struct DocumentBuilder {
+pub struct DocumentBuilder<O> {
+    /// Operation being performed
+    pub operation: O,
+
     // Document under construction
     doc: Document,
 }
 
-impl DocumentBuilder {
+// Typestate state guards for a `DocumentBuilder`.
+
+/// The `DocumentBuilder` is being used to create new DID document.
+#[derive(Default)]
+pub struct Create;
+/// The `DocumentBuilder` is being used to update an existing DID document.
+#[derive(Default)]
+pub struct Update;
+
+impl<O> DocumentBuilder<O> {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
-    pub fn new(did: &str) -> Self {
+    pub fn new(did: &str) -> DocumentBuilder<Create> {
         let doc = Document {
             id: did.to_string(),
             ..Document::default()
         };
-        Self { doc }
+        DocumentBuilder { operation: Create, doc }
+    }
+
+    /// Creates a new `DocumentBuilder` from an existing `Document`.
+    #[must_use]
+    pub fn from(doc: Document) -> DocumentBuilder<Update> {
+        DocumentBuilder {
+            operation: Update,
+            doc,
+        }
     }
 
     /// Add an also-known-as identifier.
@@ -140,17 +161,6 @@ impl DocumentBuilder {
         Ok(self)
     }
 
-    /// Set default metadata with created timestamp and build the DID Document.
-    #[must_use]
-    pub fn build(mut self) -> Document {
-        let md = DocumentMetadata {
-            created: chrono::Utc::now(),
-            ..Default::default()
-        };
-        self.doc.did_document_metadata = Some(md);
-        self.doc
-    }
-
     /// Retrieve the current `DID` from the builder.
     ///
     /// Note that although the `DID` (document identifier) is called for in the
@@ -161,6 +171,30 @@ impl DocumentBuilder {
     #[must_use]
     pub fn did(&self) -> &str {
         &self.doc.id
+    }
+}
+
+impl<Create> DocumentBuilder<Create> {
+    /// Set default metadata with created timestamp and build the DID Document.
+    #[must_use]
+    pub fn build(mut self) -> Document {
+        let md = DocumentMetadata {
+            created: chrono::Utc::now(),
+            ..Default::default()
+        };
+        self.doc.did_document_metadata = Some(md);
+        self.doc
+    }
+}
+
+impl<Update> DocumentBuilder<Update> {
+    /// Construct a new DID `Document` with updated timestamp.
+    #[must_use]
+    pub fn update(mut self) -> Document {
+        let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
+        md.updated = Some(chrono::Utc::now());
+        self.doc.did_document_metadata = Some(md);
+        self.doc
     }
 }
 

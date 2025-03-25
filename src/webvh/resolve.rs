@@ -135,7 +135,7 @@ fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
 /// Will fail if the log entries are invalid.
 ///
 pub async fn resolve_log(
-    log: &[DidLogEntry], witnesses: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
+    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
     resolver: &impl DidResolver,
 ) -> crate::Result<Document> {
     if log.is_empty() {
@@ -220,7 +220,7 @@ pub async fn resolve_log(
 
         // 9. Check witness proofs.
         if log[i].parameters.witness.is_some() {
-            if let Some(witness_entries) = witnesses {
+            if let Some(witness_entries) = witness_proofs {
                 if let Err(error) = verify_witness(&log[i], witness_entries, resolver).await {
                     return Err(Error::Other(error));
                 }
