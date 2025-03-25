@@ -284,7 +284,7 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         let doc = self.db.build();
 
         // Construct preliminary parameters.
-        let mut params = Parameters {
+        let params = Parameters {
             method: self.method,
             scid: self.scid,
             update_keys: self.update_keys.0,
@@ -308,7 +308,6 @@ impl CreateBuilder<WithUrl, WithUpdateKeys, WithVerificationMethods> {
         // Create the SCID from the hash of the log entry with the `{SCID}`
         // placeholder.
         let initial_hash = initial_log_entry.hash()?;
-        params.scid.clone_from(&initial_hash);
 
         // Make a log entry from the placeholder, replacing the placeholder SCID
         // with the calculated SCID (content hash).

@@ -1,5 +1,4 @@
-//! Tests for the creation of a new `did:webvh` document and associated
-//! log entry.
+//! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_did::{
     KeyPurpose,
@@ -7,11 +6,12 @@ use credibil_did::{
     document::{MethodType, Service, VerificationMethod},
     operation::document::{VerificationMethodBuilder, VmKeyId},
     webvh::{
-        Witness, WitnessWeight,
+        SCID_PLACEHOLDER, Witness, WitnessEntry, WitnessWeight,
         create::{
             CreateBuilder, WithUpdateKeys, WithUrl, WithoutUpdateKeys, WithoutUrl,
             WithoutVerificationMethods,
         },
+        resolve_log,
     },
 };
 use kms::new_keyring;
@@ -19,19 +19,15 @@ use multibase::Base;
 use serde_json::Value;
 use sha2::Digest;
 
-use credibil_did::webvh::SCID_PLACEHOLDER;
-
-// Test the happy path of creating a new `did:webvh` document and associated log
-// entry. Should just work without errors.
+// Construct a log with a single entry and make sure it resolves to a DID document.
 #[tokio::test]
-async fn create_success() {
+async fn resolve_single() {
     let domain_and_path = "https://credibil.io/issuers/example";
-
-    let update_multi =
-        new_keyring().verifying_key_multibase().await.expect("should get multibase key");
 
     let signer = new_keyring();
     let auth_jwk = signer.verifying_key_jwk().await.expect("should get JWK key");
+    let update_multi =
+        signer.verifying_key_multibase().await.expect("should get multibase key");
 
     let doc_builder: CreateBuilder<WithUrl, WithUpdateKeys, WithoutVerificationMethods> =
         CreateBuilder::<WithoutUrl, WithoutUpdateKeys, WithoutVerificationMethods>::new()
@@ -61,18 +57,20 @@ async fn create_success() {
 
     let doc_builder = doc_builder.next_key_hash(next_hash);
 
+    let witness_keyring1 = new_keyring();
+    let witness1 = WitnessWeight {
+        id: witness_keyring1.did_key(),
+        weight: 50,
+    };
+    let witness_keyring2 = new_keyring();
+    let witness2 = WitnessWeight {
+        id: witness_keyring2.did_key(),
+        weight: 40,
+    };
+
     let witnesses = Witness {
         threshold: 60,
-        witnesses: vec![
-            WitnessWeight {
-                id: new_keyring().did().to_string(),
-                weight: 50,
-            },
-            WitnessWeight {
-                id: new_keyring().did().to_string(),
-                weight: 40,
-            },
-        ],
+        witnesses: vec![witness1, witness2],
     };
     let doc_builder =
         doc_builder.witness(&witnesses).expect("witness information should be applied").ttl(60);
@@ -87,7 +85,19 @@ async fn create_success() {
 
     let doc_builder = doc_builder.service(&service);
 
-    let result = doc_builder.build(&signer).await.expect("should build document");
-    let log_entry = serde_json::to_string(&result.log[0]).expect("should serialize log entry");
-    println!("{log_entry}");
+    let create_result = doc_builder.build(&signer).await.expect("should build document");
+
+    let witness_proof1 =
+        create_result.log[0].proof(&witness_keyring1).await.expect("should get witness proof");
+    let witness_proof2 =
+        create_result.log[0].proof(&witness_keyring2).await.expect("should get witness proof");
+    let witness_proofs = vec![WitnessEntry {
+        version_id: create_result.log[0].version_id.clone(),
+        proof: vec![witness_proof1, witness_proof2],
+    }];
+
+    let resolved_doc = resolve_log(&create_result.log, Some(&witness_proofs), None, &signer)
+        .await
+        .expect("should resolve log");
+    assert_eq!(create_result.document, resolved_doc);
 }

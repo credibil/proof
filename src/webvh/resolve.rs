@@ -124,7 +124,8 @@ fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
     Ok(url)
 }
 
-/// Primary verification of the contents of the `did.jsonl` file.
+/// Verification of the contents of the `did.jsonl` file and resolution into a
+/// DID document.
 ///
 /// To use this function, read the contents of the `did.jsonl` file into a
 /// vector of `DidLogEntry` structs and pass to this function.
@@ -137,8 +138,13 @@ pub async fn resolve_log(
     log: &[DidLogEntry], witnesses: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
     resolver: &impl DidResolver,
 ) -> crate::Result<Document> {
+    if log.is_empty() {
+        return Err(Error::Other(anyhow!("log entries are empty")));
+    }
+
     let mut prev_index = 0;
-    let mut prev_version = SCID_PLACEHOLDER.to_string();
+    // let mut prev_version = SCID_PLACEHOLDER.to_string();
+    let mut prev_version = log[0].parameters.scid.clone();
     let mut prev_time = DateTime::<Utc>::MIN_UTC;
     let mut doc = Document::default();
     let mut prev_next_key_hashes: Option<Vec<String>> = None;
@@ -175,7 +181,10 @@ pub async fn resolve_log(
 
         // 5. If the entry is the first one, verify the SCID.
         if i == 0 {
-            let mut initial_log_entry = log[i].clone();
+            let initial_string = serde_json::to_string(&log[i]).map_err(|e| Error::Other(e.into()))?;
+            let replaced = initial_string.replace(&log[i].parameters.scid, SCID_PLACEHOLDER);
+            let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)
+                .map_err(|e| Error::Other(e.into()))?;
             initial_log_entry.version_id = SCID_PLACEHOLDER.to_string();
             initial_log_entry.proof = vec![];
             let hash = initial_log_entry.hash().map_err(Error::Other)?;
@@ -276,7 +285,7 @@ mod test {
     }
 
     #[test]
-    fn should_construct_default_url() {
+    fn default_url() {
         let did =
             "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer";
         let url = http_url(did, None).unwrap();
@@ -284,14 +293,14 @@ mod test {
     }
 
     #[test]
-    fn should_construct_path_url() {
+    fn path_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer:dids:issuer";
         let url = http_url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
     #[test]
-    fn should_construct_port_url() {
+    fn port_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer%3A8080";
         let url = http_url(did, None).unwrap();
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");

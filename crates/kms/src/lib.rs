@@ -17,6 +17,7 @@ pub const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 #[derive(Default, Clone, Debug)]
 pub struct Keyring {
     did: String,
+    did_key: String,
     secret_key: String,
     verifying_key: VerifyingKey,
     vm_secret_key: String,
@@ -36,6 +37,7 @@ pub fn new_keyring() -> Keyring {
 
     Keyring {
         did: format!("did:key:{verifying_multi}"),
+        did_key: format!("did:key:{verifying_multi}#{verifying_multi}"),
         secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
         verifying_key,
         vm_secret_key: Base64UrlUnpadded::encode_string(vm_signing_key.as_bytes()),
@@ -45,6 +47,10 @@ pub fn new_keyring() -> Keyring {
 impl Keyring {
     pub fn did(&self) -> String {
         self.did.clone()
+    }
+
+    pub fn did_key(&self) -> String {
+        self.did_key.clone()
     }
 
     pub async fn verifying_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {

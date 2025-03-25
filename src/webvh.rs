@@ -103,23 +103,41 @@ impl DidLogEntry {
         if parts.len() != 2 {
             return Err(anyhow::anyhow!("log entry version id has an unexpected format"));
         }
-        let mut pre_version_entry = self.clone();
-        pre_version_entry.proof = Vec::new();
-        pre_version_entry.version_id = previous_version.to_string();
-        let hash = pre_version_entry.hash()?;
+        let mut prev_version_entry = self.clone();
+        prev_version_entry.proof = Vec::new();
+        prev_version_entry.version_id = previous_version.to_string();
+        let hash = prev_version_entry.hash()?;
         if hash != parts[1] {
             return Err(anyhow::anyhow!("log entry hash does not match version id"));
         }
         Ok(())
     }
 
-    /// Construct a data integrity proof for the log entry.
+    /// Construct a controller's data integrity proof for the log entry.
     /// 
     /// # Errors
     /// 
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
     pub async fn sign(&mut self, signer: &impl Signer) -> anyhow::Result<()> {
+        let proof = self.proof(signer).await?;
+        self.proof.push(proof);
+        Ok(())
+    }
+
+    /// Construct a proof from a DID log entry.
+    ///
+    /// This function can be used to construct a controller's proof or a
+    /// witness's proof, but is intended to be used for witnesses. For
+    /// convenience, the `sign` method will construct a proof and add it to the
+    /// log entry and should be used instead of this method for a controller's
+    /// proof.
+    /// 
+    /// # Errors
+    /// 
+    /// Will return an error if the signer algorithm is not `EdDSA` or if the
+    /// proof structure cannot be serialized.
+    pub async fn proof(&self, signer: &impl Signer) -> anyhow::Result<Proof> {
         if signer.algorithm() != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
@@ -146,8 +164,7 @@ impl DidLogEntry {
 
         let mut proof = config.clone();
         proof.proof_value = Some(value);
-        self.proof.push(proof);
-        Ok(())
+        Ok(proof)
     }
 }
 

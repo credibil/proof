@@ -55,7 +55,9 @@ pub async fn verify_proof(
     log_entry: &DidLogEntry, proof: &Proof, signer: ProofSigner, resolver: &impl DidResolver,
 ) -> anyhow::Result<()> {
     let mut unsigned_entry = log_entry.clone();
-    unsigned_entry.proof = Vec::new();
+    if matches!(signer, ProofSigner::Controller) {
+        unsigned_entry.proof = Vec::new();
+    }
     let unsigned_data = serde_json_canonicalizer::to_string(&unsigned_entry)?;
     let unsigned_hash = sha2::Sha256::digest(unsigned_data.as_bytes());
 
@@ -185,7 +187,10 @@ pub async fn verify_witness(
             continue;
         }
         for proof in &witness.proof {
-            if matches!(verify_proof(log_entry, proof, ProofSigner::Witness, resolver).await, Ok(())) {
+            if matches!(
+                verify_proof(log_entry, proof, ProofSigner::Witness, resolver).await,
+                Ok(())
+            ) {
                 if let Some(witness_weight) =
                     witness_weights.witnesses.iter().find(|w| w.id == proof.verification_method)
                 {
