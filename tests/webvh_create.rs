@@ -43,9 +43,9 @@ async fn create_success() {
         )),
     };
     let doc = DocumentBuilder::<Create>::new(&did)
-        .verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .service(&service)
+        .add_service(&service)
         .build();
 
     let next_multi =

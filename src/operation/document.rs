@@ -50,7 +50,10 @@ impl<O> DocumentBuilder<O> {
             id: did.to_string(),
             ..Document::default()
         };
-        DocumentBuilder { operation: Create, doc }
+        DocumentBuilder {
+            operation: Create,
+            doc,
+        }
     }
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
@@ -73,7 +76,7 @@ impl<O> DocumentBuilder<O> {
     ///
     /// Chain to add multiple controllers.
     #[must_use]
-    pub fn controller(mut self, controller: &str) -> Self {
+    pub fn add_controller(mut self, controller: &str) -> Self {
         match self.doc.controller {
             Some(c) => match c {
                 OneMany::One(cont) => {
@@ -91,22 +94,82 @@ impl<O> DocumentBuilder<O> {
         self
     }
 
+    /// Remove a controller.
+    ///
+    /// # Errors
+    /// Will fail if the controller is not found.
+    pub fn remove_controller(mut self, controller: &str) -> anyhow::Result<Self> {
+        match self.doc.controller {
+            Some(c) => match c {
+                OneMany::One(cont) => {
+                    if cont == controller {
+                        self.doc.controller = None;
+                    } else {
+                        bail!("controller not found");
+                    }
+                }
+                OneMany::Many(mut cont) => {
+                    if let Some(pos) = cont.iter().position(|c| c == controller) {
+                        cont.remove(pos);
+                        self.doc.controller = Some(OneMany::Many(cont));
+                    } else {
+                        bail!("controller not found");
+                    }
+                }
+            },
+            None => {
+                bail!("controller not found");
+            }
+        }
+        Ok(self)
+    }
+
     /// Add a service endpoint.
     ///
     /// Chain to add multiple service endpoints.
     #[must_use]
-    pub fn service(mut self, service: &Service) -> Self {
+    pub fn add_service(mut self, service: &Service) -> Self {
         self.doc.service.get_or_insert(vec![]).push(service.clone());
         self
+    }
+
+    /// Remove a service endpoint.
+    ///
+    /// # Errors
+    /// Will fail if no service with the supplied ID is found.
+    pub fn remove_service(mut self, service_id: &str) -> anyhow::Result<Self> {
+        if let Some(services) = &mut self.doc.service {
+            if let Some(pos) = services.iter().position(|s| s.id == service_id) {
+                services.remove(pos);
+            } else {
+                bail!("service not found");
+            }
+        } else {
+            bail!("service not found");
+        }
+        Ok(self)
     }
 
     /// Add a context.
     ///
     /// Chain to add multiple contexts.
     #[must_use]
-    pub fn context(mut self, context: &Kind<Value>) -> Self {
+    pub fn add_context(mut self, context: &Kind<Value>) -> Self {
         self.doc.context.push(context.clone());
         self
+    }
+
+    /// Remove a context.
+    ///
+    /// # Errors
+    /// Will fail if the context is not found.
+    pub fn remove_context(mut self, context: &Kind<Value>) -> anyhow::Result<Self> {
+        if let Some(pos) = self.doc.context.iter().position(|c| c == context) {
+            self.doc.context.remove(pos);
+        } else {
+            bail!("context not found");
+        }
+        Ok(self)
     }
 
     /// Add a verification method.
@@ -121,7 +184,7 @@ impl<O> DocumentBuilder<O> {
     ///
     /// If this method is used for key agreement, an error will occur if a
     /// standalone verification method is not used.
-    pub fn verification_method(
+    pub fn add_verification_method(
         mut self, vm: &Kind<VerificationMethod>, purpose: &KeyPurpose,
     ) -> anyhow::Result<Self> {
         match purpose {
@@ -157,6 +220,69 @@ impl<O> DocumentBuilder<O> {
                     ));
                 }
             },
+        }
+        Ok(self)
+    }
+
+    /// Remove a verification method.
+    ///
+    /// # Errors
+    /// Will fail if no verification method with the supplied ID is found.
+    pub fn remove_verification_method(mut self, vm_id: &str) -> anyhow::Result<Self> {
+        let mut found = false;
+        if let Some(auths) = &mut self.doc.authentication {
+            if let Some(pos) = auths.iter().position(|vm| match vm {
+                Kind::Object(vm) => vm.id == vm_id,
+                Kind::String(id) => id == vm_id,
+            }) {
+                auths.remove(pos);
+                found = true;
+            }
+        }
+        if let Some(asserts) = &mut self.doc.assertion_method {
+            if let Some(pos) = asserts.iter().position(|vm| match vm {
+                Kind::Object(vm) => vm.id == vm_id,
+                Kind::String(id) => id == vm_id,
+            }) {
+                asserts.remove(pos);
+                found = true;
+            }
+        }
+        if let Some(kas) = &mut self.doc.key_agreement {
+            if let Some(pos) = kas.iter().position(|vm| match vm {
+                Kind::Object(vm) => vm.id == vm_id,
+                Kind::String(id) => id == vm_id,
+            }) {
+                kas.remove(pos);
+                found = true;
+            }
+        }
+        if let Some(caps) = &mut self.doc.capability_invocation {
+            if let Some(pos) = caps.iter().position(|vm| match vm {
+                Kind::Object(vm) => vm.id == vm_id,
+                Kind::String(id) => id == vm_id,
+            }) {
+                caps.remove(pos);
+                found = true;
+            }
+        }
+        if let Some(caps) = &mut self.doc.capability_delegation {
+            if let Some(pos) = caps.iter().position(|vm| match vm {
+                Kind::Object(vm) => vm.id == vm_id,
+                Kind::String(id) => id == vm_id,
+            }) {
+                caps.remove(pos);
+                found = true;
+            }
+        }
+        if let Some(vms) = &mut self.doc.verification_method {
+            if let Some(pos) = vms.iter().position(|vm| vm.id == vm_id) {
+                vms.remove(pos);
+                found = true;
+            }
+        }
+        if !found {
+            bail!("verification method not found");
         }
         Ok(self)
     }

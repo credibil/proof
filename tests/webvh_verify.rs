@@ -36,7 +36,7 @@ async fn simple_proof() {
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     let doc = DocumentBuilder::<Create>::new(&did)
-        .verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .build();
 
@@ -79,9 +79,9 @@ async fn complex_proof() {
         )),
     };
     let doc = DocumentBuilder::<Create>::new(&did)
-        .verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .service(&service)
+        .add_service(&service)
         .build();
 
     let next_multi =

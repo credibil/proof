@@ -43,9 +43,9 @@ async fn resolve_single() {
         )),
     };
     let db = db
-        .verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .service(&service);
+        .add_service(&service);
 
     let doc = db.build();
 
