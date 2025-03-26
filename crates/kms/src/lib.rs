@@ -2,7 +2,7 @@
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::{CreateOptions, DidOperator, DidResolver, Document, KeyPurpose, key::DidKey};
+use credibil_did::{key::DidKey, CreateOptions, DidOperator, DidResolver, Document, KeyPurpose};
 use credibil_infosec::{
     Algorithm, Curve, KeyType, PublicKey, PublicKeyJwk, Receiver, SecretKey, SharedSecret, Signer,
 };
@@ -12,15 +12,21 @@ use rand::rngs::OsRng;
 use sha2::Digest;
 
 pub const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
-// const X25519_CODEC: [u8; 2] = [0xec, 0x01];
 
 #[derive(Default, Clone, Debug)]
 pub struct Keyring {
+    // DID without the key fragment
     did: String,
+    // DID with the key fragment
     did_key: String,
+    // Signing key
     secret_key: String,
+    // Verifying key counterpart to `secret_key`
     verifying_key: VerifyingKey,
-    vm_secret_key: String,
+    // Key for generating an ID for a verification method
+    id_secret_key: String,
+    // Signing key in the next iteration of key rotation
+    next_secret_key: String,
 }
 
 pub fn new_keyring() -> Keyring {
@@ -32,19 +38,50 @@ pub fn new_keyring() -> Keyring {
     multi_bytes.extend_from_slice(&verifying_key.to_bytes());
     let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-    // authorization key (Ed25519) - used for generating a verification method.
-    let vm_signing_key = SigningKey::generate(&mut OsRng);
+    // key used to generate an ID for a verification method.
+    let id_secret_key = SigningKey::generate(&mut OsRng);
+
+    // key used in the next iteration of key rotation
+    let next_secret_key = SigningKey::generate(&mut OsRng);
 
     Keyring {
         did: format!("did:key:{verifying_multi}"),
         did_key: format!("did:key:{verifying_multi}#{verifying_multi}"),
         secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
         verifying_key,
-        vm_secret_key: Base64UrlUnpadded::encode_string(vm_signing_key.as_bytes()),
+        id_secret_key: Base64UrlUnpadded::encode_string(id_secret_key.as_bytes()),
+        next_secret_key: Base64UrlUnpadded::encode_string(next_secret_key.as_bytes()),
     }
 }
 
 impl Keyring {
+    // Rotate signing key to next key in key rotation.
+    pub fn rotate(&mut self) -> anyhow::Result<()> {
+        self.secret_key = self.next_secret_key.clone();
+        let key_bytes = Base64UrlUnpadded::decode_vec(&self.secret_key)?;
+        let secret_key: ed25519_dalek::SecretKey =
+            key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
+        let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);
+        let verifying_key = signing_key.verifying_key();
+        let mut multi_bytes = ED25519_CODEC.to_vec();
+        multi_bytes.extend_from_slice(&verifying_key.to_bytes());
+        let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
+        self.did = format!("did:key:{verifying_multi}");
+        self.did_key = format!("did:key:{verifying_multi}#{verifying_multi}");
+        self.verifying_key = verifying_key;
+
+        // Not strictly necessary but to aid in adding more verificatio methods
+        // in testing, generate a new ID-generation key.
+        let id_secret_key = SigningKey::generate(&mut OsRng);
+        self.id_secret_key = Base64UrlUnpadded::encode_string(id_secret_key.as_bytes());
+
+        // Generate a new key for the next iteration of key rotation.
+        let next_secret_key = SigningKey::generate(&mut OsRng);
+        self.next_secret_key = Base64UrlUnpadded::encode_string(next_secret_key.as_bytes());
+
+        Ok(())
+    }
+
     pub fn did(&self) -> String {
         self.did.clone()
     }
@@ -63,18 +100,24 @@ impl Keyring {
         key.to_multibase()
     }
 
-    // Generate an authorization key for use in creating a verification method
-    // identifier. 
-    pub fn auth_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
-        let auth_key = SigningKey::generate(&mut OsRng);
-        let key = auth_key.verifying_key().as_bytes().to_vec();
-        PublicKeyJwk::from_bytes(&key)
+    // Public key for use in creating a verification method identifier. 
+    pub fn id_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
+        let key_bytes = Base64UrlUnpadded::decode_vec(&self.id_secret_key)?;
+        let secret_key: ed25519_dalek::SecretKey =
+            key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
+        let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);
+        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
+        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
     }
 
-    // Get a predicable public key to use in a verificatio method.
+    // Public key for next signing key in key rotation.
     pub fn vm_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
-        let key = Base64UrlUnpadded::decode_vec(&self.vm_secret_key)?;
-        PublicKeyJwk::from_bytes(&key)
+        let key_bytes = Base64UrlUnpadded::decode_vec(&self.next_secret_key)?;
+        let secret_key: ed25519_dalek::SecretKey =
+            key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
+        let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);
+        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
+        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
     }
 }
 

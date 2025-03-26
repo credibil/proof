@@ -1,5 +1,5 @@
-//! Tests for the creation of a new `did:webvh` document and associated
-//! log entry.
+//! Tests for the creation of a new `did:webvh` document and associated log
+//! entry.
 
 use credibil_did::{
     KeyPurpose,
