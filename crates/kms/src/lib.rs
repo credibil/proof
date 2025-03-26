@@ -1,5 +1,7 @@
 //! # Key management and basic provider implementations for testing.
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::{key::DidKey, CreateOptions, DidOperator, DidResolver, Document, KeyPurpose};
@@ -23,10 +25,11 @@ pub struct Keyring {
     secret_key: String,
     // Verifying key counterpart to `secret_key`
     verifying_key: VerifyingKey,
-    // Key for generating an ID for a verification method
-    id_secret_key: String,
     // Signing key in the next iteration of key rotation
     next_secret_key: String,
+
+    // Extra keys for testing
+    other_secret_keys: HashMap<String, String>,
 }
 
 pub fn new_keyring() -> Keyring {
@@ -38,9 +41,6 @@ pub fn new_keyring() -> Keyring {
     multi_bytes.extend_from_slice(&verifying_key.to_bytes());
     let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-    // key used to generate an ID for a verification method.
-    let id_secret_key = SigningKey::generate(&mut OsRng);
-
     // key used in the next iteration of key rotation
     let next_secret_key = SigningKey::generate(&mut OsRng);
 
@@ -49,8 +49,8 @@ pub fn new_keyring() -> Keyring {
         did_key: format!("did:key:{verifying_multi}#{verifying_multi}"),
         secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
         verifying_key,
-        id_secret_key: Base64UrlUnpadded::encode_string(id_secret_key.as_bytes()),
         next_secret_key: Base64UrlUnpadded::encode_string(next_secret_key.as_bytes()),
+        other_secret_keys: HashMap::new(),
     }
 }
 
@@ -69,11 +69,6 @@ impl Keyring {
         self.did = format!("did:key:{verifying_multi}");
         self.did_key = format!("did:key:{verifying_multi}#{verifying_multi}");
         self.verifying_key = verifying_key;
-
-        // Not strictly necessary but to aid in adding more verificatio methods
-        // in testing, generate a new ID-generation key.
-        let id_secret_key = SigningKey::generate(&mut OsRng);
-        self.id_secret_key = Base64UrlUnpadded::encode_string(id_secret_key.as_bytes());
 
         // Generate a new key for the next iteration of key rotation.
         let next_secret_key = SigningKey::generate(&mut OsRng);
@@ -100,9 +95,9 @@ impl Keyring {
         key.to_multibase()
     }
 
-    // Public key for use in creating a verification method identifier. 
-    pub fn id_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
-        let key_bytes = Base64UrlUnpadded::decode_vec(&self.id_secret_key)?;
+    // Public key for next signing key in key rotation.
+    pub fn next_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
+        let key_bytes = Base64UrlUnpadded::decode_vec(&self.next_secret_key)?;
         let secret_key: ed25519_dalek::SecretKey =
             key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
         let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);
@@ -110,9 +105,20 @@ impl Keyring {
         Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
     }
 
-    // Public key for next signing key in key rotation.
-    pub fn vm_key_jwk(&self) -> anyhow::Result<PublicKeyJwk> {
-        let key_bytes = Base64UrlUnpadded::decode_vec(&self.next_secret_key)?;
+    // Generate a new key and store it using a string ID.
+    pub fn add_key(&mut self, id: &str) {
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let secret_key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
+        self.other_secret_keys.insert(id.to_string(), secret_key);
+    }
+
+    // Get the public key for a secret key stored by string ID.
+    pub fn get_key(&self, id: &str) -> anyhow::Result<PublicKeyJwk> {
+        let secret_key = self
+            .other_secret_keys
+            .get(id)
+            .ok_or_else(|| anyhow!("key not found"))?;
+        let key_bytes = Base64UrlUnpadded::decode_vec(secret_key)?;
         let secret_key: ed25519_dalek::SecretKey =
             key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
         let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);

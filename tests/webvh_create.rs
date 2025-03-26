@@ -19,17 +19,20 @@ use credibil_did::webvh::SCID_PLACEHOLDER;
 async fn create_success() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let signer = new_keyring();
-    let auth_jwk = signer.verifying_key_jwk().await.expect("should get JWK key");
+    let mut signer = new_keyring();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
+    signer.add_key("id");
+    let id_jwk = signer.get_key("id").expect("should get key");
+    signer.add_key("vm");
+    let vm_jwk = signer.get_key("vm").expect("should get key");
+
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm_jwk = signer.verifying_key_jwk().await.expect("should get JWK key");
     let vm = VerificationMethodBuilder::new(&vm_jwk)
-        .key_id(&did, VmKeyId::Authorization(auth_jwk))
+        .key_id(&did, VmKeyId::Authorization(id_jwk))
         .expect("should apply key ID")
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
@@ -48,8 +51,8 @@ async fn create_success() {
         .add_service(&service)
         .build();
 
-    let next_multi =
-        new_keyring().verifying_key_multibase().await.expect("should get multibase key");
+    let next_key = signer.next_key_jwk().expect("should get next key");
+    let next_multi = next_key.to_multibase().expect("should convert to multibase");
 
     let witnesses = Witness {
         threshold: 60,
