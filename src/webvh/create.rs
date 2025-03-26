@@ -92,7 +92,7 @@ impl CreateBuilder {
         self.doc.id.clone()
     }
 
-    /// Set the DID to be portable (defaults to not portable)
+    /// Set the DID to be portable or not (defaults to not portable).
     #[must_use]
     pub const fn portable(mut self, portable: bool) -> Self {
         self.portable = portable;
@@ -132,15 +132,18 @@ impl CreateBuilder {
         self.ttl = ttl;
         self
     }
-    /// Build the `CreateResult`, providing a `Signer` to construct a data
-    /// integrity proof.
+
+    /// Build the new log entry.
+    /// 
+    /// Provide a `Signer` to construct a data integrity proof. To add more
+    /// proofs, call the `sign` method on the log entry after building.
     ///
     /// # Errors
     ///
     /// Will fail if secondary algorithms fail such as generating a hash of the
-    /// log entry to calculate the `SCID` or failing to replace the placeholder
-    /// `SCID` with the calculated one. Will also fail if the provided signer
-    /// fails to sign the log entry.
+    /// log entry to calculate the `SCID` or version ID, or failing to replace
+    /// the placeholder `SCID` with the calculated one. Will also fail if the
+    /// provided signer fails to sign the log entry.
     pub async fn build(self, signer: &impl Signer) -> anyhow::Result<CreateResult> {
         // Construct preliminary parameters.
         let params = Parameters {

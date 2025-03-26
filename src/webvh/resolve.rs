@@ -129,11 +129,13 @@ fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
 ///
 /// To use this function, read the contents of the `did.jsonl` file into a
 /// vector of `DidLogEntry` structs and pass to this function.
+/// 
+/// To skip verification of the witness proofs, pass `None` for the
+/// `witness_proofs` parameter.
 ///
 /// # Errors
 ///
 /// Will fail if the log entries are invalid.
-///
 pub async fn resolve_log(
     log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
     resolver: &impl DidResolver,
@@ -218,16 +220,12 @@ pub async fn resolve_log(
         prev_time.clone_from(&log[i].version_time);
         prev_next_key_hashes.clone_from(&log[i].parameters.next_key_hashes);
 
-        // 9. Check witness proofs.
-        if log[i].parameters.witness.is_some() {
+        // 9. Check witness proofs if provided.
+        if witness_proofs.is_some() && log[i].parameters.witness.is_some() {
             if let Some(witness_entries) = witness_proofs {
                 if let Err(error) = verify_witness(&log[i], witness_entries, resolver).await {
                     return Err(Error::Other(error));
                 }
-            } else {
-                return Err(Error::Other(anyhow!(
-                    "witness proofs must be provided for a log entry with witnesses"
-                )));
             }
         }
 
