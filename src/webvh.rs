@@ -7,6 +7,7 @@
 //! See: <https://identity.foundation/didwebvh/next/>
 
 pub mod create;
+pub mod deactivate;
 pub mod update;
 pub mod url;
 pub mod resolve;
