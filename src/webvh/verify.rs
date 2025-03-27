@@ -82,19 +82,22 @@ pub async fn verify_proof(
     let verification_method = dereference_vm(&proof.verification_method, resolver).await?;
 
     // If we are verifying a controller's proof, the verification method public
-    // key must be authorized to update log entries.
-    match signer {
-        ProofSigner::Controller => {
-            let parts = verification_method.id.split('#').collect::<Vec<&str>>();
-            if parts.len() != 2 {
-                bail!("verification method id has an unexpected format");
+    // key must be authorized to update log entries unless the proof is for a
+    // deactivated log entry.
+    if !log_entry.parameters.deactivated {
+        match signer {
+            ProofSigner::Controller => {
+                let parts = verification_method.id.split('#').collect::<Vec<&str>>();
+                if parts.len() != 2 {
+                    bail!("verification method id has an unexpected format");
+                }
+                let key = parts[1].to_string();
+                if !log_entry.parameters.update_keys.contains(&key) {
+                    bail!("verification method is not authorized to update the log entry");
+                }
             }
-            let key = parts[1].to_string();
-            if !log_entry.parameters.update_keys.contains(&key) {
-                bail!("verification method is not authorized to update the log entry");
-            }
+            ProofSigner::Witness => {}
         }
-        ProofSigner::Witness => {}
     }
 
     // Verify the signature.

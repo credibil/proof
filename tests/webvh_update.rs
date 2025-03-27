@@ -50,18 +50,20 @@ async fn update_success() {
     let next_key = signer.next_key_jwk().expect("should get next key");
     let next_multi = next_key.to_multibase().expect("should convert to multibase");
 
+    let witness_keyring1 = new_keyring();
+    let witness1 = WitnessWeight {
+        id: witness_keyring1.did_key(),
+        weight: 50,
+    };
+    let witness_keyring2 = new_keyring();
+    let witness2 = WitnessWeight {
+        id: witness_keyring2.did_key(),
+        weight: 40,
+    };
+
     let witnesses = Witness {
         threshold: 60,
-        witnesses: vec![
-            WitnessWeight {
-                id: new_keyring().did().to_string(),
-                weight: 50,
-            },
-            WitnessWeight {
-                id: new_keyring().did().to_string(),
-                weight: 40,
-            },
-        ],
+        witnesses: vec![witness1, witness2],
     };
 
     let create_result = CreateBuilder::new(&update_keys, &doc)
@@ -79,6 +81,15 @@ async fn update_success() {
 
     let doc = create_result.document.clone();
 
+    // Rotate the signing key.
+    signer.rotate().expect("should rotate keys on signer");
+    let new_update = signer.verifying_key_multibase().await.expect("should get multibase key");
+    let new_update_keys = vec![new_update.clone()];
+    let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
+    let new_next = signer.next_key_jwk().expect("should get next key");
+    let new_next_keys = vec![new_next.to_multibase().expect("should convert to multibase")];
+    let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
+
     // Add a reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");
     let vm = vm_list.first().expect("should get first verification method");
@@ -94,6 +105,8 @@ async fn update_success() {
     let result = UpdateBuilder::new(create_result.log.as_slice(), None, &doc, &signer)
         .await
         .expect("should create builder")
+        .rotate_keys(&new_update_keys, &new_next_keys)
+        .expect("should rotate keys on builder")
         .build(&signer)
         .await
         .expect("should build document");

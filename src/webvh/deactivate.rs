@@ -4,7 +4,9 @@
 use anyhow::bail;
 use chrono::Utc;
 use credibil_infosec::Signer;
+use multibase::Base;
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 
 use crate::Document;
 
@@ -13,6 +15,8 @@ use super::{verify::validate_witness, DidLogEntry, Witness};
 /// Builder for deactivating a DID document and associated log entry (or 2
 /// entries if there is key rotation).
 pub struct DeactivateBuilder {
+    update_keys: Vec<String>,
+    next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
     log: Vec<DidLogEntry>,
     doc: Document,
@@ -31,10 +35,72 @@ impl DeactivateBuilder {
             bail!("log must not be empty.");
         };
         Ok(Self {
+            update_keys: last_entry.parameters.update_keys.clone(),
+            next_key_hashes: last_entry.parameters.next_key_hashes.clone(),
             witness: last_entry.parameters.witness.clone(),
             log: log.to_vec(),
             doc: last_entry.state.clone(),
         })
+    }
+
+    /// Rotate the update keys.
+    ///
+    /// The new update keys provided, when hashed, must match the hash of the
+    /// current next key hashes. If there are no next key hashes on the current
+    /// log entry it is assumed no pre-rotation strategy is being used and the
+    /// new update keys will be applied regardless.
+    ///
+    /// The `new_update_keys` parameter is a list of public keys whose private
+    /// key counterparts are authorized to sign DID log entries. They should be
+    /// provided in bytes format.
+    ///
+    /// The `new_next_keys` parameter is a list of public keys whose private key
+    /// counterparts will be authorized to sign update operations on subsequent
+    /// key rotations. They should be provided in multibase-encoded format
+    /// (this function will calculate their hashes).
+    ///
+    /// If key pre-rotation is not required for future updates set
+    /// `new_next_keys` to an empty list.
+    ///
+    /// # Note
+    /// The new update keys must not be used to sign the new log entry. Only
+    /// the current update keys should be used to sign the new log entry. This
+    /// will be checked on the build operation.
+    ///
+    /// # Errors
+    /// If the hashed new update keys do not match the current next key hashes
+    /// an error is returned (unless there are no next key hashes on the
+    /// current log entry - pre-rotation not required).
+    pub fn rotate_keys(
+        mut self, new_update_keys: &[&str], new_next_keys: &[&str],
+    ) -> anyhow::Result<Self> {
+        // Check the new update keys hash to the current next key hashes.
+        if let Some(next_key_hashes) = &self.next_key_hashes {
+            for new_key in new_update_keys {
+                let digest = sha2::Sha256::digest(new_key.as_bytes());
+                let hash = multibase::encode(Base::Base58Btc, digest.as_slice());
+                if !next_key_hashes.contains(&hash) {
+                    bail!("new update keys do not match current next key hashes.");
+                }
+            }
+        }
+
+        self.update_keys = new_update_keys.iter().map(std::string::ToString::to_string).collect();
+        if new_next_keys.is_empty() {
+            self.next_key_hashes = None;
+        } else {
+            self.next_key_hashes = Some(
+                new_next_keys
+                    .iter()
+                    .map(|key| {
+                        let digest = sha2::Sha256::digest(key.as_bytes());
+                        multibase::encode(Base::Base58Btc, digest.as_slice())
+                    })
+                    .collect(),
+            );
+        }
+
+        Ok(self)
     }
 
     /// Add a set of witnesses expected to provide proofs for this update.
@@ -84,6 +150,7 @@ impl DeactivateBuilder {
         let mut last_entry = last_entry.clone();
 
         let mut params = last_entry.parameters.clone();
+        params.update_keys.clone_from(&self.update_keys);
         params.witness.clone_from(&self.witness);
 
         if last_entry.parameters.next_key_hashes.is_some() {
