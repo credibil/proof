@@ -11,6 +11,7 @@ use chrono::{DateTime, Utc};
 use multibase::Base;
 use regex::Regex;
 use serde_json::json;
+use sha2::Digest;
 
 use super::{
     DidLogEntry, WitnessEntry,
@@ -178,7 +179,7 @@ pub async fn resolve_log(
             return Err(Error::Other(anyhow!("log entry time is in the future")));
         }
         if log[i].version_time <= prev_time {
-            return Err(Error::Other(anyhow!("log entry times are not monotonically increasing")));
+            return Err(Error::Other(anyhow!("log entry times are not monotonically increasing: {} -> {}", log[i].version_time, prev_time)));
         }
 
         // 5. If the entry is the first one, verify the SCID.
@@ -205,7 +206,8 @@ pub async fn resolve_log(
         // previous entry's next-key hashes.
         if let Some(next_key_hashes) = &prev_next_key_hashes {
             for key in &log[i].parameters.update_keys {
-                let key_hash = multibase::encode(Base::Base58Btc, key.as_bytes());
+                let key_digest = sha2::Sha256::digest(key.as_bytes());
+                let key_hash = multibase::encode(Base::Base58Btc, key_digest.as_slice());
                 if !next_key_hashes.contains(&key_hash) {
                     return Err(Error::Other(anyhow!(
                         "update key not found in pre-rotation hashes"

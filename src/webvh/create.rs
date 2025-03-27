@@ -42,7 +42,7 @@ impl CreateBuilder {
     /// algorithm.
     ///
     /// Update keys are the multibase-encoded public keys that can be used by
-    /// a constroller to sign log entries for the DID.
+    /// a controller to sign log entries for the DID.
     ///
     /// # Errors
     ///

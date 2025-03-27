@@ -79,9 +79,6 @@ async fn update_success() {
 
     let doc = create_result.document.clone();
 
-    // Rotate the signing key.
-    signer.rotate().expect("should rotate key");
-
     // Add a reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");
     let vm = vm_list.first().expect("should get first verification method");

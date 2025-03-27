@@ -85,7 +85,7 @@ impl UpdateBuilder {
     ///
     /// The `new_update_keys` parameter is a list of public keys whose private
     /// key counterparts are authorized to sign DID log entries. They should be
-    /// provided in multibase-encoded format.
+    /// provided in bytes format.
     ///
     /// The `new_next_keys` parameter is a list of public keys whose private key
     /// counterparts will be authorized to sign update operations on subsequent
@@ -202,8 +202,11 @@ impl UpdateBuilder {
         params.witness.clone_from(&self.witness);
         params.ttl = self.ttl;
 
-        let version_time =
-            self.doc.did_document_metadata.as_ref().map_or_else(Utc::now, |m| m.created);
+        let version_time = self
+            .doc
+            .did_document_metadata
+            .as_ref()
+            .map_or_else(Utc::now, |m| m.updated.unwrap_or_else(Utc::now));
         let mut entry = DidLogEntry {
             version_id: last_entry.version_id.clone(),
             version_time,
