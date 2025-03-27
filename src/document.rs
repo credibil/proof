@@ -303,6 +303,7 @@ pub struct DocumentMetadata {
     /// May be set if the document version is not the latest. Indicates the
     /// timestamp of the next Update operation as an XMLSCHEMA11-2
     /// (RFC3339).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub next_update: Option<DateTime<Utc>>,
 
     /// Used to indicate the version of the last Update operation. SHOULD be

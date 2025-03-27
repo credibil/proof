@@ -38,11 +38,11 @@ impl UpdateBuilder {
     ///
     /// Returns an error if the log entries are not valid.
     pub async fn new(
-        log: Vec<DidLogEntry>, witness_proofs: Option<&[WitnessEntry]>, document: &Document,
+        log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, document: &Document,
         resolver: &impl DidResolver,
     ) -> anyhow::Result<Self> {
         // Validate the current log entries by resolving the DID document.
-        let _ = resolve_log(&log, witness_proofs, None, resolver).await?;
+        let _ = resolve_log(log, witness_proofs, None, resolver).await?;
 
         // Check the DID location hasn't changed unless the original log entry
         // allowed portability. If the location has changed, the SCID must be
@@ -71,7 +71,7 @@ impl UpdateBuilder {
             witness: last_entry.parameters.witness.clone(),
             ttl: last_entry.parameters.ttl,
 
-            log,
+            log: log.to_vec(),
             doc: document.clone(),
         })
     }
