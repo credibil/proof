@@ -1,0 +1,24 @@
+[package]
+name = "kms"
+authors.workspace = true
+description = "Key management sample code for testing"
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+base64ct.workspace = true
+credibil-did = { path = "../.." }
+credibil-infosec.workspace = true
+ed25519-dalek.workspace = true
+multibase.workspace = true
+rand = "0.8.5"
+sha2.workspace = true
+x25519-dalek.workspace = true

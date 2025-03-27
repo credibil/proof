@@ -20,7 +20,7 @@ impl<T: Default> Default for Kind<T> {
 }
 
 impl<T: Default> Kind<T> {
-    /// Returns `true` if the quota is a single object.
+    /// Returns `true` if the `OneMany` is a single object.
     pub const fn is_string(&self) -> bool {
         match self {
             Self::String(_) => true,
@@ -28,7 +28,7 @@ impl<T: Default> Kind<T> {
         }
     }
 
-    /// Returns `true` if the quota contains an array of objects.
+    /// Returns `true` if the `OneMany` contains an array of objects.
     pub const fn is_object(&self) -> bool {
         match self {
             Self::String(_) => false,
@@ -37,11 +37,11 @@ impl<T: Default> Kind<T> {
     }
 }
 
-/// `Quota` allows serde to serialize/deserialize a single object or a set of
+/// `OneMany` allows serde to serialize/deserialize a single object or a set of
 /// objects.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
-pub enum Quota<T> {
+pub enum OneMany<T> {
     /// Single object
     One(T),
 
@@ -49,14 +49,14 @@ pub enum Quota<T> {
     Many(Vec<T>),
 }
 
-impl<T: Default> Default for Quota<T> {
+impl<T: Default> Default for OneMany<T> {
     fn default() -> Self {
         Self::One(T::default())
     }
 }
 
-impl<T: Clone + Default + PartialEq> Quota<T> {
-    /// Returns `true` if the quota is a single object.
+impl<T: Clone + Default + PartialEq> OneMany<T> {
+    /// Returns `true` if the `OneMany` is a single object.
     pub const fn is_one(&self) -> bool {
         match self {
             Self::One(_) => true,
@@ -64,7 +64,7 @@ impl<T: Clone + Default + PartialEq> Quota<T> {
         }
     }
 
-    /// Returns `true` if the quota contains an array of objects.
+    /// Returns `true` if the `OneMany` contains an array of objects.
     pub const fn is_many(&self) -> bool {
         match self {
             Self::One(_) => false,
@@ -72,7 +72,7 @@ impl<T: Clone + Default + PartialEq> Quota<T> {
         }
     }
 
-    /// Adds an object to the quota. If the quota is a single object, it is
+    /// Adds an object to the `OneMany`. If the `OneMany` is a single object, it is
     /// converted to a set of objects.
     pub fn add(&mut self, item: T) {
         match self {
@@ -85,7 +85,7 @@ impl<T: Clone + Default + PartialEq> Quota<T> {
         }
     }
 
-    /// Returns the length of the quota.
+    /// Returns the length of the `OneMany`.
     pub fn len(&self) -> usize {
         match self {
             Self::One(_) => 1,
@@ -93,7 +93,7 @@ impl<T: Clone + Default + PartialEq> Quota<T> {
         }
     }
 
-    /// Returns `true` if the quota is an empty `Many`.
+    /// Returns `true` if the `OneMany` is an empty `Many`.
     pub fn is_empty(&self) -> bool {
         match self {
             Self::One(_) => false,

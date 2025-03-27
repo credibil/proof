@@ -15,16 +15,16 @@ use regex::Regex;
 use serde_json::json;
 
 use super::DidKey;
-use crate::document::{CreateOptions, MethodType};
+use crate::document::{CreateOptions, PublicKeyFormat};
 use crate::error::Error;
-use crate::resolution::{ContentType, Metadata, Resolved};
+use crate::operation::resolve::{ContentType, Metadata, Resolved};
 use crate::{DidOperator, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:key:(?<identifier>z[a-km-zA-HJ-NP-Z1-9]+)$").expect("should compile")
 });
 
-struct Operator(MethodType);
+struct Operator(PublicKeyFormat);
 impl DidOperator for Operator {
     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
         match purpose {
@@ -47,7 +47,7 @@ impl DidKey {
         };
         let multikey = &caps["identifier"];
 
-        let op = Operator(MethodType::Multikey {
+        let op = Operator(PublicKeyFormat::PublicKeyMultibase {
             public_key_multibase: multikey.to_string(),
         });
 

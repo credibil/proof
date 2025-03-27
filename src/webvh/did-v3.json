@@ -1,0 +1,35 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/multikey/v1",
+    "https://identity.foundation/.well-known/did-configuration/v1",
+    "https://identity.foundation/linked-vp/contexts/v1"
+  ],
+  "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
+  "authentication": [
+    "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+  ],
+  "assertionMethod": [
+    "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+  ],
+  "verificationMethod": [
+    {
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv",
+      "controller": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
+      "type": "Multikey",
+      "publicKeyMultibase": "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+    }
+  ],
+  "service": [
+    {
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#domain",
+      "type": "LinkedDomains",
+      "serviceEndpoint": "https://credibil.io"
+    },
+    {
+      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#whois",
+      "type": "LinkedVerifiablePresentation",
+      "serviceEndpoint": "https://credibil.io/.well-known/whois.vc"
+    }
+  ]
+}

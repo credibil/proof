@@ -1,6 +1,6 @@
 //! # DID Web Operations
 //!
-//! Implements Create, Read, Update, Delete (CRUD) operations for DID Key.
+//! Implements Create, Read, Update, Delete (CRUD) operations for DID Web.
 //!
 //! See <https://w3c-ccg.github.io/did-method-web>
 
@@ -59,27 +59,26 @@ impl DidWeb {
             };
             let x25519_bytes = edwards_pt.to_montgomery().to_bytes();
 
-            let method_type = match options.public_key_format {
-                PublicKeyFormat::Multikey => {
+            let key_format = match &options.method_type {
+                MethodType::Multikey
+                | MethodType::Ed25519VerificationKey2020
+                | MethodType::X25519KeyAgreementKey2020 => {
                     let mut multi_bytes = X25519_CODEC.to_vec();
                     multi_bytes.extend_from_slice(&x25519_bytes);
-                    MethodType::Multikey {
+                    PublicKeyFormat::PublicKeyMultibase {
                         public_key_multibase: multibase::encode(Base::Base58Btc, &multi_bytes),
                     }
                 }
-                PublicKeyFormat::JsonWebKey => {
-                    let mut jwk = verifying_key.clone();
-                    jwk.x = Base64UrlUnpadded::encode_string(&x25519_bytes);
-                    MethodType::JsonWebKey { public_key_jwk: jwk }
+                MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
+                    return Err(Error::InvalidPublicKey("Unsupported public key format".into()));
                 }
-
-                _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),
             };
 
             Some(vec![Kind::Object(VerificationMethod {
                 id: format!("{did}#key-1"),
                 controller: did.clone(),
-                method_type,
+                type_: MethodType::X25519KeyAgreementKey2020,
+                key: key_format,
                 ..VerificationMethod::default()
             })])
         } else {
@@ -87,19 +86,20 @@ impl DidWeb {
         };
 
         let kid = format!("{did}#key-0");
-        let method_type = match options.public_key_format {
-            PublicKeyFormat::Multikey => {
+        let key_format = match &options.method_type {
+            MethodType::Multikey
+            | MethodType::Ed25519VerificationKey2020
+            | MethodType::X25519KeyAgreementKey2020 => {
                 // multibase encode the public key
                 let mut multi_bytes = ED25519_CODEC.to_vec();
                 multi_bytes.extend_from_slice(&key_bytes);
-                MethodType::Multikey {
+                PublicKeyFormat::PublicKeyMultibase {
                     public_key_multibase: multibase::encode(Base::Base58Btc, &multi_bytes),
                 }
             }
-            PublicKeyFormat::JsonWebKey => MethodType::JsonWebKey {
+            _ => PublicKeyFormat::PublicKeyJwk {
                 public_key_jwk: verifying_key,
             },
-            _ => return Err(Error::InvalidPublicKey("Unsupported public key format".into())),
         };
 
         let context = Kind::String("https://w3id.org/security/data-integrity/v1".into());
@@ -110,7 +110,8 @@ impl DidWeb {
             verification_method: Some(vec![VerificationMethod {
                 id: kid.clone(),
                 controller: did,
-                method_type,
+                type_: options.method_type,
+                key: key_format,
                 ..VerificationMethod::default()
             }]),
             authentication: Some(vec![Kind::String(kid.clone())]),

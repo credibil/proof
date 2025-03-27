@@ -7,7 +7,7 @@
     "verificationMethod": [
         {
             "id": "did:web:demo.credibil.io#key-0",
-            "type": "JsonWebKey",
+            "type": "JsonWebKey2020",
             "controller": "did:web:demo.credibil.io",
             "publicKeyJwk": {
                 "kty": "EC",
@@ -32,7 +32,7 @@
     "keyAgreement": [
         {
             "id": "did:web:demo.credibil.io#key-1",
-            "type": "JsonWebKey",
+            "type": "JsonWebKey2020",
             "controller": "did:web:demo.credibil.io",
             "publicKeyJwk": {
                 "kty": "EC",

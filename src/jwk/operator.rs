@@ -45,19 +45,21 @@ impl DidJwk {
 
             let mut jwk = verifying_key.clone();
             jwk.x = Base64UrlUnpadded::encode_string(&x25519_bytes);
-            let method_type = MethodType::JsonWebKey { public_key_jwk: jwk };
+            let method_type = MethodType::JsonWebKey2020;
+            let key_format = PublicKeyFormat::PublicKeyJwk { public_key_jwk: jwk };
 
             Some(vec![Kind::Object(VerificationMethod {
                 id: format!("{did}#key-1"),
                 controller: did.clone(),
-                method_type,
+                type_: method_type,
+                key: key_format,
                 ..VerificationMethod::default()
             })])
         } else {
             None
         };
 
-        let verif_type = &options.public_key_format;
+        let verif_type = &options.method_type;
         let context = Kind::Object(json!({
             "publicKeyJwk": {
                 "@id": "https://w3id.org/security#publicKeyJwk",
@@ -68,13 +70,20 @@ impl DidJwk {
 
         let kid = format!("{did}#key-0");
 
-        let method_type = match options.public_key_format {
-            PublicKeyFormat::Multikey => MethodType::Multikey {
-                public_key_multibase: verifying_key.to_multibase()?,
-            },
-            _ => MethodType::JsonWebKey {
-                public_key_jwk: verifying_key,
-            },
+        let key_format = match options.method_type {
+            MethodType::Multikey
+            | MethodType::Ed25519VerificationKey2020
+            | MethodType::X25519KeyAgreementKey2020 => {
+                // multibase encode the public key
+                PublicKeyFormat::PublicKeyMultibase {
+                    public_key_multibase: verifying_key.to_multibase()?,
+                }
+            }
+            MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
+                PublicKeyFormat::PublicKeyJwk {
+                    public_key_jwk: verifying_key,
+                }
+            }
         };
 
         Ok(Document {
@@ -83,7 +92,8 @@ impl DidJwk {
             verification_method: Some(vec![VerificationMethod {
                 id: kid.clone(),
                 controller: did,
-                method_type,
+                type_: options.method_type,
+                key: key_format,
                 ..VerificationMethod::default()
             }]),
             authentication: Some(vec![Kind::String(kid.clone())]),

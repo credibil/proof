@@ -1,12 +1,11 @@
-//! # DID Key Resolver
+//! # DID Web Resolver
 //!
-//! The `did:key` method is a DID method for static cryptographic keys. At its
-//! core, it is based on expanding a cryptographic public key into a DID
-//! Document.
+//! The `did:web` method uses a web domain's reputation to confer trust. This
+//! module provides a resolver for `did:web` DIDs.
 //!
 //! See:
 //!
-//! - <https://w3c-ccg.github.io/did-method-key>
+//! - <https://w3c-ccg.github.io/did-method-web>
 //! - <https://w3c.github.io/did-resolution>
 
 use std::sync::LazyLock;
@@ -17,10 +16,10 @@ use serde_json::json;
 use super::DidWeb;
 use crate::DidResolver;
 use crate::error::Error;
-use crate::resolution::{ContentType, Metadata, Options, Resolved};
+use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("^did:web:(?<identifier>[a-zA-Z0-9.\\-:%]+)$").expect("should compile")
+    Regex::new("^did:web:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")
 });
 
 impl DidWeb {
@@ -52,11 +51,11 @@ impl DidWeb {
             metadata: Metadata {
                 content_type: ContentType::DidLdJson,
                 additional: Some(json!({
-                    "pattern": "^did:key:z[a-km-zA-HJ-NP-Z1-9]+$",
+                    "pattern": "^did:web:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$",
                     "did": {
                         "didString": did,
                         "methodSpecificId": did[8..],
-                        "method": "key"
+                        "method": "web"
                     }
                 })),
                 ..Metadata::default()

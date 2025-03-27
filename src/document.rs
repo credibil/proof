@@ -11,7 +11,7 @@ use credibil_infosec::jose::jwk::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 use crate::error::Error;
 
 /// DID Document
@@ -29,7 +29,7 @@ pub struct Document {
     /// organization, physical thing, digital thing, logical thing, etc.
     pub id: String,
 
-    /// A set of URIs taht are other identifiers for the subject of the above
+    /// A set of URIs that are other identifiers for the subject of the above
     /// DID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub also_known_as: Option<Vec<String>>,
@@ -44,7 +44,7 @@ pub struct Document {
     /// verification methods are to be considered equivalent to proofs provided
     /// by the DID subject.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub controller: Option<Quota<String>>,
+    pub controller: Option<OneMany<String>>,
 
     /// A set of services, that express ways of communicating with the DID
     /// subject or related entities.
@@ -112,7 +112,9 @@ pub struct Document {
 }
 
 /// Services are used to express ways of communicating with the DID subject or
-/// associated entities. They can be any type of service the DID subject wants
+/// associated entities.
+///
+/// They can be any type of service the DID subject wants
 /// to advertise, including decentralized identity management services for
 /// further discovery, authentication, authorization, or interaction.
 ///
@@ -136,12 +138,14 @@ pub struct Service {
 
     /// One or more endpoints for the service.
     #[allow(clippy::struct_field_names)]
-    pub service_endpoint: Quota<Kind<Value>>,
+    pub service_endpoint: OneMany<Kind<Value>>,
 }
 
 /// A DID document can express verification methods, such as cryptographic
 /// public keys, which can be used to authenticate or authorize interactions
-/// with the DID subject or associated parties. For example, a cryptographic
+/// with the DID subject or associated parties.
+///
+/// For example, a cryptographic
 /// public key can be used as a verification method with respect to a digital
 /// signature; in such usage, it verifies that the signer could use the
 /// associated cryptographic private key. Verification methods might take many
@@ -164,113 +168,115 @@ pub struct VerificationMethod {
     /// A DID that identifies the verification method.
     pub id: String,
 
+    /// The type of verification method. SHOULD be a registered type in the
+    /// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+    #[serde(rename = "type")]
+    pub type_: MethodType,
+
     /// The DID of the controller of the verification method.
     pub controller: String,
 
-    /// The verification method type. SHOULD be a registered type (in DID
-    /// Specification Registries).
+    /// The format of the public key material.
     #[serde(flatten)]
-    pub method_type: MethodType,
+    pub key: PublicKeyFormat,
 }
 
-/// Verification method types. SHOULD be registered in the [DID Specification
-/// Registries](https://www.w3.org/TR/did-spec-registries).
+/// The format of the public key material.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(tag = "type")]
 #[serde(rename_all_fields = "camelCase")]
-pub enum MethodType {
-    /// Key is encoded as a Multibase. The Multikey data model is a specific
-    /// type of verification method that encodes key types into a single
-    /// binary stream that is then encoded as a Multibase value.
-    ///
-    /// <https://w3c.github.io/controller-document/#multikey>
-    #[serde(alias = "Ed25519VerificationKey2020")]
-    Multikey {
+#[serde(untagged)]
+pub enum PublicKeyFormat {
+    /// The key is encoded as a Multibase string.
+    PublicKeyMultibase {
         /// The public key encoded as a Multibase.
         public_key_multibase: String,
     },
 
-    /// Key is JWK. The JSON Web Key (JWK) data model is a specific type of
-    /// verification method that uses the JWK specification [RFC7517] to encode
-    /// key types into a set of parameters.
-    ///
-    /// <https://w3c.github.io/controller-document/#jsonwebkey>
-    #[serde(alias = "JsonWebKey2020")]
-    #[serde(alias = "EcdsaSecp256k1VerificationKey2019")]
-    JsonWebKey {
+    /// The key is encoded as a JWK.
+    PublicKeyJwk {
         /// The public key encoded as a JWK.
         public_key_jwk: PublicKeyJwk,
     },
-    //
-    // #[serde(alias = "Ed25519VerificationKey2018")]
-    // Base58 { public_key_base58: String },
 }
 
-impl Default for MethodType {
+impl Default for PublicKeyFormat {
     fn default() -> Self {
-        Self::Multikey {
+        Self::PublicKeyMultibase {
             public_key_multibase: String::new(),
         }
     }
 }
 
-impl MethodType {
-    /// Converts a Multibase public key to JWK format.
+impl PublicKeyFormat {
+    /// Return the key as a JWK
     ///
     /// # Errors
+    /// Will return an error if the key is multibase encoded and cannot be
+    /// decoded.
     pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
         match self {
-            Self::JsonWebKey { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::Multikey { public_key_multibase } => {
+            Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
+            Self::PublicKeyMultibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)
                     .map_err(|e| Error::InvalidPublicKey(e.to_string()))
             }
         }
     }
+
+    /// Return the key as a multibase string.
+    /// 
+    /// # Errors
+    /// Will return an error if the key is a JWK and cannot be encoded as a
+    /// multibase string.
+    pub fn multibase(&self) -> crate::Result<String> {
+        match self {
+            Self::PublicKeyJwk { public_key_jwk } => {
+                public_key_jwk.to_multibase().map_err(|e| Error::InvalidPublicKey(e.to_string()))
+            }
+            Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
+        }
+    }
 }
 
-/// Verification method types. SHOULD be registered in the [DID Specification
-/// Registries](https://www.w3.org/TR/did-spec-registries).
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub enum PublicKeyFormat {
-    /// Key is encoded as a Multibase. The Multikey data model is a specific
-    /// type of verification method that encodes key types into a single
-    /// binary stream that is then encoded as a Multibase value.
-    ///
-    /// <https://w3c.github.io/controller-document/#multikey>
+/// Verification method types supported by this library. SHOULD be registered in
+/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all_fields = "camelCase")]
+pub enum MethodType {
+    /// Generic Multi-key format.
     #[default]
     Multikey,
 
-    /// Key is JWK. The JSON Web Key (JWK) data model is a specific type of
-    /// verification method that uses the JWK specification [RFC7517] to encode
-    /// key types into a set of parameters.
-    ///
-    /// <https://w3c.github.io/controller-document/#jsonwebkey>
-    JsonWebKey,
-
-    /// Key is ED2559 Verification Key.
-    ///
-    /// <https://w3id.org/security/suites/ed25519-2020/v1>
+    /// `ED25519` Verification key, version 2020.
     Ed25519VerificationKey2020,
 
-    /// X25519 Key Agreement Key, 2020 version
+    /// `X25519` Key Agreement Key, version 2020.
     X25519KeyAgreementKey2020,
+
+    /// JSON Web Key (JWK), version 2020.
+    JsonWebKey2020,
+
+    /// Secp256k1 Verification Key, version 2019.
+    EcdsaSecp256k1VerificationKey2019,
 }
 
-// TODO: set context based on key format:
-// - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
-// - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
-
-impl Display for PublicKeyFormat {
+impl Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Multikey => write!(f, "Multikey"),
             Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
             Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
-            Self::JsonWebKey => write!(f, "JsonWebKey"),
+            Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
+            Self::EcdsaSecp256k1VerificationKey2019 => {
+                write!(f, "EcdsaSecp256k1VerificationKey2019")
+            }
         }
     }
 }
+
+// // TODO: set context based on key format:
+// // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
+// // - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
 
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.
@@ -280,34 +286,35 @@ impl Display for PublicKeyFormat {
 pub struct DocumentMetadata {
     /// Timestamp of the Create operation.
     /// An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
-    created: DateTime<Utc>,
+    pub created: DateTime<Utc>,
 
     /// Timestamp of the last Update operation. Omitted if an Update operation
     /// has never been performed. May be the same value as the `created`
     /// property when the difference between the two timestamps is less than
     /// one second. An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
     #[serde(skip_serializing_if = "Option::is_none")]
-    updated: Option<DateTime<Utc>>,
+    pub updated: Option<DateTime<Utc>>,
 
     /// MUST be set to true if the DID has been deactivated. Optional if the DID
     /// has not been deactivated.
     #[serde(skip_serializing_if = "Option::is_none")]
-    deactivated: Option<bool>,
+    pub deactivated: Option<bool>,
 
     /// May be set if the document version is not the latest. Indicates the
     /// timestamp of the next Update operation as an XMLSCHEMA11-2
     /// (RFC3339).
-    next_update: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_update: Option<DateTime<Utc>>,
 
     /// Used to indicate the version of the last Update operation. SHOULD be
     /// set.
     #[serde(skip_serializing_if = "Option::is_none")]
-    version_id: Option<String>,
+    pub version_id: Option<String>,
 
     /// MAY be set if the document version is not the latest. It indicates the
     /// version of the next Update operation.
     #[serde(skip_serializing_if = "Option::is_none")]
-    next_version_id: Option<String>,
+    pub next_version_id: Option<String>,
 
     /// Used when a DID method needs to define different forms of a DID that are
     /// logically equivalent. For example, when a DID takes one form prior to
@@ -324,11 +331,12 @@ pub struct DocumentMetadata {
 }
 
 /// Options that can be provided when creating a DID document.
+// TODO: Remove this and use builders instead.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOptions {
-    /// Format to use for the the public key.
-    pub public_key_format: PublicKeyFormat,
+    /// Verification method type.
+    pub method_type: MethodType,
 
     /// Default context for the DID document. SHOULD be set to
     /// `"https://www.w3.org/ns/did/v1"`.
@@ -351,7 +359,7 @@ pub struct CreateOptions {
 impl Default for CreateOptions {
     fn default() -> Self {
         Self {
-            public_key_format: PublicKeyFormat::default(),
+            method_type: MethodType::default(),
             enable_experimental_public_key_types: false,
             default_context: "https://www.w3.org/ns/did/v1".to_string(),
             enable_encryption_key_derivation: false,

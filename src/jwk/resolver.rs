@@ -16,15 +16,15 @@ use regex::Regex;
 use serde_json::json;
 
 use super::DidJwk;
-use crate::document::{CreateOptions, MethodType};
+use crate::document::{CreateOptions, PublicKeyFormat};
 use crate::error::Error;
-use crate::resolution::{ContentType, Metadata, Options, Resolved};
+use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
 use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("^did:jwk:(?<jwk>[A-Za-z0-9-=—]+)$").expect("should compile"));
 
-struct Operator(MethodType);
+struct Operator(PublicKeyFormat);
 impl DidOperator for Operator {
     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
         match purpose {
@@ -46,7 +46,7 @@ impl DidJwk {
             .map_err(|e| Error::InvalidDid(format!("issue decoding key: {e}")))?;
         let jwk = serde_json::from_slice(&decoded)
             .map_err(|e| Error::InvalidDid(format!("issue deserializing key: {e}")))?;
-        let op = Operator(MethodType::JsonWebKey { public_key_jwk: jwk });
+        let op = Operator(PublicKeyFormat::PublicKeyJwk { public_key_jwk: jwk });
 
         // per the spec, use the create operation to generate a DID document
         let options = CreateOptions {

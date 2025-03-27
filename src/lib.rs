@@ -1,4 +1,4 @@
-//! # DID Resolver
+//! # DID Operations and Resolver
 //!
 //! This crate provides common utilities for the Credibil project and is not
 //! intended to be used directly.
@@ -13,27 +13,59 @@
 // Ed25519VerificationKey2020 |             Ed25519VerificationKey2018 |
 // X25519KeyAgreementKey2019   crv: Ed25519 | secp256k1 | P-256 | P-384 | p-521
 
-mod core;
+pub mod core;
 pub mod document;
 mod error;
 mod jwk;
-mod key;
-mod resolution;
-mod web;
+pub mod key;
+pub mod operation;
+pub mod web;
+pub mod webvh;
 
-use std::future::Future;
+use std::{future::Future, str::FromStr};
 
+use anyhow::anyhow;
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::{CreateOptions, Document};
 pub use error::Error;
-pub use key::DidKey;
-pub use resolution::{
-    ContentType, Dereferenced, Metadata, Options, Resolved, Resource, dereference, resolve,
-};
-pub use web::DidWeb;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
+
+/// DID methods supported by this crate.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Method {
+    /// The `did:jwk` method.
+    Jwk,
+
+    /// The `did:key` method.
+    #[default]
+    Key,
+
+    /// The `did:web` method.
+    Web,
+
+    /// The `did:webvh` method.
+    WebVh,
+}
+
+impl FromStr for Method {
+    type Err = Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let parts = s.split(':').collect::<Vec<_>>();
+        if parts.len() < 2  || parts[0] != "did" {
+            return Err(Error::Other(anyhow!(format!("invalid did method string {}", s))));
+        }
+        match *parts.get(1).unwrap_or(&"unknown") {
+            "jwk" => Ok(Self::Jwk),
+            "key" => Ok(Self::Key),
+            "web" => Ok(Self::Web),
+            "webvh" => Ok(Self::WebVh),
+            _ => Err(Error::MethodNotSupported(s.to_string())),
+        }
+    }
+}
 
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -49,7 +81,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// For example, a DID resolver for `did:web` would fetch the DID document from
 /// the specified URL. A DID resolver for `did:dht`should forward the request to
 /// a remote DID resolver for the DHT network.
-pub trait DidResolver: Send + Clone {
+pub trait DidResolver: Send + Sync + Clone {
     /// Resolve the DID URL to a DID Document.
     ///
     /// # Errors
@@ -66,7 +98,8 @@ pub trait DidOperator: Send + Sync {
     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
 }
 
-/// The purpose the requested key material will be used for.
+/// The purpose key material will be used for.
+#[derive(Clone)]
 pub enum KeyPurpose {
     /// The document's `verification_method` field.
     VerificationMethod,
