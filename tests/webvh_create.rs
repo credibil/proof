@@ -4,8 +4,10 @@
 use credibil_did::{
     KeyPurpose,
     core::{Kind, OneMany},
-    document::{MethodType, Service, VerificationMethod},
-    operation::document::{Create, DocumentBuilder, VerificationMethodBuilder, VmKeyId},
+    document::{
+        Create, DocumentBuilder, MethodType, Service, VerificationMethod,
+        VerificationMethodBuilder, VmKeyId,
+    },
     webvh::{Witness, WitnessWeight, create::CreateBuilder, url::default_did},
 };
 use kms::new_keyring;

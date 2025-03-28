@@ -16,7 +16,7 @@ use serde_json::json;
 use super::DidWeb;
 use crate::DidResolver;
 use crate::error::Error;
-use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Resolved};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:web:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")

@@ -2,7 +2,10 @@
 //! entries.
 //! 
 
-use credibil_did::{core::{Kind, OneMany}, document::{MethodType, Service, VerificationMethod}, operation::document::{Create, DocumentBuilder, Update, VerificationMethodBuilder, VmKeyId}, webvh::{create::CreateBuilder, deactivate::DeactivateBuilder, update::UpdateBuilder, url::default_did, Witness, WitnessWeight, SCID_PLACEHOLDER}, KeyPurpose};
+use credibil_did::KeyPurpose;
+use credibil_did::core::{Kind, OneMany};
+use credibil_did::document::{MethodType, Service, VerificationMethod, Create, DocumentBuilder, Update, VerificationMethodBuilder, VmKeyId};
+use credibil_did::webvh::{create::CreateBuilder, deactivate::DeactivateBuilder, update::UpdateBuilder, url::default_did, Witness, WitnessWeight, SCID_PLACEHOLDER};
 use kms::new_keyring;
 use serde_json::Value;
 

@@ -18,7 +18,7 @@ use serde_json::json;
 use super::DidJwk;
 use crate::document::{CreateOptions, PublicKeyFormat};
 use crate::error::Error;
-use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Resolved};
 use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> =

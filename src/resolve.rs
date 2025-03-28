@@ -14,52 +14,6 @@ use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
 use crate::{jwk, key, web, webvh, DidResolver};
 
-// /// Resolve a DID to a DID document.
-// ///
-// /// The [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) functions
-// /// resolve a DID into a DID document by using the "Read" operation of the
-// /// applicable DID method.
-// ///
-// /// Caveats:
-// /// - No JSON-LD Processing, however, valid JSON-LD is returned.
-// /// - Ignores accept header.
-// /// - Only returns application/did+ld+json.
-// /// - did:key support for ed25519
-// /// - did:web and did:webvh support for .well-known and path based DIDs.
-// ///
-// /// # Errors
-// ///
-// /// Returns a [DID resolution](https://www.w3.org/TR/did-core/#did-resolution-metadata)
-// /// error as specified.
-// pub async fn resolve(
-//     did: &str, opts: Option<Options>, resolver: impl DidResolver,
-// ) -> crate::Result<Resolved> {
-//     // use DID-specific resolver
-//     let method = did.split(':').nth(1).unwrap_or_default();
-
-//     let result = match method {
-//         "key" => key::DidKey::resolve(did),
-//         "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
-//         "web" => web::DidWeb::resolve(did, opts, resolver).await,
-//         "webvh" => webvh::resolve(did, opts, resolver).await,
-//         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
-//     };
-
-//     if let Err(e) = result {
-//         return Ok(Resolved {
-//             metadata: Metadata {
-//                 error: Some(e.to_string()),
-//                 error_message: Some(e.message()),
-//                 content_type: ContentType::DidLdJson,
-//                 ..Metadata::default()
-//             },
-//             ..Resolved::default()
-//         });
-//     }
-
-//     result
-// }
-
 // FIXME:  This whole approach needs to be strongly-typed in a similar way to
 // the VC endpoint model. Should consider dereferencing to a specific resource
 // type too.
@@ -297,7 +251,7 @@ mod test {
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("../web/did-ecdsa.json"))
+            serde_json::from_slice(include_bytes!("./web/did-ecdsa.json"))
                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
         }
     }

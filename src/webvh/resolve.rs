@@ -17,7 +17,7 @@ use super::{
     DidLogEntry, WitnessEntry,
     verify::{verify_proofs, verify_witness},
 };
-use crate::operation::resolve::{ContentType, Metadata, Options, Parameters, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Parameters, Resolved};
 use crate::{DidResolver, Document, Error, webvh::SCID_PLACEHOLDER};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
@@ -262,7 +262,7 @@ mod test {
     use anyhow::anyhow;
     use insta::assert_json_snapshot as assert_snapshot;
 
-    use crate::{Document, operation::resolve::dereference};
+    use crate::{Document, resolve::dereference};
 
     use super::*;
 
