@@ -36,7 +36,7 @@ pub async fn dereference(
         "jwk" => jwk::DidJwk::resolve(&did, opts, resolver)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
         // FIXME: This needs a more complex resolver.
-        "webvh" => webvh::resolve::resolve(&did, opts, resolver).await?,
+        "webvh" => webvh::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 

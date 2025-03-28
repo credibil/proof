@@ -8,9 +8,8 @@ use credibil_did::{
         VerificationMethodBuilder, VmKeyId,
     },
     webvh::{
-        SCID_PLACEHOLDER, Witness, WitnessEntry, WitnessWeight, create::CreateBuilder,
-        deactivate::DeactivateBuilder, resolve::resolve_log, update::UpdateBuilder,
-        url::default_did,
+        CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
+        WitnessWeight, default_did, resolve_log,
     },
 };
 use kms::new_keyring;

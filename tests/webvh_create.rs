@@ -8,7 +8,7 @@ use credibil_did::{
         Create, DocumentBuilder, MethodType, Service, VerificationMethod,
         VerificationMethodBuilder, VmKeyId,
     },
-    webvh::{Witness, WitnessWeight, create::CreateBuilder, url::default_did},
+    webvh::{Witness, WitnessWeight, CreateBuilder, default_did},
 };
 use kms::new_keyring;
 use serde_json::Value;

@@ -1,11 +1,17 @@
 //! Tests for the deactivation of a `did:webvh` document and associated log
 //! entries.
-//! 
+//!
 
 use credibil_did::KeyPurpose;
 use credibil_did::core::{Kind, OneMany};
-use credibil_did::document::{MethodType, Service, VerificationMethod, Create, DocumentBuilder, Update, VerificationMethodBuilder, VmKeyId};
-use credibil_did::webvh::{create::CreateBuilder, deactivate::DeactivateBuilder, update::UpdateBuilder, url::default_did, Witness, WitnessWeight, SCID_PLACEHOLDER};
+use credibil_did::document::{
+    Create, DocumentBuilder, MethodType, Service, Update, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
+};
+use credibil_did::webvh::{
+    CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
+    default_did,
+};
 use kms::new_keyring;
 use serde_json::Value;
 
