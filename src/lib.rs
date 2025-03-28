@@ -16,7 +16,7 @@
 pub mod core;
 pub mod document;
 mod error;
-mod jwk;
+pub mod jwk;
 pub mod key;
 mod resolve;
 pub mod web;
@@ -26,8 +26,8 @@ use std::{future::Future, str::FromStr};
 
 use anyhow::anyhow;
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-pub use document::{CreateOptions, Document};
-pub use resolve::{Resource, dereference};
+pub use document::*;
+pub use resolve::*;
 pub use error::Error;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];

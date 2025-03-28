@@ -16,6 +16,10 @@ use crate::error::Error;
 use crate::{DidOperator, KeyPurpose};
 
 impl DidJwk {
+    /// Create operation for `did:jwk`.
+    /// 
+    /// # Errors
+    /// TODO: Document errors
     pub fn create(op: &impl DidOperator, options: CreateOptions) -> crate::Result<Document> {
         let Some(verifying_key) = op.verification(KeyPurpose::VerificationMethod) else {
             return Err(Error::Other(anyhow!("no verification key")));
@@ -106,6 +110,10 @@ impl DidJwk {
     }
 
     #[allow(dead_code)]
+    /// Read operation for `did:jwk`.
+    /// 
+    /// # Errors
+    /// TODO: Document errors
     pub fn read(_did: &str, _: CreateOptions) -> crate::Result<Document> {
         // self.resolve(did, options)
         unimplemented!("read")

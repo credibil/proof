@@ -35,6 +35,10 @@ impl DidOperator for Operator {
 }
 
 impl DidJwk {
+    /// Resolve a `did:jwk` DID.
+    /// 
+    /// # Errors
+    /// TODO: Document errors
     pub fn resolve(did: &str, _: Option<Options>, _: impl DidResolver) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {
