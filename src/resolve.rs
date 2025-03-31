@@ -5,8 +5,6 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -85,46 +83,6 @@ pub struct Options {
     /// [`accept`](https://www.w3.org/TR/did-spec-registries/#accept) resolution option.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept: Option<ContentType>,
-}
-
-/// The DID URL syntax supports parameters in the URL query component. Adding a
-/// DID parameter to a DID URL means the parameter becomes part of the
-/// identifier for a resource.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Parameters {
-    /// Identifies a service from the DID document by service's ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub service: Option<String>,
-
-    /// A relative URI reference that identifies a resource at a service
-    /// endpoint, which is selected from a DID document by using the service
-    /// parameter. MUST use URL encoding if set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(alias = "relative-ref")]
-    pub relative_ref: Option<String>,
-
-    /// Identifies a specific version of a DID document to be resolved (the
-    /// version ID could be sequential, or a UUID, or method-specific).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<String>,
-
-    /// Identifies a version timestamp of a DID document to be resolved. That
-    /// is, the DID document that was valid for a DID at a certain time.
-    /// An XML datetime value [XMLSCHEMA11-2] normalized to UTC 00:00:00 without
-    /// sub-second decimal precision. For example: 2020-12-20T19:17:47Z.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_time: Option<String>,
-
-    /// A resource hash of the DID document to add integrity protection, as
-    /// specified in [HASHLINK]. This parameter is non-normative.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "hl")]
-    pub hashlink: Option<String>,
-
-    /// Additional parameters.
-    #[serde(flatten)]
-    pub additional: Option<HashMap<String, Value>>,
 }
 
 /// Returned by `resolve` DID methods.

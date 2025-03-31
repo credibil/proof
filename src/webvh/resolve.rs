@@ -17,8 +17,9 @@ use super::{
     DidLogEntry, WitnessEntry,
     verify::{verify_proofs, verify_witness},
 };
-use crate::resolve::{ContentType, Metadata, Options, Parameters, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Resolved};
 use crate::{DidResolver, Document, Error, webvh::SCID_PLACEHOLDER};
+use crate::url::QueryParams;
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:webvh:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")
@@ -138,7 +139,7 @@ fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
 ///
 /// Will fail if the log entries are invalid.
 pub async fn resolve_log(
-    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
+    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<QueryParams>,
     resolver: &impl DidResolver,
 ) -> crate::Result<Document> {
     if log.is_empty() {
