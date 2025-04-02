@@ -86,6 +86,9 @@ fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
             return Err(Error::NotFound(format!("service {service_id} not found in document")));
         }
     }
+    if url.fragment.is_none() {
+        return Ok(Resource::Document(doc.clone()));
+    }
     if let Some(vm) = doc.get_verification_method(&url.to_string()) {
         return Ok(Resource::VerificationMethod(vm.clone()));
     }
