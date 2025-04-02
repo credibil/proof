@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{jwk, key, web, webvh, DidResolver, Method, Url};
+use crate::{DidResolver, Method, Url, jwk, key, web, webvh};
 
 /// Dereference a DID URL into a resource.
 ///
@@ -50,32 +50,46 @@ pub async fn dereference_url(
 /// # Errors
 /// Will return an error if the provided resolver fails to resolve the source
 /// DID document.
-/// 
+///
 /// Will also return an error if the resource is not found in the document. This
 /// includes cases that don't make sense, like asking a `did:key` for a service
 /// endpoint.
 ///
 /// TOOD: Rename to `derefence` when possible.
-pub async fn deref2(
-    url: &Url, resolver: &impl DidResolver,
-) -> crate::Result<Resource> {
+pub async fn deref2(url: &Url, resolver: &impl DidResolver) -> crate::Result<Resource> {
     match url.method {
         Method::Jwk => jwk::resolve(url),
         Method::Key => key::resolve(url),
         Method::Web => {
             let doc = web::resolve(url, resolver).await?;
-            get_document_resource(url, &doc)
-        },
+            document_resource(url, &doc)
+        }
         Method::WebVh => {
             let doc = webvh::resolve(url, resolver).await?;
-            get_document_resource(url, &doc)
-        },
+            document_resource(url, &doc)
+        }
     }
 }
 
-// Search the document for the resource requested by the DID URL.
-fn get_document_resource(_url: &Url, _document: &Document) -> crate::Result<Resource> {
-    todo!()
+/// Get a resource from a DID document.
+///
+/// Uses the `Url` to infer the type of resource to return.
+///
+/// # Errors
+/// Will return an error if the resource is not found in the document.
+fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
+    if let Some(query) = &url.query {
+        if let Some(service_id) = &query.service {
+            if let Some(service) = doc.get_service(service_id) {
+                return Ok(Resource::Service(service.clone()));
+            }
+            return Err(Error::NotFound(format!("service {service_id} not found in document")));
+        }
+    }
+    if let Some(vm) = doc.get_verification_method(&url.to_string()) {
+        return Ok(Resource::VerificationMethod(vm.clone()));
+    }
+    Err(Error::NotFound(format!("verification method {url} not found in document")))
 }
 
 /// Dereference a DID URL into a resource.

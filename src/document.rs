@@ -116,6 +116,23 @@ pub struct Document {
     pub did_document_metadata: Option<DocumentMetadata>,
 }
 
+impl Document {
+    /// Retrieve a service by its ID.
+    #[must_use]
+    pub fn get_service(&self, id: &str) -> Option<&Service> {
+        self.service.as_ref()?.iter().find(|s| s.id == id)
+    }
+
+    /// Retrieve a verification method by its ID.
+    #[must_use]
+    pub fn get_verification_method(&self, id: &str) -> Option<&VerificationMethod> {
+        self.verification_method
+            .as_ref()?
+            .iter()
+            .find(|vm| vm.id == id)
+    }
+}
+
 /// Services are used to express ways of communicating with the DID subject or
 /// associated entities.
 ///

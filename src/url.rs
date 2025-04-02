@@ -123,10 +123,22 @@ impl FromStr for Url {
         // an HTTP one.
         let domain = parts[parts.len() - 1];
         let domain = domain.replace("%3A", ":");
-        let fake_url = format!("https://{}", domain);
+        let fake_url = format!("https://{domain}");
         let url = url::Url::parse(&fake_url)
             .map_err(|e| Error::InvalidDidUrl(format!("issue parsing URL: {e}")))?;
-        let id = parts[2..parts.len()].join(":");
+        let host = url.host_str().ok_or_else(|| {
+            Error::InvalidDidUrl(format!("issue parsing host from URL: {fake_url}"))
+        })?;
+        let mut id = parts[2..parts.len()-1].join(":");
+        if id.is_empty() {
+            id = host.to_string();
+        } else {
+            id = format!("{id}:{host}");
+        }
+        let port = url.port().map(|p| p.to_string());
+        if let Some(p) = port {
+            id = format!("{id}%3A{p}");
+        }
         let mut path: Option<Vec<&str>> = url.path_segments().map(std::iter::Iterator::collect);
         if let Some(p) = &path {
             if p.is_empty() {
@@ -135,8 +147,7 @@ impl FromStr for Url {
                 if p[0].is_empty() {
                     path = None;
                 }
-            }
-            else {
+            } else {
                 path = Some(p.clone());
             }
         }
@@ -186,8 +197,8 @@ impl Url {
         id
     }
 
-    /// Get the DID part of the URL.
-    /// 
+    /// Get the DID part of the URL, excluding the fragment.
+    ///
     /// This is in the form of `did:<method>:<method-specific-id>`.
     #[must_use]
     pub fn did(&self) -> String {
@@ -237,7 +248,7 @@ mod tests {
 
     #[test]
     fn simple_url() {
-        let url = Url::from_str("did:key:123456789abcdefghi#key-1").unwrap();
+        let url = Url::from_str("did:key:123456789abcdefghi#key-1").expect("should parse url");
         assert_eq!(url.method, Method::Key);
         assert_eq!(url.id, "123456789abcdefghi");
         assert_eq!(url.path, None);
@@ -249,10 +260,14 @@ mod tests {
 
     #[test]
     fn url_with_path() {
-        let url = Url::from_str("did:key:123456789abcdefghi/path/to/resource#key-1").unwrap();
+        let url = Url::from_str("did:key:123456789abcdefghi/path/to/resource#key-1")
+            .expect("should parse url");
         assert_eq!(url.method, Method::Key);
         assert_eq!(url.id, "123456789abcdefghi");
-        assert_eq!(url.path, Some(vec!["path".to_string(), "to".to_string(), "resource".to_string()]));
+        assert_eq!(
+            url.path,
+            Some(vec!["path".to_string(), "to".to_string(), "resource".to_string()])
+        );
         assert_eq!(url.query, None);
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
@@ -261,11 +276,18 @@ mod tests {
 
     #[test]
     fn url_with_query() {
-        let url = Url::from_str("did:key:123456789abcdefghi?service=example#key-1").unwrap();
+        let url = Url::from_str("did:key:123456789abcdefghi?service=example#key-1")
+            .expect("should parse url");
         assert_eq!(url.method, Method::Key);
         assert_eq!(url.id, "123456789abcdefghi");
         assert_eq!(url.path, None);
-        assert_eq!(url.query, Some(QueryParams { service: Some("example".to_string()), ..Default::default() }));
+        assert_eq!(
+            url.query,
+            Some(QueryParams {
+                service: Some("example".to_string()),
+                ..Default::default()
+            })
+        );
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
         assert_eq!(url.to_string(), "did:key:123456789abcdefghi?service=example#key-1");
@@ -273,13 +295,41 @@ mod tests {
 
     #[test]
     fn url_with_the_works() {
-        let url = Url::from_str("did:key:123456789abcdefghi/path/to/resource?service=example&hl=hashlink#key-1").unwrap();
+        let url = Url::from_str(
+            "did:key:123456789abcdefghi/path/to/resource?service=example&hl=hashlink#key-1",
+        )
+        .expect("should parse url");
         assert_eq!(url.method, Method::Key);
         assert_eq!(url.id, "123456789abcdefghi");
-        assert_eq!(url.path, Some(vec!["path".to_string(), "to".to_string(), "resource".to_string()]));
-        assert_eq!(url.query, Some(QueryParams { service: Some("example".to_string()), hashlink: Some("hashlink".to_string()), ..Default::default() }));
+        assert_eq!(
+            url.path,
+            Some(vec!["path".to_string(), "to".to_string(), "resource".to_string()])
+        );
+        assert_eq!(
+            url.query,
+            Some(QueryParams {
+                service: Some("example".to_string()),
+                hashlink: Some("hashlink".to_string()),
+                ..Default::default()
+            })
+        );
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
-        assert_eq!(url.to_string(), "did:key:123456789abcdefghi/path/to/resource?service=example&hl=hashlink#key-1");
+        assert_eq!(
+            url.to_string(),
+            "did:key:123456789abcdefghi/path/to/resource?service=example&hl=hashlink#key-1"
+        );
+    }
+
+    #[test]
+    fn typical_webvh_url() {
+        let url = Url::from_str("did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv").expect("should parse url");
+        assert_eq!(url.method, Method::WebVh);
+        assert_eq!(url.id, "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io");
+        assert_eq!(url.path, None);
+        assert_eq!(url.query, None);
+        assert_eq!(url.fragment, Some("z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv".to_string()));
+        assert_eq!(url.resource_id(), "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv");
+        assert_eq!(url.to_string(), "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv");
     }
 }

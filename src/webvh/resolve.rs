@@ -257,7 +257,7 @@ mod test {
             "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer";
         let structured_url = Url::from_str(did).expect("should parse");
         println!("structured_url: {structured_url:?}");
-        let url = structured_url.to_webvh_http().unwrap();
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer/.well-known/did.jsonl");
     }
 
@@ -265,7 +265,7 @@ mod test {
     fn path_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer:dids:issuer";
         let structured_url = Url::from_str(did).expect("should parse");
-        let url = structured_url.to_webvh_http().unwrap();
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
@@ -273,7 +273,8 @@ mod test {
     fn port_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer%3A8080";
         let structured_url = Url::from_str(did).expect("should parse");
-        let url = structured_url.to_webvh_http().unwrap();
+        println!("structured_url: {structured_url:?}");
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");
     }
 }
