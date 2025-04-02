@@ -41,7 +41,6 @@ impl DidWeb {
         //    considerations.
         let document = resolver.resolve(&url).await.map_err(Error::Other)?;
 
-        // TODO: implement security requirement:
         // 7. When performing the DNS resolution during the HTTP GET request, the client
         //    SHOULD utilize [RFC8484] in order to prevent tracking of the identity
         //    being resolved.

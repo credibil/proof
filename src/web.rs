@@ -9,6 +9,9 @@
 
 pub mod operator;
 pub mod resolver;
+mod resolve;
+
+pub use resolve::*;
 
 /// `DidWeb` provides a type for implementing `did:web` operation and 
 /// resolution methods.

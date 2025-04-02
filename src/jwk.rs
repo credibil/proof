@@ -11,8 +11,12 @@
 
 pub mod operator;
 pub mod resolver;
+mod resolve;
+
+pub use resolve::*;
 
 /// Receiver for the `did:jwk` method.
 /// TODO: Remove this. Just need the namespace, not a struct.
 #[allow(clippy::module_name_repetitions)]
 pub struct DidJwk;
+

@@ -29,7 +29,7 @@ pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::*;
 pub use resolve::*;
 pub use error::Error;
-pub use url::Url;
+pub use url::*;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
@@ -84,13 +84,12 @@ impl Display for Method {
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// [`DidResolver`] is used to proxy the resolution of a DID document. Resolution
-/// can either be local as in the case of `did:key`, or remote as in the case of
-/// `did:web` or `did:dht`.
+/// [`DidResolver`] is used to proxy the resolution of a DID document. 
 ///
 /// Implementers need only return the DID document specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
-/// fetching from a remote DID resolver.
+/// fetching from a remote DID resolver, or using a ledger or log that contains
+/// DID document versions.
 ///
 /// For example, a DID resolver for `did:web` would fetch the DID document from
 /// the specified URL. A DID resolver for `did:dht`should forward the request to

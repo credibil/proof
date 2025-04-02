@@ -701,6 +701,9 @@ impl VerificationMethodBuilder {
     pub fn key_id(mut self, did: &str, id_type: VmKeyId) -> anyhow::Result<Self> {
         self.did = did.to_string();
         match id_type {
+            VmKeyId::Did => {
+                self.kid.clone_from(&self.did);
+            }
             VmKeyId::Authorization(auth_key) => {
                 let mb = auth_key.to_multibase()?;
                 self.kid = format!("{did}#{mb}");
@@ -709,8 +712,8 @@ impl VerificationMethodBuilder {
                 let mb = self.vm_key.to_multibase()?;
                 self.kid = format!("{did}#{mb}");
             }
-            VmKeyId::Index(index) => {
-                self.kid = format!("{did}#key-{index}");
+            VmKeyId::Index(prefix, index) => {
+                self.kid = format!("{did}#{prefix}{index}");
             }
         }
         Ok(self)
@@ -725,8 +728,6 @@ impl VerificationMethodBuilder {
     ///
     /// Will fail if required format is multibase but the public key cannot be
     /// decoded into bytes.
-    /// TODO: Is there a nicer way to handle this? This type mapping is
-    /// awkward.
     pub fn method_type(mut self, mtype: &MethodType) -> anyhow::Result<Self> {
         self.method = mtype.clone();
         self.format = match mtype {
@@ -784,6 +785,9 @@ impl VerificationMethodBuilder {
 /// Instruction to the `VerificationMethodBuilder` on how to construct the key
 /// ID.
 pub enum VmKeyId {
+    /// Use the DID as the identifier without any fragment.
+    Did,
+
     /// Use the provided authorization key and construct a multibase value from
     /// that to append to the document identifier (DID URL).
     Authorization(PublicKeyJwk),
@@ -792,8 +796,12 @@ pub enum VmKeyId {
     /// multibase value to append to the document identifier (DID URL).
     Verification,
 
-    /// Increment an index to append to the document identifier (DID URL).
-    ///
-    /// `key-0`, `key-1`, etc.
-    Index(u32),
+    /// Append the document identifier (DID URL) with a prefix and an
+    /// incrementing index. Use an empty string for the prefix if only the index
+    /// is required.
+    /// 
+    /// # Examples
+    /// With prefix `key-` and index `0`, the key ID will be
+    /// `did:<method>:<method-specific-identifier>#key-0`.
+    Index(String, u32),
 }

@@ -4,7 +4,7 @@
 //!
 //! `did:<method>:<method-specific-id>[/<path>][?<query>][#<fragment>]`.
 
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +12,7 @@ use super::Method;
 use crate::error::Error;
 
 /// Structure of a DID URL.
+#[derive(Clone, Debug)]
 pub struct Url {
     /// DID method.
     ///
@@ -47,6 +48,55 @@ pub struct Url {
     pub fragment: Option<String>,
 }
 
+impl Display for Url {
+    /// Format the URL as a specification-compliant string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "did:{}:{}", self.method, self.id)?;
+        if let Some(path) = &self.path {
+            write!(f, "/{}", path.join("/"))?;
+        }
+        if let Some(query) = &self.query {
+            write!(f, "?")?;
+            let mut first = true;
+            if let Some(service) = &query.service {
+                write!(f, "service={service}")?;
+                first = false;
+            }
+            if let Some(relative_ref) = &query.relative_ref {
+                if !first {
+                    write!(f, "&")?;
+                }
+                write!(f, "relativeRef={relative_ref}")?;
+                first = false;
+            }
+            if let Some(version_id) = &query.version_id {
+                if !first {
+                    write!(f, "&")?;
+                }
+                write!(f, "versionId={version_id}")?;
+                first = false;
+            }
+            if let Some(version_time) = &query.version_time {
+                if !first {
+                    write!(f, "&")?;
+                }
+                write!(f, "versionTime={version_time}")?;
+                first = false;
+            }
+            if let Some(hashlink) = &query.hashlink {
+                if !first {
+                    write!(f, "&")?;
+                }
+                write!(f, "hl={hashlink}")?;
+            }
+        }
+        if let Some(fragment) = &self.fragment {
+            write!(f, "#{fragment}")?;
+        }
+        Ok(())
+    }
+}
+
 impl FromStr for Url {
     type Err = super::Error;
 
@@ -59,8 +109,9 @@ impl FromStr for Url {
     /// If the string is not a valid format or portions of the string cannot be
     /// de-serialized into the expected types, an error is returned.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split(':').collect::<Vec<_>>();
-        if parts.len() != 3 {
+        let parts = s.splitn(3, ':').collect::<Vec<_>>();
+        println!("parts: {parts:?}");
+        if parts.len() < 3 {
             return Err(super::Error::InvalidDidUrl(s.to_string()));
         }
         if parts[0] != "did" {
@@ -135,6 +186,14 @@ impl Url {
         }
         id
     }
+
+    /// Get the DID part of the URL.
+    /// 
+    /// This is in the form of `did:<method>:<method-specific-id>`.
+    #[must_use]
+    pub fn did(&self) -> String {
+        format!("did:{}:{}", self.method, self.id)
+    }
 }
 
 /// The DID URL syntax supports parameters in the URL query component. Adding a
@@ -175,7 +234,6 @@ pub struct QueryParams {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -187,6 +245,7 @@ mod tests {
         assert_eq!(url.query, None);
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
+        assert_eq!(url.to_string(), "did:key:123456789abcdefghi#key-1");
     }
 
     #[test]
@@ -198,6 +257,7 @@ mod tests {
         assert_eq!(url.query, None);
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
+        assert_eq!(url.to_string(), "did:key:123456789abcdefghi/path/to/resource#key-1");
     }
 
     #[test]
@@ -209,6 +269,7 @@ mod tests {
         assert_eq!(url.query, Some(QueryParams { service: Some("example".to_string()), ..Default::default() }));
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
+        assert_eq!(url.to_string(), "did:key:123456789abcdefghi?service=example#key-1");
     }
 
     #[test]
@@ -220,5 +281,6 @@ mod tests {
         assert_eq!(url.query, Some(QueryParams { service: Some("example".to_string()), hashlink: Some("hashlink".to_string()), ..Default::default() }));
         assert_eq!(url.fragment, Some("key-1".to_string()));
         assert_eq!(url.resource_id(), "did:key:123456789abcdefghi#key-1");
+        assert_eq!(url.to_string(), "did:key:123456789abcdefghi/path/to/resource?service=example&hl=hashlink#key-1");
     }
 }

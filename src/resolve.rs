@@ -5,16 +5,78 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{jwk, key, web, webvh, DidResolver};
+use crate::{jwk, key, web, webvh, DidResolver, Method, Url};
 
-// FIXME:  This whole approach needs to be strongly-typed in a similar way to
-// the VC endpoint model. Should consider dereferencing to a specific resource
-// type too.
+/// Dereference a DID URL into a resource.
+///
+/// If you have destructured DID URL already, you can bypass this function and
+/// call `deref2` directly. See [`deref2`] for more information.
+///
+/// # Errors
+/// Will return an error if the DID URL cannot be parsed or the provided
+/// resolver fails to resolve the source DID document.
+///
+/// Note that only URLs implying DID methods supported by this crate will
+/// survive parsing.
+pub async fn dereference_url(
+    did_url: &str, resolver: &impl DidResolver,
+) -> crate::Result<Resource> {
+    let url = crate::url::Url::from_str(did_url)?;
+    deref2(&url, resolver).await
+}
+
+/// Dereference a structured DID URL into a resource.
+///
+/// Construct a structured DID URL using the `Url` struct for the `url`
+/// parameter or call `dereference_url` with a string to do the same.
+///
+/// For DID documents that are hosted (on a web server, in a ledger, etc.), you
+/// will need to implement the `DidResolver` trait for your resolver. to resolve
+/// the DID document from the `Url`. This crate will then do its best to find
+/// the requested resource in the document.
+///
+/// For self-describing DIDs a full document is never resolved. The
+/// `DidResolver` can be a no-op because it's `resolve` method is not called.
+/// For example, the `did:key` method can return a public key from the DID URL
+/// fragment.
+///
+/// # Errors
+/// Will return an error if the provided resolver fails to resolve the source
+/// DID document.
+/// 
+/// Will also return an error if the resource is not found in the document. This
+/// includes cases that don't make sense, like asking a `did:key` for a service
+/// endpoint.
+///
+/// TOOD: Rename to `derefence` when possible.
+pub async fn deref2(
+    url: &Url, resolver: &impl DidResolver,
+) -> crate::Result<Resource> {
+    match url.method {
+        Method::Jwk => jwk::resolve(url),
+        Method::Key => key::resolve(url),
+        Method::Web => {
+            let doc = web::resolve(url, resolver).await?;
+            get_document_resource(url, &doc)
+        },
+        Method::WebVh => {
+            let doc = webvh::resolve(url, resolver).await?;
+            get_document_resource(url, &doc)
+        },
+    }
+}
+
+// Search the document for the resource requested by the DID URL.
+fn get_document_resource(_url: &Url, _document: &Document) -> crate::Result<Resource> {
+    todo!()
+}
 
 /// Dereference a DID URL into a resource.
 ///
@@ -33,8 +95,6 @@ pub async fn dereference(
         "key" => key::DidKey::resolve(&did)?,
         "jwk" => jwk::DidJwk::resolve(&did, opts, resolver)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
-        // FIXME: This needs a more complex resolver.
-        "webvh" => webvh::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -180,7 +240,6 @@ pub enum ContentType {
     // /// The JSON-LD Media Type.
     // #[serde(rename = "application/ld+json")]
     // LdJson,
-
     /// JSON list document.
     #[serde(rename = "text/jsonl")]
     JsonL,
