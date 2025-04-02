@@ -1,3 +1,5 @@
+//! Standard error codes for DID resolution errors.
+
 /// DID resolution error codes
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

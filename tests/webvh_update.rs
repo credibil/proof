@@ -2,7 +2,13 @@
 //! entry.
 
 use credibil_did::{
-    core::{Kind, OneMany}, document::{MethodType, Service, VerificationMethod}, operation::document::{Create, DocumentBuilder, Update, VerificationMethodBuilder, VmKeyId}, webvh::{create::CreateBuilder, update::UpdateBuilder, url::default_did, Witness, WitnessWeight, SCID_PLACEHOLDER}, KeyPurpose
+    KeyPurpose,
+    core::{Kind, OneMany},
+    document::{
+        Create, DocumentBuilder, MethodType, Service, Update, VerificationMethod,
+        VerificationMethodBuilder, VmKeyId,
+    },
+    webvh::{CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did},
 };
 use kms::new_keyring;
 use serde_json::Value;

@@ -6,12 +6,12 @@
 //! 
 //! See: <https://identity.foundation/didwebvh/next/>
 
-pub mod create;
-pub mod deactivate;
-pub mod update;
-pub mod url;
-pub mod resolve;
-pub mod verify;
+mod create;
+mod deactivate;
+mod update;
+mod url;
+mod resolve;
+mod verify;
 
 use chrono::{DateTime, Utc};
 use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
@@ -22,6 +22,13 @@ use uuid::Uuid;
 
 use crate::Document;
 use super::Method;
+
+pub use resolve::*;
+pub use create::*;
+pub use deactivate::*;
+pub use update::*;
+pub use url::*;
+pub use verify::*;
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 /// 

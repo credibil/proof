@@ -4,7 +4,7 @@
 use crate::{
     DidResolver,
     document::VerificationMethod,
-    operation::resolve::{Resource, dereference},
+    resolve::{Resource, dereference},
 };
 
 use super::{DidLogEntry, Witness, WitnessEntry};

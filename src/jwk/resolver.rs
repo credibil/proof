@@ -18,7 +18,7 @@ use serde_json::json;
 use super::DidJwk;
 use crate::document::{CreateOptions, PublicKeyFormat};
 use crate::error::Error;
-use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Resolved};
 use crate::{DidOperator, DidResolver, KeyPurpose, PublicKeyJwk};
 
 static DID_REGEX: LazyLock<Regex> =
@@ -35,6 +35,10 @@ impl DidOperator for Operator {
 }
 
 impl DidJwk {
+    /// Resolve a `did:jwk` DID.
+    /// 
+    /// # Errors
+    /// TODO: Document errors
     pub fn resolve(did: &str, _: Option<Options>, _: impl DidResolver) -> crate::Result<Resolved> {
         // check DID is valid AND extract key
         let Some(caps) = DID_REGEX.captures(did) else {

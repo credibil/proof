@@ -1,6 +1,6 @@
 ---
-source: src/operation/resolve.rs
-assertion_line: 326
+source: src/resolve.rs
+assertion_line: 280
 expression: dereferenced
 ---
 {

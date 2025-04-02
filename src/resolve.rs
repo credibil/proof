@@ -5,64 +5,95 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-use std::collections::HashMap;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{jwk, key, web, webvh, DidResolver};
+use crate::{DidResolver, Method, Url, jwk, key, web, webvh};
 
-// /// Resolve a DID to a DID document.
-// ///
-// /// The [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) functions
-// /// resolve a DID into a DID document by using the "Read" operation of the
-// /// applicable DID method.
-// ///
-// /// Caveats:
-// /// - No JSON-LD Processing, however, valid JSON-LD is returned.
-// /// - Ignores accept header.
-// /// - Only returns application/did+ld+json.
-// /// - did:key support for ed25519
-// /// - did:web and did:webvh support for .well-known and path based DIDs.
-// ///
-// /// # Errors
-// ///
-// /// Returns a [DID resolution](https://www.w3.org/TR/did-core/#did-resolution-metadata)
-// /// error as specified.
-// pub async fn resolve(
-//     did: &str, opts: Option<Options>, resolver: impl DidResolver,
-// ) -> crate::Result<Resolved> {
-//     // use DID-specific resolver
-//     let method = did.split(':').nth(1).unwrap_or_default();
+/// Dereference a DID URL into a resource.
+///
+/// If you have destructured DID URL already, you can bypass this function and
+/// call `deref2` directly. See [`deref2`] for more information.
+///
+/// # Errors
+/// Will return an error if the DID URL cannot be parsed or the provided
+/// resolver fails to resolve the source DID document.
+///
+/// Note that only URLs implying DID methods supported by this crate will
+/// survive parsing.
+pub async fn dereference_url(
+    did_url: &str, resolver: &impl DidResolver,
+) -> crate::Result<Resource> {
+    let url = crate::url::Url::from_str(did_url)?;
+    deref2(&url, resolver).await
+}
 
-//     let result = match method {
-//         "key" => key::DidKey::resolve(did),
-//         "jwk" => jwk::DidJwk::resolve(did, opts, resolver),
-//         "web" => web::DidWeb::resolve(did, opts, resolver).await,
-//         "webvh" => webvh::resolve(did, opts, resolver).await,
-//         _ => Err(Error::MethodNotSupported(format!("{method} is not supported"))),
-//     };
+/// Dereference a structured DID URL into a resource.
+///
+/// Construct a structured DID URL using the `Url` struct for the `url`
+/// parameter or call `dereference_url` with a string to do the same.
+///
+/// For DID documents that are hosted (on a web server, in a ledger, etc.), you
+/// will need to implement the `DidResolver` trait for your resolver. to resolve
+/// the DID document from the `Url`. This crate will then do its best to find
+/// the requested resource in the document.
+///
+/// For self-describing DIDs a full document is never resolved. The
+/// `DidResolver` can be a no-op because it's `resolve` method is not called.
+/// For example, the `did:key` method can return a public key from the DID URL
+/// fragment.
+///
+/// # Errors
+/// Will return an error if the provided resolver fails to resolve the source
+/// DID document.
+///
+/// Will also return an error if the resource is not found in the document. This
+/// includes cases that don't make sense, like asking a `did:key` for a service
+/// endpoint.
+///
+/// TOOD: Rename to `derefence` when possible.
+pub async fn deref2(url: &Url, resolver: &impl DidResolver) -> crate::Result<Resource> {
+    match url.method {
+        Method::Jwk => jwk::resolve(url),
+        Method::Key => key::resolve(url),
+        Method::Web => {
+            let doc = web::resolve(url, resolver).await?;
+            document_resource(url, &doc)
+        }
+        Method::WebVh => {
+            let doc = webvh::resolve(url, resolver).await?;
+            document_resource(url, &doc)
+        }
+    }
+}
 
-//     if let Err(e) = result {
-//         return Ok(Resolved {
-//             metadata: Metadata {
-//                 error: Some(e.to_string()),
-//                 error_message: Some(e.message()),
-//                 content_type: ContentType::DidLdJson,
-//                 ..Metadata::default()
-//             },
-//             ..Resolved::default()
-//         });
-//     }
-
-//     result
-// }
-
-// FIXME:  This whole approach needs to be strongly-typed in a similar way to
-// the VC endpoint model. Should consider dereferencing to a specific resource
-// type too.
+/// Get a resource from a DID document.
+///
+/// Uses the `Url` to infer the type of resource to return.
+///
+/// # Errors
+/// Will return an error if the resource is not found in the document.
+fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
+    if let Some(query) = &url.query {
+        if let Some(service_id) = &query.service {
+            if let Some(service) = doc.get_service(service_id) {
+                return Ok(Resource::Service(service.clone()));
+            }
+            return Err(Error::NotFound(format!("service {service_id} not found in document")));
+        }
+    }
+    if url.fragment.is_none() {
+        return Ok(Resource::Document(doc.clone()));
+    }
+    if let Some(vm) = doc.get_verification_method(&url.to_string()) {
+        return Ok(Resource::VerificationMethod(vm.clone()));
+    }
+    Err(Error::NotFound(format!("verification method {url} not found in document")))
+}
 
 /// Dereference a DID URL into a resource.
 ///
@@ -81,8 +112,6 @@ pub async fn dereference(
         "key" => key::DidKey::resolve(&did)?,
         "jwk" => jwk::DidJwk::resolve(&did, opts, resolver)?,
         "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
-        // FIXME: This needs a more complex resolver.
-        "webvh" => webvh::resolve::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
@@ -131,46 +160,6 @@ pub struct Options {
     /// [`accept`](https://www.w3.org/TR/did-spec-registries/#accept) resolution option.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept: Option<ContentType>,
-}
-
-/// The DID URL syntax supports parameters in the URL query component. Adding a
-/// DID parameter to a DID URL means the parameter becomes part of the
-/// identifier for a resource.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Parameters {
-    /// Identifies a service from the DID document by service's ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub service: Option<String>,
-
-    /// A relative URI reference that identifies a resource at a service
-    /// endpoint, which is selected from a DID document by using the service
-    /// parameter. MUST use URL encoding if set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(alias = "relative-ref")]
-    pub relative_ref: Option<String>,
-
-    /// Identifies a specific version of a DID document to be resolved (the
-    /// version ID could be sequential, or a UUID, or method-specific).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<String>,
-
-    /// Identifies a version timestamp of a DID document to be resolved. That
-    /// is, the DID document that was valid for a DID at a certain time.
-    /// An XML datetime value [XMLSCHEMA11-2] normalized to UTC 00:00:00 without
-    /// sub-second decimal precision. For example: 2020-12-20T19:17:47Z.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_time: Option<String>,
-
-    /// A resource hash of the DID document to add integrity protection, as
-    /// specified in [HASHLINK]. This parameter is non-normative.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "hl")]
-    pub hashlink: Option<String>,
-
-    /// Additional parameters.
-    #[serde(flatten)]
-    pub additional: Option<HashMap<String, Value>>,
 }
 
 /// Returned by `resolve` DID methods.
@@ -268,7 +257,6 @@ pub enum ContentType {
     // /// The JSON-LD Media Type.
     // #[serde(rename = "application/ld+json")]
     // LdJson,
-
     /// JSON list document.
     #[serde(rename = "text/jsonl")]
     JsonL,
@@ -297,7 +285,7 @@ mod test {
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("../web/did-ecdsa.json"))
+            serde_json::from_slice(include_bytes!("./web/did-ecdsa.json"))
                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
         }
     }

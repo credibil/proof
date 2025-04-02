@@ -4,25 +4,68 @@
 //!
 //! See: <https://identity.foundation/didwebvh/next/>
 
-use std::{sync::LazyLock, vec};
+use std::vec;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use chrono::{DateTime, Utc};
 use multibase::Base;
-use regex::Regex;
-use serde_json::json;
 use sha2::Digest;
 
 use super::{
     DidLogEntry, WitnessEntry,
     verify::{verify_proofs, verify_witness},
 };
-use crate::operation::resolve::{ContentType, Metadata, Options, Parameters, Resolved};
-use crate::{DidResolver, Document, Error, webvh::SCID_PLACEHOLDER};
+use crate::{DidResolver, Document, Error, QueryParams, Url, webvh::SCID_PLACEHOLDER};
 
-static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new("^did:webvh:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")
-});
+impl Url {
+    /// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
+    /// DID list document (default) or another location where the root path is
+    /// a conversion from the DID to an HTTP URL.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the DID URL is invalid.
+    ///
+    /// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
+    ///
+    pub fn to_webvh_http(&self) -> anyhow::Result<String> {
+        // 1. Remove the literal `did:webvh:` prefix from the DID URL.
+        let scid_and_fqdn = self.id.clone();
+
+        // 2. Remove the `SCID` by removing the text up to and including the
+        // first `:` character.
+        let Some(fqdn) = scid_and_fqdn.split_once(':').map(|x| x.1) else {
+            bail!("DID is not a valid did:webvh - no SCID");
+        };
+
+        // 3. Replace `:` with `/` in the domain part of the identifier to obtain
+        // the fully qualified domain name and optional path.
+        let mut domain = fqdn.replace(':', "/");
+
+        // 4. If there is no optional path, append `/.well-known` to the URL.
+        if !fqdn.contains(':') {
+            domain.push_str("/.well-known");
+        }
+
+        // 5. If the domain contains a port, percent-decode the colon.
+        let domain = domain.replace("%3A", ":");
+
+        // 6. Prepend `https://` to the domain to generate the URL.
+        let url = format!("https://{domain}");
+
+        // 7. Append `/did.jsonl` (default) or the specified file sub-path to
+        // the URL to complete it.
+        let mut fp = "/did.jsonl".to_string();
+        if let Some(path) = &self.path {
+            if !path.is_empty() {
+                fp = path.join("/");
+            }
+        };
+        let url = format!("{url}{fp}");
+
+        Ok(url)
+    }
+}
 
 /// Resolve a `did:webvh` DID URL to a DID document.
 ///
@@ -32,97 +75,19 @@ static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// # Errors
 ///
-/// Will fail if the DID URL is invalid or the DID list document cannot be
-/// found.
+/// Will fail if the DID URL is invalid or the provider returns an error.
 pub async fn resolve(
-    did: &str, options: Option<Options>, resolver: impl DidResolver,
-) -> crate::Result<Resolved> {
-    // Generate the URL to fetch the DID list document.
-    let url = http_url(did, None)?;
-
-    // The content type for the did.jsonl file SHOULD be text/jsonl.
-    if let Some(opts) = options {
-        if let Some(content_type) = opts.accept {
-            match content_type {
-                ContentType::JsonL => {}
-                ContentType::DidLdJson => {
-                    return Err(Error::RepresentationNotSupported(
-                        "Content type must be text/json".to_string(),
-                    ));
-                }
-            }
-        }
-    }
+    url: &Url, resolver: &impl DidResolver,
+) -> crate::Result<Document> {
+    // Generate the URL to fetch the DID list (log) document.
+    let http_url = url.to_webvh_http().map_err(|e| Error::InvalidDid(e.to_string()))?;
 
     // Perform an HTTP GET request to the URL for the DID log document. The
     // client can use helper methods to unpack the `JSONL` file and extract the
     // DID document.
-    // TODO: The resolver needs to honour the content type.
-    let document = resolver.resolve(&url).await.map_err(Error::Other)?;
-
-    Ok(Resolved {
-        context: "https://w3id.org/did-resolution/v1".into(),
-        metadata: Metadata {
-            content_type: ContentType::DidLdJson,
-            additional: Some(json!({
-                "pattern": "^did:webvh:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$",
-                "did": {
-                    "didString": did,
-                    "methodSpecificId": did[8..],
-                    "method": "webvh"
-                }
-            })),
-            ..Metadata::default()
-        },
-        document: Some(document),
-        ..Resolved::default()
+    resolver.resolve(&http_url).await.map_err(|e| {
+        Error::InvalidDid(format!("issue resolving did:web: {e}"))
     })
-}
-
-/// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
-/// DID list document (default) or another location where the root path is
-/// a conversion from the DID to an HTTP URL.
-///
-/// # Errors
-///
-/// Will fail if the DID URL is invalid.
-///
-/// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
-///
-fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
-    let Some(caps) = DID_REGEX.captures(did) else {
-        return Err(Error::InvalidDid("DID is not a valid did:webvh".to_string()));
-    };
-    // 1. Remove the literal `did:webvh:` prefix from the DID URL.
-    let scid_and_fqdn = &caps["identifier"];
-
-    // 2. Remove the `SCID` by removing the text up to and including the
-    // first `:` character.
-    let Some(fqdn) = scid_and_fqdn.split_once(':').map(|x| x.1) else {
-        return Err(Error::InvalidDid("DID is not a valid did:webvh - no SCID".to_string()));
-    };
-
-    // 3. Replace `:` with `/` in the domain part of the identifier to obtain
-    // the fully qualified domain name and optional path.
-    let mut domain = fqdn.replace(':', "/");
-
-    // 4. If there is no optional path, append `/.well-known` to the URL.
-    if !fqdn.contains(':') {
-        domain.push_str("/.well-known");
-    }
-
-    // 5. If the domain contains a port, percent-decode the colon.
-    let domain = domain.replace("%3A", ":");
-
-    // 6. Prepend `https://` to the domain to generate the URL.
-    let url = format!("https://{domain}");
-
-    // 7. Append `/did.jsonl` (default) or the specified file sub-path to
-    // the URL to complete it.
-    let fp = file_path.unwrap_or("/did.jsonl");
-    let url = format!("{url}{fp}");
-
-    Ok(url)
 }
 
 /// Verification of the contents of the `did.jsonl` file and resolution into a
@@ -138,7 +103,7 @@ fn http_url(did: &str, file_path: Option<&str>) -> crate::Result<String> {
 ///
 /// Will fail if the log entries are invalid.
 pub async fn resolve_log(
-    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<Parameters>,
+    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<QueryParams>,
     resolver: &impl DidResolver,
 ) -> crate::Result<Document> {
     if log.is_empty() {
@@ -259,10 +224,12 @@ pub async fn resolve_log(
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use anyhow::anyhow;
     use insta::assert_json_snapshot as assert_snapshot;
 
-    use crate::{Document, operation::resolve::dereference};
+    use crate::{Document, resolve::dereference_url};
 
     use super::*;
 
@@ -280,7 +247,7 @@ mod test {
         const DID_URL: &str = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
 
         let dereferenced =
-            dereference(DID_URL, None, MockResolver).await.expect("should dereference");
+            dereference_url(DID_URL, &MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_webvh", dereferenced);
     }
 
@@ -288,21 +255,26 @@ mod test {
     fn default_url() {
         let did =
             "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer";
-        let url = http_url(did, None).unwrap();
+        let structured_url = Url::from_str(did).expect("should parse");
+        println!("structured_url: {structured_url:?}");
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer/.well-known/did.jsonl");
     }
 
     #[test]
     fn path_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer:dids:issuer";
-        let url = http_url(did, None).unwrap();
+        let structured_url = Url::from_str(did).expect("should parse");
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer/dids/issuer/did.jsonl");
     }
 
     #[test]
     fn port_url() {
         let did = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:domain.with-hyphens.computer%3A8080";
-        let url = http_url(did, None).unwrap();
+        let structured_url = Url::from_str(did).expect("should parse");
+        println!("structured_url: {structured_url:?}");
+        let url = structured_url.to_webvh_http().expect("should serialize");
         assert_eq!(url, "https://domain.with-hyphens.computer:8080/.well-known/did.jsonl");
     }
 }

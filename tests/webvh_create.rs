@@ -4,9 +4,11 @@
 use credibil_did::{
     KeyPurpose,
     core::{Kind, OneMany},
-    document::{MethodType, Service, VerificationMethod},
-    operation::document::{Create, DocumentBuilder, VerificationMethodBuilder, VmKeyId},
-    webvh::{Witness, WitnessWeight, create::CreateBuilder, url::default_did},
+    document::{
+        Create, DocumentBuilder, MethodType, Service, VerificationMethod,
+        VerificationMethodBuilder, VmKeyId,
+    },
+    webvh::{Witness, WitnessWeight, CreateBuilder, default_did},
 };
 use kms::new_keyring;
 use serde_json::Value;

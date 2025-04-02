@@ -11,8 +11,12 @@
 
 pub mod operator;
 pub mod resolver;
+mod resolve;
+
+pub use resolve::*;
 
 /// `DidKey` provides a type for implementing `did:key` operation and 
 /// resolution methods. 
+/// TODO: Remove this. Just need the namespace, not a receiver.
 #[allow(clippy::module_name_repetitions)]
 pub struct DidKey;

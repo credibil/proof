@@ -1,19 +1,13 @@
 ---
 source: src/webvh/resolve.rs
-assertion_line: 154
+assertion_line: 251
 expression: dereferenced
 ---
 {
-  "metadata": {
-    "contentType": "application/did+ld+json"
-  },
-  "contentStream": {
-    "VerificationMethod": {
-      "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv",
-      "type": "Multikey",
-      "controller": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
-      "publicKeyMultibase": "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
-    }
-  },
-  "contentMetadata": {}
+  "VerificationMethod": {
+    "id": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv",
+    "type": "Multikey",
+    "controller": "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io",
+    "publicKeyMultibase": "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+  }
 }

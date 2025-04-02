@@ -16,19 +16,20 @@
 pub mod core;
 pub mod document;
 mod error;
-mod jwk;
+pub mod jwk;
 pub mod key;
-pub mod operation;
+mod resolve;
 pub mod web;
 pub mod webvh;
+mod url;
 
-use std::{future::Future, str::FromStr};
+use std::{fmt::{Display, Formatter}, future::Future, str::FromStr};
 
-use anyhow::anyhow;
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-pub use document::{CreateOptions, Document};
-pub use operation::resolve::{Resource, dereference};
+pub use document::*;
+pub use resolve::*;
 pub use error::Error;
+pub use url::*;
 
 const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
 const X25519_CODEC: [u8; 2] = [0xec, 0x01];
@@ -53,12 +54,13 @@ pub enum Method {
 impl FromStr for Method {
     type Err = Error;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let parts = s.split(':').collect::<Vec<_>>();
-        if parts.len() < 2  || parts[0] != "did" {
-            return Err(Error::Other(anyhow!(format!("invalid did method string {}", s))));
-        }
-        match *parts.get(1).unwrap_or(&"unknown") {
+    /// Parse a string into a [`Method`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the string is not a valid method.
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
             "jwk" => Ok(Self::Jwk),
             "key" => Ok(Self::Key),
             "web" => Ok(Self::Web),
@@ -68,16 +70,26 @@ impl FromStr for Method {
     }
 }
 
+impl Display for Method {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Jwk => write!(f, "jwk"),
+            Self::Key => write!(f, "key"),
+            Self::Web => write!(f, "web"),
+            Self::WebVh => write!(f, "webvh"),
+        }
+    }
+}
+
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// [`DidResolver`] is used to proxy the resolution of a DID document. Resolution
-/// can either be local as in the case of `did:key`, or remote as in the case of
-/// `did:web` or `did:dht`.
+/// [`DidResolver`] is used to proxy the resolution of a DID document. 
 ///
 /// Implementers need only return the DID document specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
-/// fetching from a remote DID resolver.
+/// fetching from a remote DID resolver, or using a ledger or log that contains
+/// DID document versions.
 ///
 /// For example, a DID resolver for `did:web` would fetch the DID document from
 /// the specified URL. A DID resolver for `did:dht`should forward the request to

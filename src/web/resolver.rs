@@ -16,7 +16,7 @@ use serde_json::json;
 use super::DidWeb;
 use crate::DidResolver;
 use crate::error::Error;
-use crate::operation::resolve::{ContentType, Metadata, Options, Resolved};
+use crate::resolve::{ContentType, Metadata, Options, Resolved};
 
 static DID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new("^did:web:(?<identifier>[a-zA-Z0-9.\\-:\\%]+)$").expect("should compile")
@@ -41,7 +41,6 @@ impl DidWeb {
         //    considerations.
         let document = resolver.resolve(&url).await.map_err(Error::Other)?;
 
-        // TODO: implement security requirement:
         // 7. When performing the DNS resolution during the HTTP GET request, the client
         //    SHOULD utilize [RFC8484] in order to prevent tracking of the identity
         //    being resolved.
