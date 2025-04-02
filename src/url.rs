@@ -109,7 +109,7 @@ impl FromStr for Url {
     /// If the string is not a valid format or portions of the string cannot be
     /// de-serialized into the expected types, an error is returned.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.splitn(3, ':').collect::<Vec<_>>();
+        let parts = s.split(':').collect::<Vec<_>>();
         println!("parts: {parts:?}");
         if parts.len() < 3 {
             return Err(super::Error::InvalidDidUrl(s.to_string()));
@@ -121,13 +121,12 @@ impl FromStr for Url {
 
         // Get some help from standard URL parsing by converting the DID URL to
         // an HTTP one.
-        let fake_url = format!("https://{}", parts[2]);
+        let domain = parts[parts.len() - 1];
+        let domain = domain.replace("%3A", ":");
+        let fake_url = format!("https://{}", domain);
         let url = url::Url::parse(&fake_url)
             .map_err(|e| Error::InvalidDidUrl(format!("issue parsing URL: {e}")))?;
-        let id = url
-            .host_str()
-            .ok_or_else(|| Error::InvalidDidUrl(format!("missing method-specific id: {s}")))?;
-        let id = id.to_string();
+        let id = parts[2..parts.len()].join(":");
         let mut path: Option<Vec<&str>> = url.path_segments().map(std::iter::Iterator::collect);
         if let Some(p) = &path {
             if p.is_empty() {
