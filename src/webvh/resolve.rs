@@ -60,7 +60,7 @@ impl Url {
             if !path.is_empty() {
                 fp = path.join("/");
             }
-        };
+        }
         let url = format!("{url}{fp}");
 
         Ok(url)

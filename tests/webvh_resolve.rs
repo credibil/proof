@@ -12,7 +12,7 @@ use credibil_did::{
         WitnessWeight, default_did, resolve_log,
     },
 };
-use kms::new_keyring;
+use kms::Keyring;
 use serde_json::Value;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.
@@ -20,7 +20,7 @@ use serde_json::Value;
 async fn resolve_single() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -53,13 +53,13 @@ async fn resolve_single() {
         .build();
 
     let next_multi =
-        new_keyring().verifying_key_multibase().await.expect("should get multibase key");
-    let witness_keyring1 = new_keyring();
+    Keyring::new().verifying_key_multibase().await.expect("should get multibase key");
+    let witness_keyring1 = Keyring::new();
     let witness1 = WitnessWeight {
         id: witness_keyring1.did_key(),
         weight: 50,
     };
-    let witness_keyring2 = new_keyring();
+    let witness_keyring2 = Keyring::new();
     let witness2 = WitnessWeight {
         id: witness_keyring2.did_key(),
         weight: 40,
@@ -103,7 +103,7 @@ async fn resolve_multiple() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -138,12 +138,12 @@ async fn resolve_multiple() {
     let next_key = signer.next_key_jwk().expect("should get next key");
     let next_multi = next_key.to_multibase().expect("should convert to multibase");
 
-    let witness_keyring1 = new_keyring();
+    let witness_keyring1 = Keyring::new();
     let witness1 = WitnessWeight {
         id: witness_keyring1.did_key(),
         weight: 50,
     };
-    let witness_keyring2 = new_keyring();
+    let witness_keyring2 = Keyring::new();
     let witness2 = WitnessWeight {
         id: witness_keyring2.did_key(),
         weight: 40,
@@ -229,7 +229,7 @@ async fn resolve_deactivated() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -268,11 +268,11 @@ async fn resolve_deactivated() {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 50,
             },
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 40,
             },
         ],

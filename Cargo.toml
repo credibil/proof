@@ -25,9 +25,9 @@ credibil-infosec = "0.1.2"
 curve25519-dalek = "4.1.3"
 ed25519-dalek.workspace = true
 multibase.workspace = true
-rand = "0.8.5"
+rand.workspace = true
 regex = "1.11.1"
-serde = { version = "1.0.218", features = ["derive"] }
+serde.workspace = true
 serde-querystring = "0.3.0"
 serde_json = { version = "1.0.139", features = ["alloc"] }
 serde_json_canonicalizer = "0.3.0"
@@ -39,14 +39,15 @@ uuid = { version = "1.15.1", features = ["v4"] }
 [dev-dependencies]
 axum = "0.8.1"
 insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.44.1", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["fs"] }
 kms = { path = "crates/kms" }
 serde-jsonlines = "0.7.0"
 
 [workspace]
 members = [
-    "crates/kms"
+    "crates/kms",
+    "examples/webvh",
 ]
 resolver = "2"
 
@@ -82,5 +83,7 @@ credibil-did = { path = "." }
 credibil-infosec = "0.1.1"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 multibase = "0.9.1"
+rand = "0.8.5"
+serde = { version = "1.0.218", features = ["derive"] }
 sha2 = "0.10.8"
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }

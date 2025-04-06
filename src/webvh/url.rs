@@ -5,6 +5,8 @@
 //!
 //! See <https://identity.foundation/didwebvh/next/>
 
+use std::fmt::Write;
+
 use anyhow::bail;
 use url::Url;
 
@@ -34,13 +36,13 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
     };
     let mut host = host_str.to_string();
     if let Some(port) = url.port() {
-        host.push_str(&format!("%3A{port}"));
+        let _ = write!(host, "%3A{port}");
     }
     if let Some(path) = url.path().strip_prefix('/') {
         if !path.is_empty() {
             let formatted_path = path.trim_end_matches('/');
             let formatted_path = formatted_path.replace('/', ":");
-            host.push_str(&format!(":{formatted_path}"));
+            let _ = write!(host, ":{formatted_path}");
         }
     }
     Ok(host)

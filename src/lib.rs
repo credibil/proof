@@ -25,6 +25,8 @@ mod url;
 
 use std::{fmt::{Display, Formatter}, future::Future, str::FromStr};
 
+use anyhow::anyhow;
+
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::*;
 pub use resolve::*;
@@ -112,7 +114,7 @@ pub trait DidOperator: Send + Sync {
 }
 
 /// The purpose key material will be used for.
-#[derive(Clone)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum KeyPurpose {
     /// The document's `verification_method` field.
     VerificationMethod,
@@ -131,4 +133,33 @@ pub enum KeyPurpose {
 
     /// The document's `capability_delegation` field.
     CapabilityDelegation,
+}
+
+impl Display for KeyPurpose {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VerificationMethod => write!(f, "verificationMethod"),
+            Self::Authentication => write!(f, "authentication"),
+            Self::AssertionMethod => write!(f, "assertionMethod"),
+            Self::KeyAgreement => write!(f, "keyAgreement"),
+            Self::CapabilityInvocation => write!(f, "capabilityInvocation"),
+            Self::CapabilityDelegation => write!(f, "capabilityDelegation"),
+        }
+    }
+}
+
+impl FromStr for KeyPurpose {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "verificationMethod" => Ok(Self::VerificationMethod),
+            "authentication" => Ok(Self::Authentication),
+            "assertionMethod" => Ok(Self::AssertionMethod),
+            "keyAgreement" => Ok(Self::KeyAgreement),
+            "capabilityInvocation" => Ok(Self::CapabilityInvocation),
+            "capabilityDelegation" => Ok(Self::CapabilityDelegation),
+            _ => Err(anyhow!("Invalid key purpose").into()),
+        }
+    }
 }

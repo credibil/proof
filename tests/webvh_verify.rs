@@ -9,7 +9,7 @@ use credibil_did::{
     },
     webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs},
 };
-use kms::new_keyring;
+use kms::Keyring;
 use serde_json::Value;
 
 // Create a minimal document and then verify the proof. Should verify without
@@ -18,7 +18,7 @@ use serde_json::Value;
 async fn simple_proof() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -57,7 +57,7 @@ async fn simple_proof() {
 async fn complex_proof() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -90,14 +90,14 @@ async fn complex_proof() {
         .build();
 
     let next_multi =
-        new_keyring().verifying_key_multibase().await.expect("should get multibase key");
+        Keyring::new().verifying_key_multibase().await.expect("should get multibase key");
 
-    let witness_keyring1 = new_keyring();
+    let witness_keyring1 = Keyring::new();
     let witness1 = WitnessWeight {
         id: witness_keyring1.did().to_string(),
         weight: 50,
     };
-    let witness_keyring2 = new_keyring();
+    let witness_keyring2 = Keyring::new();
     let witness2 = WitnessWeight {
         id: witness_keyring2.did().to_string(),
         weight: 40,

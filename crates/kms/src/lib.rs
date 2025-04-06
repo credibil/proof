@@ -32,36 +32,38 @@ pub struct Keyring {
     other_secret_keys: HashMap<String, String>,
 }
 
-pub fn new_keyring() -> Keyring {
-    let signing_key = SigningKey::generate(&mut OsRng);
-
-    // verifying key (Ed25519)
-    let verifying_key = signing_key.verifying_key();
-    let mut multi_bytes = ED25519_CODEC.to_vec();
-    multi_bytes.extend_from_slice(&verifying_key.to_bytes());
-    let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-    // key used in the next iteration of key rotation
-    let next_secret_key = SigningKey::generate(&mut OsRng);
-
-    Keyring {
-        did: format!("did:key:{verifying_multi}"),
-        did_key: format!("did:key:{verifying_multi}#{verifying_multi}"),
-        secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
-        verifying_key,
-        next_secret_key: Base64UrlUnpadded::encode_string(next_secret_key.as_bytes()),
-        other_secret_keys: HashMap::new(),
-    }
-}
 
 impl Keyring {
+    // Create a new keyring with a random signing key.
+    pub fn new() -> Self {
+        let signing_key = SigningKey::generate(&mut OsRng);
+    
+        // verifying key (Ed25519)
+        let verifying_key = signing_key.verifying_key();
+        let mut multi_bytes = ED25519_CODEC.to_vec();
+        multi_bytes.extend_from_slice(&verifying_key.to_bytes());
+        let verifying_multi = multibase::encode(Base::Base58Btc, &multi_bytes);
+    
+        // key used in the next iteration of key rotation
+        let next_secret_key = SigningKey::generate(&mut OsRng);
+    
+        Self {
+            did: format!("did:key:{verifying_multi}"),
+            did_key: format!("did:key:{verifying_multi}#{verifying_multi}"),
+            secret_key: Base64UrlUnpadded::encode_string(signing_key.as_bytes()),
+            verifying_key,
+            next_secret_key: Base64UrlUnpadded::encode_string(next_secret_key.as_bytes()),
+            other_secret_keys: HashMap::new(),
+        }
+    }
+
     // Rotate signing key to next key in key rotation.
     pub fn rotate(&mut self) -> anyhow::Result<()> {
         self.secret_key = self.next_secret_key.clone();
         let key_bytes = Base64UrlUnpadded::decode_vec(&self.secret_key)?;
         let secret_key: ed25519_dalek::SecretKey =
             key_bytes.try_into().map_err(|_| anyhow!("invalid secret key"))?;
-        let signing_key: SigningKey = SigningKey::from_bytes(&secret_key);
+        let signing_key = SigningKey::from_bytes(&secret_key);
         let verifying_key = signing_key.verifying_key();
         let mut multi_bytes = ED25519_CODEC.to_vec();
         multi_bytes.extend_from_slice(&verifying_key.to_bytes());

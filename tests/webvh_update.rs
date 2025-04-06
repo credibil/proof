@@ -10,7 +10,7 @@ use credibil_did::{
     },
     webvh::{CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did},
 };
-use kms::new_keyring;
+use kms::Keyring;
 use serde_json::Value;
 
 // Test the happy path of creating then updating a `did:webvh` document and log
@@ -21,7 +21,7 @@ async fn update_success() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -56,12 +56,12 @@ async fn update_success() {
     let next_key = signer.next_key_jwk().expect("should get next key");
     let next_multi = next_key.to_multibase().expect("should convert to multibase");
 
-    let witness_keyring1 = new_keyring();
+    let witness_keyring1 = Keyring::new();
     let witness1 = WitnessWeight {
         id: witness_keyring1.did_key(),
         weight: 50,
     };
-    let witness_keyring2 = new_keyring();
+    let witness_keyring2 = Keyring::new();
     let witness2 = WitnessWeight {
         id: witness_keyring2.did_key(),
         weight: 40,

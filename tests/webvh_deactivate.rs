@@ -12,7 +12,7 @@ use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
     default_did,
 };
-use kms::new_keyring;
+use kms::Keyring;
 use serde_json::Value;
 
 // Test the happy path of creating then deactivating a `did:webvh` document and
@@ -21,7 +21,7 @@ use serde_json::Value;
 async fn create_then_deactivate() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -60,11 +60,11 @@ async fn create_then_deactivate() {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 50,
             },
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 40,
             },
         ],
@@ -102,7 +102,7 @@ async fn update_then_deactivate() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
+    let mut signer = Keyring::new();
     let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -141,11 +141,11 @@ async fn update_then_deactivate() {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 50,
             },
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: Keyring::new().did().to_string(),
                 weight: 40,
             },
         ],

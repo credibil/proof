@@ -660,8 +660,8 @@ impl<O> DocumentBuilder<O> {
     /// be aware of the DID method context in which it is used to determine the
     /// reliability of the value.
     #[must_use]
-    pub fn did(&self) -> &str {
-        &self.doc.id
+    pub fn did(&self) -> String {
+        self.doc.id.clone()
     }
 }
 
