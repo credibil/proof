@@ -17,7 +17,7 @@ pub struct Keyring {
 }
 
 impl Keyring {
-    // Create a new keyring pre-populated with some keys.
+    // Create a new keyring.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -45,10 +45,13 @@ impl Keyring {
         let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
         keys.insert(id.to_string(), key);
 
-        let mut next_keys = self.next_keys.lock().unwrap();
+        let mut next_keys = self.next_keys.lock().map_err(|_| {
+            anyhow!("failed to lock next keys mutex")
+        })?;
         let next_signing_key = SigningKey::generate(&mut OsRng);
         let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
         next_keys.insert(id.to_string(), next_key);
+
         Ok(())
     }
 
@@ -179,7 +182,9 @@ impl Signer for Keyring {
     }
 
     async fn verification_method(&self) -> anyhow::Result<String> {
-        let vm = self.verification_method.lock().unwrap();
+        let vm = self.verification_method.lock().map_err(|_| {
+            anyhow!("failed to lock verification method mutex")
+        })?;
         if vm.is_empty() {
             return Err(anyhow!("verification method not set"));
         }

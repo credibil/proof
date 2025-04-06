@@ -1,10 +1,11 @@
 
 use crate::keyring::Keyring;
+use crate::log::Log;
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub keyring: Keyring,
-    // pub log: Arc<Mutex<HashMap<String, Vec<DidLog>>>>,
+    pub log: Log,
 }
 
 impl AppState {
@@ -12,7 +13,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             keyring: Keyring::new(),
-            // log: Arc::new(Mutex::new(HashMap::new())),
+            log: Log::new(),
         }
     }
 }

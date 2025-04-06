@@ -5,6 +5,7 @@
 
 mod create;
 mod keyring;
+mod log;
 mod state;
 
 use axum::extract::rejection::JsonRejection;
@@ -28,10 +29,8 @@ async fn main() {
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
-    let app_state = AppState::new();
-    app_state.keyring.add_key("signing").expect("should add signing key to keyring");
     let router =
-        Router::new().route("/create", post(create)).layer(cors).with_state(app_state);
+        Router::new().route("/create", post(create)).layer(cors).with_state(AppState::new());
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
     tracing::info!("listening on {}", listener.local_addr().expect("should have addr"));
