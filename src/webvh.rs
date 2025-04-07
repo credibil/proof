@@ -149,6 +149,9 @@ impl DidLogEntry {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vm = signer.verification_method().await?;
+        // We have no way of passing the SCID to an infosec signer, so assume
+        // the signer has injected a placeholder and replace it here.
+        let vm = vm.replace(SCID_PLACEHOLDER, &self.parameters.scid);
 
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
