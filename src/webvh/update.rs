@@ -1,5 +1,4 @@
 //! Update operation for the `did:webvh` method.
-//!
 
 use anyhow::bail;
 use chrono::Utc;

@@ -54,7 +54,7 @@ pub async fn create(
 
     // Store the log in app state
     let mut log = state.log.lock().await;
-    log.add_log(&result.did, result.log.clone())?;
+    log.add_log(&domain_and_path, result.log.clone())?;
 
     Ok(AppJson(result))
 }

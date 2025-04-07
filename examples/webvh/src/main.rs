@@ -6,12 +6,13 @@
 mod create;
 mod keyring;
 mod log;
+mod resolve;
 mod state;
 
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Router, extract::FromRequest};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
@@ -21,6 +22,7 @@ use tracing_subscriber::FmtSubscriber;
 
 use create::create;
 use state::AppState;
+use resolve::read;
 
 #[tokio::main]
 async fn main() {
@@ -29,8 +31,11 @@ async fn main() {
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
-    let router =
-        Router::new().route("/create", post(create)).layer(cors).with_state(AppState::new());
+    let router = Router::new()
+        .route("/create", post(create))
+        .route("/.well-known/did.jsonl", get(read))
+        .layer(cors)
+        .with_state(AppState::new());
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
     tracing::info!("listening on {}", listener.local_addr().expect("should have addr"));

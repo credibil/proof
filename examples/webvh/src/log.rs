@@ -21,10 +21,7 @@ impl Log {
         Ok(())
     }
 
-    // pub fn get_log(&self) -> anyhow::Result<HashMap<String, DidLog>> {
-    //     let entries = self.entries.lock().map_err(|_| {
-    //         anyhow::anyhow!("failed to lock entries mutex")
-    //     })?;
-    //     Ok(entries.clone())
-    // }
+    pub fn get_log(&self, id: impl ToString) -> Option<DidLog> {
+        self.entries.get(&id.to_string()).cloned()
+    }
 }
