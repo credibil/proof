@@ -89,38 +89,35 @@ impl Keyring {
     }
 
     // Get a public multibase key for a key in the keyring.
-    // pub fn multibase(&self, id: impl ToString + Clone) -> anyhow::Result<String> {
-    //     let key = self.jwk(id)?;
-    //     Ok(key.to_multibase()?)
-    // }
+    pub fn multibase(&mut self, id: impl ToString + Clone) -> anyhow::Result<String> {
+        let key = self.jwk(id)?;
+        Ok(key.to_multibase()?)
+    }
 
     // Get a public JWK for a next key in the keyring.
     //
     // This will fail with an error if the key is not found or any encoding
     // errors occur.
-    // pub fn next_jwk(&self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
-    //     let keys = self.next_keys.lock().map_err(|_| {
-    //         anyhow!("failed to lock keys mutex")
-    //     })?;
-    //     if let Some(secret) = keys.get(&id.to_string()).cloned() {
-    //         let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-    //         let secret_key: ed25519_dalek::SecretKey =
-    //             key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-    //         let signing_key = SigningKey::from_bytes(&secret_key);
-    //         let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-    //         return Ok(PublicKeyJwk::from_bytes(&verifying_key)?);
-    //     }
-    //     Err(anyhow!("key not found"))
-    // }
+    pub fn next_jwk(&self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
+        if let Some(secret) = self.next_keys.get(&id.to_string()).cloned() {
+            let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
+            let secret_key: ed25519_dalek::SecretKey =
+                key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
+            let signing_key = SigningKey::from_bytes(&secret_key);
+            let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
+            return Ok(PublicKeyJwk::from_bytes(&verifying_key)?);
+        }
+        Err(anyhow!("key not found"))
+    }
 
     // Get a public multibase key for a next key in the keyring.
     //
     // Will fail with an error if the key is not found or any encoding errors
     // occur.
-    // pub fn next_multibase(&self, id: impl ToString + Clone) -> anyhow::Result<String> {
-    //     let key = self.next_jwk(id)?;
-    //     Ok(key.to_multibase()?)
-    // }
+    pub fn next_multibase(&self, id: impl ToString + Clone) -> anyhow::Result<String> {
+        let key = self.next_jwk(id)?;
+        Ok(key.to_multibase()?)
+    }
 
     // Get a `did:key` for the specified key in the keyring.
     //

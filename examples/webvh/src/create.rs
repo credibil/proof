@@ -28,11 +28,12 @@ pub async fn create(
     let mut keyring = state.keyring.lock().await;
 
     let update_jwk = keyring.jwk("signing")?;
-    let update_multi = update_jwk.to_multibase()?;
+    let update_multi = keyring.multibase("signing")?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
     let id_jwk = keyring.jwk("id")?;
     let did = default_did(&domain_and_path)?;
+    let next_key = keyring.next_multibase("signing")?;
 
     let vm = VerificationMethodBuilder::new(&update_jwk)
         .key_id(&did, VmKeyId::Authorization(id_jwk))?
@@ -50,7 +51,8 @@ pub async fn create(
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?
         .build();
 
-    let result = CreateBuilder::new(&update_keys, &doc)?.build(&keyring.clone()).await?;
+    let result =
+        CreateBuilder::new(&update_keys, &doc)?.next_key(&next_key).build(&keyring.clone()).await?;
 
     // Store the log in app state
     let mut log = state.log.lock().await;
