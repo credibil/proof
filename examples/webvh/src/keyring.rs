@@ -1,7 +1,6 @@
 //! Key management
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
@@ -11,9 +10,9 @@ use rand::rngs::OsRng;
 
 #[derive(Clone, Debug)]
 pub struct Keyring {
-    keys: Arc<Mutex<HashMap<String, String>>>,
-    next_keys: Arc<Mutex<HashMap<String, String>>>,
-    verification_method: Arc<Mutex<String>>,
+    keys: HashMap<String, String>,
+    next_keys: HashMap<String, String>,
+    verification_method: String,
 }
 
 impl Keyring {
@@ -21,36 +20,27 @@ impl Keyring {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            keys: Arc::new(Mutex::new(HashMap::new())),
-            next_keys: Arc::new(Mutex::new(HashMap::new())),
-            verification_method: Arc::new(Mutex::new(String::new())),
+            keys: HashMap::new(),
+            next_keys: HashMap::new(),
+            verification_method: String::new(),
         }
     }
 
     // Set the verification method for the keyring.
-    pub fn set_verification_method(&self, vm: impl ToString) -> anyhow::Result<()> {
-        let mut verification_method = self.verification_method.lock().map_err(|_| {
-            anyhow!("failed to lock verification method mutex")
-        })?;
-        *verification_method = vm.to_string();
+    pub fn set_verification_method(&mut self, vm: impl ToString) -> anyhow::Result<()> {
+        self.verification_method = vm.to_string();
         Ok(())
     }
 
     // Add a newly generated key to the keyring and corresponding next key.
-    pub fn add_key(&self, id: impl ToString) -> anyhow::Result<()> {
-        let mut keys = self.keys.lock().map_err(|_| {
-            anyhow!("failed to lock keys mutex")
-        })?;
+    pub fn add_key(&mut self, id: impl ToString) -> anyhow::Result<()> {
         let signing_key = SigningKey::generate(&mut OsRng);
         let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
-        keys.insert(id.to_string(), key);
+        self.keys.insert(id.to_string(), key);
 
-        let mut next_keys = self.next_keys.lock().map_err(|_| {
-            anyhow!("failed to lock next keys mutex")
-        })?;
         let next_signing_key = SigningKey::generate(&mut OsRng);
         let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
-        next_keys.insert(id.to_string(), next_key);
+        self.next_keys.insert(id.to_string(), next_key);
 
         Ok(())
     }
@@ -80,15 +70,12 @@ impl Keyring {
     //
     // This will always return a result if it can. If the key is not found, one
     // will be generated with the specified ID.
-    pub fn jwk(&self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
-        let keys = self.keys.lock().map_err(|_| {
-            anyhow!("failed to lock keys mutex")
-        })?;
-        let secret = match keys.get(&id.to_string()) {
+    pub fn jwk(&mut self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
+        let secret = match self.keys.get(&id.to_string()) {
             Some(secret) => secret,
             None => {
                 self.add_key(id.clone())?;
-                keys.get(&id.to_string()).ok_or_else(|| {
+                self.keys.get(&id.to_string()).ok_or_else(|| {
                     anyhow!("key not found after generating new key")
                 })?
             }
@@ -149,10 +136,7 @@ impl Keyring {
 
 impl Signer for Keyring {
     async fn try_sign(&self, msg: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let keys = self.next_keys.lock().map_err(|_| {
-            anyhow!("failed to lock keys mutex")
-        })?;
-        if let Some(secret) = keys.get("signing").cloned() {
+        if let Some(secret) = self.keys.get("signing").cloned() {
             let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
             let secret_key: ed25519_dalek::SecretKey =
                 key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
@@ -163,10 +147,7 @@ impl Signer for Keyring {
     }
 
     async fn verifying_key(&self) -> anyhow::Result<Vec<u8>> {
-        let keys = self.next_keys.lock().map_err(|_| {
-            anyhow!("failed to lock keys mutex")
-        })?;
-        if let Some(secret) = keys.get("signing").cloned() {
+        if let Some(secret) = self.keys.get("signing").cloned() {
             let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
             let secret_key: ed25519_dalek::SecretKey =
                 key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
@@ -182,12 +163,9 @@ impl Signer for Keyring {
     }
 
     async fn verification_method(&self) -> anyhow::Result<String> {
-        let vm = self.verification_method.lock().map_err(|_| {
-            anyhow!("failed to lock verification method mutex")
-        })?;
-        if vm.is_empty() {
+        if self.verification_method.is_empty() {
             return Err(anyhow!("verification method not set"));
         }
-        Ok(vm.clone())
+        Ok(self.verification_method.clone())
     }
 }

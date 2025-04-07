@@ -25,11 +25,13 @@ pub async fn create(
 
     tracing::debug!("creating DID log document for {domain_and_path}");
 
-    let update_jwk = state.keyring.jwk("signing")?;
+    let mut keyring = state.keyring.lock().await;
+
+    let update_jwk = keyring.jwk("signing")?;
     let update_multi = update_jwk.to_multibase()?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let id_jwk = state.keyring.jwk("id")?;
+    let id_jwk = keyring.jwk("id")?;
     let did = default_did(&domain_and_path)?;
 
     let vm = VerificationMethodBuilder::new(&update_jwk)
@@ -37,7 +39,7 @@ pub async fn create(
         .method_type(&MethodType::Ed25519VerificationKey2020)?
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    state.keyring.set_verification_method(vm.id)?;
+    keyring.set_verification_method(vm.id)?;
 
     tracing::debug!("keys established");
 
@@ -48,10 +50,11 @@ pub async fn create(
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?
         .build();
 
-    let result = CreateBuilder::new(&update_keys, &doc)?.build(&state.keyring).await?;
+    let result = CreateBuilder::new(&update_keys, &doc)?.build(&keyring.clone()).await?;
 
     // Store the log in app state
-    state.log.add_log(&result.did, result.log.clone())?;
+    let mut log = state.log.lock().await;
+    log.add_log(&result.did, result.log.clone())?;
 
     Ok(AppJson(result))
 }
