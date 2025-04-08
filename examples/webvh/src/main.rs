@@ -4,7 +4,6 @@
 //! `did:webvh` method using the `credibil-did` crate.
 
 mod create;
-mod keyring;
 mod log;
 mod resolve;
 mod state;

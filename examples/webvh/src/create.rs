@@ -2,10 +2,7 @@ use axum::Json;
 use axum::extract::State;
 use axum_extra::{TypedHeader, headers::Host};
 use credibil_did::{
-    Create, DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder,
-    VmKeyId,
-    core::Kind,
-    webvh::{CreateBuilder, CreateResult, default_did},
+    core::Kind, webvh::{default_did, CreateBuilder, CreateResult}, Create, DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId
 };
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +37,7 @@ pub async fn create(
         .method_type(&MethodType::Ed25519VerificationKey2020)?
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    keyring.set_verification_method(vm.id)?;
+    keyring.set_verification_method("signing")?;
 
     tracing::debug!("keys established");
 

@@ -1,34 +1,26 @@
 //! Verification and validation functions for `did:webvh` log entries and
 //! information referenced in the log parameters.
 
-use crate::{
-    DidResolver,
-    document::VerificationMethod,
-    resolve::{Resource, dereference},
-};
-
 use super::{DidLogEntry, Witness, WitnessEntry};
 
 use anyhow::bail;
-use credibil_infosec::proof::w3c::Proof;
+use credibil_infosec::{proof::w3c::Proof, PublicKeyJwk};
 use sha2::Digest;
 
-/// Verify the proofs in a log entry.
+/// Verify the controller's proofs in a log entry.
 ///
 /// Requires a DID resolver to fetch a DID document and find the verification
 /// method referenced in the proof.
 ///
 /// # Errors
 /// Will return an error if any of the proofs on the log entry are invalid.
-pub async fn verify_proofs(
-    log_entry: &DidLogEntry, resolver: &impl DidResolver,
-) -> anyhow::Result<()> {
+pub async fn verify_proofs(log_entry: &DidLogEntry) -> anyhow::Result<()> {
     if log_entry.proof.is_empty() {
         bail!("log entry has no proof");
     }
 
     for proof in &log_entry.proof {
-        verify_proof(log_entry, proof, ProofSigner::Controller, resolver).await?;
+        verify_proof(log_entry, proof, &ProofSigner::Controller)?;
     }
     Ok(())
 }
@@ -51,8 +43,8 @@ pub enum ProofSigner {
 ///
 /// # Errors
 /// Will return an error if the proof is invalid.
-pub async fn verify_proof(
-    log_entry: &DidLogEntry, proof: &Proof, signer: ProofSigner, resolver: &impl DidResolver,
+pub fn verify_proof(
+    log_entry: &DidLogEntry, proof: &Proof, signer: &ProofSigner,
 ) -> anyhow::Result<()> {
     let mut unsigned_entry = log_entry.clone();
     if matches!(signer, ProofSigner::Controller) {
@@ -79,7 +71,12 @@ pub async fn verify_proof(
             proof.cryptosuite.as_deref().unwrap_or("")
         );
     }
-    let verification_method = dereference_vm(&proof.verification_method, resolver).await?;
+
+    let parts = proof.verification_method.split('#').collect::<Vec<&str>>();
+    if parts.len() != 2 {
+        bail!("verification method id has an unexpected format");
+    }
+    let verification_key = parts[1].to_string();
 
     // If we are verifying a controller's proof, the verification method public
     // key must be authorized to update log entries unless the proof is for a
@@ -87,12 +84,7 @@ pub async fn verify_proof(
     if !log_entry.parameters.deactivated {
         match signer {
             ProofSigner::Controller => {
-                let parts = verification_method.id.split('#').collect::<Vec<&str>>();
-                if parts.len() != 2 {
-                    bail!("verification method id has an unexpected format");
-                }
-                let key = parts[1].to_string();
-                if !log_entry.parameters.update_keys.contains(&key) {
+                if !log_entry.parameters.update_keys.contains(&verification_key) {
                     bail!("verification method is not authorized to update the log entry");
                 }
             }
@@ -110,26 +102,9 @@ pub async fn verify_proof(
     if base != multibase::Base::Base58Btc {
         bail!("unsupported multibase encoding");
     }
-    let key = verification_method.key.jwk()?;
+    let key = PublicKeyJwk::from_multibase(&verification_key)?;
     key.verify_bytes(&payload, &signature)?;
     Ok(())
-}
-
-/// Dereference a verification method URL for verifying a proof.
-///
-/// # Errors
-/// Will fail if the verification method URL cannot be dereferenced.
-async fn dereference_vm(
-    url: &str, resolver: &impl DidResolver,
-) -> anyhow::Result<VerificationMethod> {
-    let deref = dereference(url, None, resolver.clone()).await?;
-    let Some(cs) = deref.content_stream else {
-        bail!("could not dereference verification method");
-    };
-    match cs {
-        Resource::VerificationMethod(vm) => Ok(vm),
-        _ => bail!("dereferenced content stream is not a verification method"),
-    }
 }
 
 /// Validate a set of witness entries.
@@ -179,7 +154,7 @@ pub fn validate_witness(witness: &Witness) -> anyhow::Result<()> {
 /// Will fail if the total weight of witness proofs does not meet the threshold.
 /// Will also fail if called for a log entry that has no witness parameters.
 pub async fn verify_witness(
-    log_entry: &DidLogEntry, witnesses: &[WitnessEntry], resolver: &impl DidResolver,
+    log_entry: &DidLogEntry, witnesses: &[WitnessEntry],
 ) -> anyhow::Result<u64> {
     let Some(witness_weights) = &log_entry.parameters.witness else {
         bail!("log entry has no witness parameters");
@@ -190,10 +165,7 @@ pub async fn verify_witness(
             continue;
         }
         for proof in &witness.proof {
-            if matches!(
-                verify_proof(log_entry, proof, ProofSigner::Witness, resolver).await,
-                Ok(())
-            ) {
+            if matches!(verify_proof(log_entry, proof, &ProofSigner::Witness), Ok(())) {
                 if let Some(witness_weight) =
                     witness_weights.witnesses.iter().find(|w| w.id == proof.verification_method)
                 {

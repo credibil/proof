@@ -135,10 +135,9 @@ impl DidLogEntry {
     /// Construct a proof from a DID log entry.
     ///
     /// This function can be used to construct a controller's proof or a
-    /// witness's proof, but is intended to be used for witnesses. For
-    /// convenience, the `sign` method will construct a proof and add it to the
-    /// log entry and should be used instead of this method for a controller's
-    /// proof.
+    /// witness's proof. For convenience, the `sign` method will construct a
+    /// proof and add it to the log entry and should be used instead of this
+    /// method directly for a controller's proof.
     /// 
     /// # Errors
     /// 
@@ -159,7 +158,7 @@ impl DidLogEntry {
             cryptosuite: Some("eddsa-jcs-2022".to_string()),
             verification_method: vm,
             created: Some(Utc::now()),
-            proof_purpose: "authentication".to_string(),
+            proof_purpose: "assertionMethod".to_string(),
             ..Proof::default()
         };
         let config_data = serde_json_canonicalizer::to_string(&config)?;

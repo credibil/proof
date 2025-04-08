@@ -103,8 +103,7 @@ pub async fn resolve(
 ///
 /// Will fail if the log entries are invalid.
 pub async fn resolve_log(
-    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<QueryParams>,
-    resolver: &impl DidResolver,
+    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<QueryParams>
 ) -> crate::Result<Document> {
     if log.is_empty() {
         return Err(Error::Other(anyhow!("log entries are empty")));
@@ -121,7 +120,7 @@ pub async fn resolve_log(
         // processed.
 
         // 2. Verify controller proofs.
-        if let Err(error) = verify_proofs(&log[i], resolver).await {
+        if let Err(error) = verify_proofs(&log[i]).await {
             return Err(Error::Other(error));
         }
 
@@ -190,7 +189,7 @@ pub async fn resolve_log(
         // 9. Check witness proofs if provided.
         if witness_proofs.is_some() && log[i].parameters.witness.is_some() {
             if let Some(witness_entries) = witness_proofs {
-                if let Err(error) = verify_witness(&log[i], witness_entries, resolver).await {
+                if let Err(error) = verify_witness(&log[i], witness_entries).await {
                     return Err(Error::Other(error));
                 }
             }

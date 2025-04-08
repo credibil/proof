@@ -1,8 +1,9 @@
 //! Application state
 use std::sync::Arc;
+
+use kms::Keyring;
 use tokio::sync::Mutex;
 
-use crate::keyring::Keyring;
 use crate::log::Log;
 
 #[derive(Clone, Debug)]
