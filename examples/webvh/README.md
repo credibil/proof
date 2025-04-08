@@ -29,7 +29,7 @@ The read endpoint will `GET` the JSON log file (`did.jsonl`). You can call this 
 curl --location 'http://localhost:8080/.well-known/did.jsonl'
 ```
 
-Note that for convenience, the returned result for this example is a JSON document with entries as array members. In a real application the output should be a slighly more compact JSONL format.
+Note that the returned result for this example is a newline-delimited set of JSON objects. There is no standard MIME-type for this. See [jsonlines.org](https://jsonlines.org/).
 
 ### Update
 

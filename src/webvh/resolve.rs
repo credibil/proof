@@ -236,7 +236,7 @@ mod test {
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("./did-v3.json"))
+            serde_json::from_slice(include_bytes!("../../.samples/didwebvh.json"))
                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
         }
     }
