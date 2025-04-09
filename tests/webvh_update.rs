@@ -133,9 +133,11 @@ async fn update_success() {
         .build();
 
     // Create an update log entry and skip witness verification.
-    let result = UpdateBuilder::new(create_result.log.as_slice(), None, &doc)
+    let result = UpdateBuilder::from(create_result.log.as_slice(), None)
         .await
         .expect("should create builder")
+        .document(&doc)
+        .expect("should apply document")
         .rotate_keys(&new_update_keys, &new_next_keys)
         .expect("should rotate keys on builder")
         .signer(&signer)

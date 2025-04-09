@@ -86,8 +86,9 @@ pub async fn update(
 
     // Create an update log entry.
     let doc = db.build();
-    let result = UpdateBuilder::new(&did_log, None, &doc)
+    let result = UpdateBuilder::from(&did_log, None)
         .await?
+        .document(&doc)?
         .rotate_keys(&update_keys, &next_keys)?
         .signer(&*keyring)
         .build()
