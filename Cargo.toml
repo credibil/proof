@@ -39,14 +39,14 @@ uuid = { version = "1.15.1", features = ["v4"] }
 [dev-dependencies]
 axum = "0.8.1"
 insta = { version = "1.42.1", features = ["filters", "json", "redactions", "yaml"] }
+kms.workspace = true
 tokio = { version = "1.44.1", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["fs"] }
-kms = { path = "crates/kms" }
 serde-jsonlines = "0.7.0"
 
 [workspace]
 members = [
-    "crates/kms",
+    "examples/kms",
     "examples/webvh",
 ]
 resolver = "2"
@@ -82,6 +82,7 @@ base64ct = { version = "1.6.0", features = ["std"] }
 credibil-did = { path = "." } 
 credibil-infosec = "0.1.1"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
+kms = { path = "examples/kms" }
 multibase = "0.9.1"
 rand = "0.8.5"
 serde = { version = "1.0.218", features = ["derive"] }
