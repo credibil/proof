@@ -53,8 +53,13 @@ pub async fn create(
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?
         .build();
 
-    let result =
-        CreateBuilder::new(&update_keys, &doc)?.next_key(&next_key).build(&keyring.clone()).await?;
+    let result = CreateBuilder::new()
+        .document(&doc)?
+        .update_keys(&update_keys)?
+        .next_key(&next_key)
+        .signer(&*keyring)
+        .build()
+        .await?;
 
     // Store the log in app state
     let mut log = state.log.lock().await;

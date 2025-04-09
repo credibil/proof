@@ -78,14 +78,18 @@ async fn create_then_deactivate() {
         ],
     };
 
-    let create_result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let create_result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
         .expect("witness information should be applied")
         .ttl(60)
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 
@@ -167,14 +171,18 @@ async fn update_then_deactivate() {
         ],
     };
 
-    let create_result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let create_result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
         .expect("witness information should be applied")
         .ttl(60)
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 

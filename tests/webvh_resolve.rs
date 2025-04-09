@@ -79,14 +79,18 @@ async fn resolve_single() {
 
     signer.set_verification_method("signing").expect("should set verification method");
 
-    let result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
-        .ttl(60)
         .witness(&witnesses)
         .expect("witness information should be applied")
-        .build(&signer)
+        .ttl(60)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 
@@ -169,14 +173,18 @@ async fn resolve_multiple() {
 
     signer.set_verification_method("signing").expect("should set verification method");
 
-    let create_result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let create_result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
         .expect("witness information should be applied")
         .ttl(60)
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 
@@ -315,14 +323,18 @@ async fn resolve_deactivated() {
 
     signer.set_verification_method("signing").expect("should set verification method");
 
-    let create_result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let create_result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
         .expect("witness information should be applied")
         .ttl(60)
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 

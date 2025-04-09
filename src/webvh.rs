@@ -24,9 +24,9 @@ use crate::Document;
 use super::Method;
 
 pub use resolve::*;
-pub use create::*;
-pub use deactivate::*;
-pub use update::*;
+pub use create::{CreateBuilder, CreateResult};
+pub use deactivate::{DeactivateBuilder, DeactivateResult};
+pub use update::{UpdateBuilder, UpdateResult};
 pub use url::*;
 pub use verify::*;
 
