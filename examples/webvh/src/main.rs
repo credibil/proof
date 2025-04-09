@@ -7,6 +7,7 @@ mod create;
 mod log;
 mod resolve;
 mod state;
+mod update;
 
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
@@ -19,9 +20,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-use create::create;
 use state::AppState;
-use resolve::read;
 
 #[tokio::main]
 async fn main() {
@@ -31,8 +30,9 @@ async fn main() {
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let router = Router::new()
-        .route("/create", post(create))
-        .route("/.well-known/did.jsonl", get(read))
+        .route("/create", post(create::create))
+        .route("/.well-known/did.jsonl", get(resolve::read))
+        .route("/update", post(update::update))
         .layer(cors)
         .with_state(AppState::new());
 

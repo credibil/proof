@@ -21,6 +21,11 @@ curl --location 'http://localhost:8080/create' \
 --header 'Content-Type: application/json' \
 --data '{}'
 ```
+
+### Update
+
+The update endpoint will rotate keys and add another verification method to the DID document. See the `UpdateRequest` struct in the `update.rs` file: you can define a key purpose for the verification method to add. If you leave this blank a general purpose verification method is added anyway.
+
 ### Read JSON Log
 
 The read endpoint will `GET` the JSON log file (`did.jsonl`). You can call this after the other operations to see their effect.
@@ -30,7 +35,3 @@ curl --location 'http://localhost:8080/.well-known/did.jsonl'
 ```
 
 Note that the returned result for this example is a newline-delimited set of JSON objects. There is no standard MIME-type for this. See [jsonlines.org](https://jsonlines.org/).
-
-### Update
-
-The update endpoint will rotate keys and add another verification method to the DID document.

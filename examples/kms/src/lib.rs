@@ -48,6 +48,20 @@ impl Keyring {
         Ok(())
     }
 
+    // Replace a key in the keyring with a new one.
+    pub fn replace(&mut self, id: impl ToString) -> anyhow::Result<PublicKeyJwk> {
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
+        let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
+        self.keys.insert(id.to_string(), key);
+
+        let next_signing_key = SigningKey::generate(&mut OsRng);
+        let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
+        self.next_keys.insert(id.to_string(), next_key);
+
+        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)        
+    }
+
     // Rotate keys
     pub fn rotate(&mut self) -> anyhow::Result<()> {
         for (id, next_key) in self.next_keys.iter() {

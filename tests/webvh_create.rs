@@ -5,7 +5,7 @@ use credibil_did::{
     KeyPurpose,
     core::{Kind, OneMany},
     document::{
-        Create, DocumentBuilder, MethodType, Service, VerificationMethod,
+        DocumentBuilder, MethodType, Service, VerificationMethod,
         VerificationMethodBuilder, VmKeyId,
     },
     webvh::{CreateBuilder, Witness, WitnessWeight, default_did},
@@ -47,7 +47,7 @@ async fn create_success() {
             "https://example.com/.well-known/whois".to_string(),
         )),
     };
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)

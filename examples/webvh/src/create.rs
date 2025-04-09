@@ -1,8 +1,13 @@
+//! Create operation
+
 use axum::Json;
 use axum::extract::State;
 use axum_extra::{TypedHeader, headers::Host};
 use credibil_did::{
-    core::Kind, webvh::{default_did, CreateBuilder, CreateResult}, Create, DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId
+    DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder,
+    VmKeyId,
+    core::Kind,
+    webvh::{CreateBuilder, CreateResult, default_did},
 };
 use serde::{Deserialize, Serialize};
 
@@ -44,7 +49,7 @@ pub async fn create(
     // Could add other verification methods and service endpoints to the
     // `CreateRequest` and build them here.
 
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?
         .build();
 

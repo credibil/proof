@@ -390,45 +390,47 @@ impl Default for CreateOptions {
     }
 }
 
-/// A builder for creating a DID Document.
+/// Types of operation a `DocumentBuilder` can perform.
 #[derive(Clone, Debug, Default)]
-pub struct DocumentBuilder<O> {
-    /// Operation being performed
-    pub operation: O,
+pub enum DocumentBuilderOperation {
+    /// Create a new DID Document.
+    #[default]
+    Create,
 
-    // Document under construction
-    doc: Document,
+    /// Update an existing DID Document.
+    Update,
 }
 
-// Typestate state guards for a `DocumentBuilder`.
+/// A builder for creating a DID Document.
+#[derive(Clone, Debug, Default)]
+pub struct DocumentBuilder {
+    // Document under construction
+    doc: Document,
 
-/// The `DocumentBuilder` is being used to create new DID document.
-#[derive(Default)]
-pub struct Create;
-/// The `DocumentBuilder` is being used to update an existing DID document.
-#[derive(Default)]
-pub struct Update;
+    // Operation to perform
+    op: DocumentBuilderOperation,
+}
 
-impl<O> DocumentBuilder<O> {
+impl DocumentBuilder {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
-    pub fn new(did: &str) -> DocumentBuilder<Create> {
+    pub fn new(did: &str) -> Self {
         let doc = Document {
             id: did.to_string(),
             ..Document::default()
         };
-        DocumentBuilder {
-            operation: Create,
+        Self {
             doc,
+            op: DocumentBuilderOperation::Create,
         }
     }
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub fn from(doc: &Document) -> DocumentBuilder<Update> {
-        DocumentBuilder {
-            operation: Update,
+    pub fn from(doc: &Document) -> Self {
+        Self {
             doc: doc.clone(),
+            op: DocumentBuilderOperation::Update,
         }
     }
 
@@ -663,27 +665,22 @@ impl<O> DocumentBuilder<O> {
     pub fn did(&self) -> String {
         self.doc.id.clone()
     }
-}
 
-impl<Create> DocumentBuilder<Create> {
-    /// Set default metadata with created timestamp and build the DID Document.
+    /// Set default metadata with created or updated timestamp and build the DID
+    /// Document.
     #[must_use]
     pub fn build(mut self) -> Document {
-        let md = DocumentMetadata {
-            created: chrono::Utc::now(),
-            ..Default::default()
+        let md = match self.op {
+            DocumentBuilderOperation::Create => DocumentMetadata {
+                created: chrono::Utc::now(),
+                ..Default::default()
+            },
+            DocumentBuilderOperation::Update => {
+                let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
+                md.updated = Some(chrono::Utc::now());
+                md        
+            }
         };
-        self.doc.did_document_metadata = Some(md);
-        self.doc
-    }
-}
-
-impl<Update> DocumentBuilder<Update> {
-    /// Construct a new DID `Document` with updated timestamp.
-    #[must_use]
-    pub fn update(mut self) -> Document {
-        let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
-        md.updated = Some(chrono::Utc::now());
         self.doc.did_document_metadata = Some(md);
         self.doc
     }

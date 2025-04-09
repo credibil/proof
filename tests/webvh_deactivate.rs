@@ -5,8 +5,7 @@
 use credibil_did::KeyPurpose;
 use credibil_did::core::{Kind, OneMany};
 use credibil_did::document::{
-    Create, DocumentBuilder, MethodType, Service, Update, VerificationMethod,
-    VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
@@ -47,7 +46,7 @@ async fn create_then_deactivate() {
             "https://example.com/.well-known/whois".to_string(),
         )),
     };
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
@@ -136,7 +135,7 @@ async fn update_then_deactivate() {
             "https://example.com/.well-known/whois".to_string(),
         )),
     };
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
@@ -210,12 +209,12 @@ async fn update_then_deactivate() {
     let auth_vm = Kind::<VerificationMethod>::String(vm.id.clone());
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::<Update>::from(&doc)
+    let doc = DocumentBuilder::from(&doc)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_verification_method(&auth_vm, &KeyPurpose::Authentication)
         .expect("should add verification method")
-        .update();
+        .build();
 
     // Create an update log entry and skip witness verification of existing log.
     let update_result = UpdateBuilder::new(create_result.log.as_slice(), None, &doc)
@@ -223,7 +222,8 @@ async fn update_then_deactivate() {
         .expect("should create builder")
         .rotate_keys(&new_update_keys, &new_next_keys)
         .expect("should rotate keys on builder")
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 

@@ -14,7 +14,7 @@ use super::{DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::va
 /// Builder to update a DID document and associated log entry.
 ///
 /// Use this to construct an [`UpdateResult`].
-pub struct UpdateBuilder {
+pub struct UpdateBuilder<S> {
     update_keys: Vec<String>,
     portable: bool,
     next_key_hashes: Option<Vec<String>>,
@@ -23,9 +23,17 @@ pub struct UpdateBuilder {
 
     log: Vec<DidLogEntry>,
     doc: Document,
+
+    signer: S,
 }
 
-impl UpdateBuilder {
+/// Builder does not have a signer (can't build).
+pub struct WithoutSigner;
+
+/// Builder has a signer (can build).
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
+
+impl UpdateBuilder<WithoutSigner> {
     /// Create a new `UpdateBuilder` populated with the current log entries and
     /// the intended new DID document.
     ///
@@ -71,6 +79,7 @@ impl UpdateBuilder {
 
             log: log.to_vec(),
             doc: document.clone(),
+            signer: WithoutSigner,
         })
     }
 
@@ -177,6 +186,25 @@ impl UpdateBuilder {
         self
     }
 
+    /// Add a signer to the builder.
+    #[must_use]
+    pub fn signer<S: Signer>(self, signer: &S) -> UpdateBuilder<WithSigner<'_, S>> {
+        UpdateBuilder {
+            update_keys: self.update_keys,
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes,
+            witness: self.witness,
+            ttl: self.ttl,
+
+            log: self.log,
+            doc: self.doc,
+            signer: WithSigner(signer),
+        }
+    }
+}
+
+impl<S: Signer> UpdateBuilder<WithSigner<'_, S>> {
+
     /// Build the new log entry.
     ///
     /// Provide a `Signer` to construct a data integrity proof. To add more
@@ -187,7 +215,7 @@ impl UpdateBuilder {
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
     /// signer fails to sign the log entry.
-    pub async fn build(&self, signer: &impl Signer) -> anyhow::Result<UpdateResult> {
+    pub async fn build(&self) -> anyhow::Result<UpdateResult> {
         let mut log = self.log.clone();
         let Some(last_entry) = log.last() else {
             anyhow::bail!("log must not be empty.");
@@ -223,7 +251,7 @@ impl UpdateBuilder {
         entry.version_id = format!("{version_number}-{entry_hash}");
 
         // Sign (adds a proof to the log entry).
-        entry.sign(signer).await?;
+        entry.sign(self.signer.0).await?;
 
         log.push(entry);
 

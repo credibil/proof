@@ -26,6 +26,7 @@ mod url;
 use std::{fmt::{Display, Formatter}, future::Future, str::FromStr};
 
 use anyhow::anyhow;
+use serde::{Deserialize, Serialize};
 
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 pub use document::*;
@@ -114,7 +115,7 @@ pub trait DidOperator: Send + Sync {
 }
 
 /// The purpose key material will be used for.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize, Eq)]
 pub enum KeyPurpose {
     /// The document's `verification_method` field.
     VerificationMethod,

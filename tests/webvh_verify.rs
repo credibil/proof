@@ -4,8 +4,8 @@ use credibil_did::{
     KeyPurpose,
     core::{Kind, OneMany},
     document::{
-        Create, DocumentBuilder, MethodType, Service, VerificationMethod,
-        VerificationMethodBuilder, VmKeyId,
+        DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder,
+        VmKeyId,
     },
     webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs},
 };
@@ -37,7 +37,7 @@ async fn simple_proof() {
         .build();
     signer.set_verification_method("signing").expect("should set verification method");
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .build();
@@ -83,7 +83,7 @@ async fn complex_proof() {
             "https://example.com/.well-known/whois".to_string(),
         )),
     };
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
