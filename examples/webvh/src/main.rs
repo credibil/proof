@@ -4,6 +4,7 @@
 //! `did:webvh` method using the `credibil-did` crate.
 
 mod create;
+mod deactivate;
 mod log;
 mod resolve;
 mod state;
@@ -33,6 +34,7 @@ async fn main() {
         .route("/create", post(create::create))
         .route("/.well-known/did.jsonl", get(resolve::read))
         .route("/update", post(update::update))
+        .route("/deactivate", post(deactivate::deactivate))
         .layer(cors)
         .with_state(AppState::new());
 

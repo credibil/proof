@@ -402,11 +402,12 @@ async fn resolve_deactivated() {
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
 
-    let deactivate_result = DeactivateBuilder::new(&update_result.log)
+    let deactivate_result = DeactivateBuilder::from(&update_result.log)
         .expect("should create builder")
         .rotate_keys(&new_update_keys, &new_next_keys)
         .expect("should rotate keys on builder")
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build deactivated document");
 
