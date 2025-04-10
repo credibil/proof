@@ -1,11 +1,10 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_did::{
-    KeyPurpose,
-    core::{Kind, OneMany},
+    KeyPurpose, ServiceBuilder,
+    core::Kind,
     document::{
-        DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder,
-        VmKeyId,
+        DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
     },
     webvh::{
         CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
@@ -14,7 +13,6 @@ use credibil_did::{
 };
 use credibil_infosec::Signer;
 use kms::Keyring;
-use serde_json::Value;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.
 #[tokio::test]
@@ -38,13 +36,10 @@ async fn resolve_single() {
         .expect("should apply method type")
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -141,13 +136,10 @@ async fn resolve_multiple() {
         .expect("should apply method type")
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -266,7 +258,7 @@ async fn resolve_multiple() {
 
     let resolved_doc =
         resolve_log(&result.log, Some(&witness_proofs), None).await.expect("should resolve log");
-    
+
     // The resolved document should *almost* match the result of the update
     // except for some of the metadata. So remove the metadata from each and
     // then compare.
@@ -302,13 +294,10 @@ async fn resolve_deactivated() {
         .expect("should apply method type")
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")

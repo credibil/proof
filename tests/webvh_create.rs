@@ -2,17 +2,15 @@
 //! entry.
 
 use credibil_did::{
-    KeyPurpose,
-    core::{Kind, OneMany},
+    KeyPurpose, ServiceBuilder,
+    core::Kind,
     document::{
-        DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder,
-        VmKeyId,
+        DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
     },
     webvh::{CreateBuilder, Witness, WitnessWeight, default_did},
 };
 use credibil_infosec::Signer;
 use kms::Keyring;
-use serde_json::Value;
 
 use credibil_did::webvh::SCID_PLACEHOLDER;
 
@@ -40,13 +38,10 @@ async fn create_success() {
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     signer.set_verification_method("signing").expect("should set verification method");
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")

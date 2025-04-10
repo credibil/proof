@@ -160,6 +160,111 @@ pub struct Service {
     pub service_endpoint: OneMany<Kind<Value>>,
 }
 
+/// Service builder
+#[derive(Clone, Debug, Default)]
+pub struct ServiceBuilder<T, E> {
+    id: String,
+    service_type: T,
+    endpoint: E,
+}
+
+/// Service builder does not have a type specified (can't build)
+#[derive(Clone, Debug)]
+pub struct WithoutType;
+
+/// Service builder has a type specified (can build)
+#[derive(Clone, Debug)]
+pub struct WithType(String);
+
+/// Service builder does not have an endpoint specified (can't build)
+#[derive(Clone, Debug)]
+pub struct WithoutEndpoint;
+
+/// Service builder has at least one endpoint specified (can build)
+#[derive(Clone, Debug)]
+pub struct WithEndpoint(Vec<Kind<Value>>);
+
+impl ServiceBuilder<WithoutType, WithoutEndpoint> {
+    /// Creates a new `ServiceBuilder` with the given service ID.
+    #[must_use]
+    pub fn new(id: &impl ToString) -> Self {
+        Self {
+            id: id.to_string(),
+            service_type: WithoutType,
+            endpoint: WithoutEndpoint,
+        }
+    }
+
+    /// Specify the service type.
+    #[must_use]
+    pub fn service_type(
+        &self, service_type: &impl ToString,
+    ) -> ServiceBuilder<WithType, WithoutEndpoint> {
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: WithType(service_type.to_string()),
+            endpoint: WithoutEndpoint,
+        }
+    }
+}
+
+impl ServiceBuilder<WithType, WithoutEndpoint> {
+    /// Specify a string-based service endpoint.
+    #[must_use]
+    pub fn endpoint_str(&self, endpoint: &impl ToString) -> ServiceBuilder<WithType, WithEndpoint> {
+        let ep = Kind::String(endpoint.to_string());
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: self.service_type.clone(),
+            endpoint: WithEndpoint(vec![ep]),
+        }
+    }
+
+    /// Specify a JSON-based service endpoint.
+    #[must_use]
+    pub fn endpoint_json(&self, endpoint: &Value) -> ServiceBuilder<WithType, WithEndpoint> {
+        let ep = Kind::Object(endpoint.clone());
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: self.service_type.clone(),
+            endpoint: WithEndpoint(vec![ep]),
+        }
+    }
+}
+
+impl ServiceBuilder<WithType, WithEndpoint> {
+    /// Add a string-based service endpoint.
+    #[must_use]
+    pub fn add_endpoint_str(mut self, endpoint: &impl ToString) -> Self {
+        let ep = Kind::String(endpoint.to_string());
+        self.endpoint.0.push(ep);
+        self
+    }
+
+    /// Add a JSON-based service endpoint.
+    #[must_use]
+    pub fn add_endpoint_json(mut self, endpoint: &Value) -> Self {
+        let ep = Kind::Object(endpoint.clone());
+        self.endpoint.0.push(ep);
+        self
+    }
+
+    /// Build the service.
+    #[must_use]
+    pub fn build(self) -> Service {
+        let ep = if self.endpoint.0.len() == 1 {
+            OneMany::One(self.endpoint.0[0].clone())
+        } else {
+            OneMany::Many(self.endpoint.0)
+        };
+        Service {
+            id: self.id,
+            type_: self.service_type.0,
+            service_endpoint: ep,
+        }
+    }
+}
+
 /// A DID document can express verification methods, such as cryptographic
 /// public keys, which can be used to authenticate or authorize interactions
 /// with the DID subject or associated parties.
