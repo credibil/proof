@@ -19,6 +19,6 @@ credibil-did = { path = "../.." }
 credibil-infosec.workspace = true
 ed25519-dalek.workspace = true
 multibase.workspace = true
-rand = "0.8.5"
+rand.workspace = true
 sha2.workspace = true
 x25519-dalek.workspace = true

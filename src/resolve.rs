@@ -77,7 +77,7 @@ pub async fn deref2(url: &Url, resolver: &impl DidResolver) -> crate::Result<Res
 ///
 /// # Errors
 /// Will return an error if the resource is not found in the document.
-fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
+pub fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
     if let Some(query) = &url.query {
         if let Some(service_id) = &query.service {
             if let Some(service) = doc.get_service(service_id) {

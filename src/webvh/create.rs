@@ -17,8 +17,7 @@ use super::{
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
 /// Use this to construct a `CreateResult`.
-pub struct CreateBuilder {
-    update_keys: Vec<String>,
+pub struct CreateBuilder<U, S, D> {
     method: String,
     scid: String,
     portable: bool,
@@ -26,13 +25,54 @@ pub struct CreateBuilder {
     witness: Option<Witness>,
     ttl: u64,
 
-    doc: Document,
+    update_keys: U,
+    signer: S,
+    doc: D,
 }
 
-impl CreateBuilder {
+/// Builder does not have update keys (can't build).
+#[derive(Clone, Debug)]
+pub struct WithoutUpdateKeys;
+
+/// Builder has update keys (can build).
+#[derive(Clone, Debug)]
+pub struct WithUpdateKeys(Vec<String>);
+
+/// Builder does not have a signer (can't build).
+#[derive(Clone, Debug)]
+pub struct WithoutSigner;
+
+/// Builder has a signer (can build).
+#[derive(Clone, Debug)]
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
+
+/// Builder does not have a document (can't build).
+#[derive(Clone, Debug)]
+pub struct WithoutDocument;
+
+/// Builder has a document (can build).
+#[derive(Clone, Debug)]
+pub struct WithDocument(Document);
+
+impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
     /// Create a new `CreateBuilder`.
-    ///
-    /// Pass a document with a default DID and at least one update key.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            method: format!("did:{METHOD}:{VERSION}"),
+            scid: SCID_PLACEHOLDER.to_string(),
+            portable: false,
+            next_key_hashes: None,
+            witness: None,
+            ttl: 0,
+
+            update_keys: WithoutUpdateKeys,
+            signer: WithoutSigner,
+            doc: WithoutDocument,
+        }
+    }
+
+    /// Add a document with a default DID.
     ///
     /// You can use a `DocumentBuilder` to construct the document using a DID
     /// constructed using the `default_did` function to construct one from the
@@ -41,18 +81,12 @@ impl CreateBuilder {
     /// required SCID and update the document with it as part of the build
     /// algorithm.
     ///
-    /// Update keys are the multibase-encoded public keys that can be used by
-    /// a controller to sign log entries for the DID.
-    ///
     /// # Errors
-    ///
-    /// Will fail if the update keys are empty or if the document ID does not
-    /// resemble a `did:webvh:{SCID}:<host_and_path>` string.
-    pub fn new(update_keys: &[&str], document: &Document) -> anyhow::Result<Self> {
-        // The update keys cannot be empty.
-        if update_keys.is_empty() {
-            bail!("update keys must not be empty.");
-        }
+    /// Will fail if the document ID does not resemble a
+    /// `did:webvh:{SCID}:<host_and_path>` string.
+    pub fn document(
+        &self, document: &Document,
+    ) -> anyhow::Result<CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument>> {
         // The document ID must resemble a `did:webvh:{SCID}:<host_and_path>`
         // string.
         if !document.id.starts_with(&format!("did:{METHOD}:{SCID_PLACEHOLDER}")) {
@@ -69,29 +103,93 @@ impl CreateBuilder {
             }
         }
 
-        Ok(Self {
-            update_keys: update_keys.iter().map(std::string::ToString::to_string).collect(),
+        Ok(CreateBuilder {
+            method: self.method.clone(),
+            scid: self.scid.clone(),
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes.clone(),
+            witness: self.witness.clone(),
+            ttl: self.ttl,
 
-            method: format!("did:{METHOD}:{VERSION}"),
-            scid: SCID_PLACEHOLDER.to_string(),
-            portable: false,
-            next_key_hashes: None,
-            witness: None,
-            ttl: 0,
-
-            doc,
+            update_keys: WithoutUpdateKeys,
+            signer: WithoutSigner,
+            doc: WithDocument(doc),
         })
     }
+}
 
+impl Default for CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument> {
+    /// Add update keys.
+    ///
+    /// Update keys are the multibase-encoded public keys that can be used by
+    /// a controller to sign log entries for the DID.
+    ///
+    /// # Errors
+    /// Will fail if the update keys are empty.
+    pub fn update_keys(
+        &self, update_keys: &[&str],
+    ) -> anyhow::Result<CreateBuilder<WithUpdateKeys, WithoutSigner, WithDocument>> {
+        // The update keys cannot be empty.
+        if update_keys.is_empty() {
+            bail!("update keys must not be empty.");
+        }
+
+        Ok(CreateBuilder {
+            method: self.method.clone(),
+            scid: self.scid.clone(),
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes.clone(),
+            witness: self.witness.clone(),
+            ttl: self.ttl,
+
+            update_keys: WithUpdateKeys(
+                update_keys.iter().map(std::string::ToString::to_string).collect(),
+            ),
+            signer: WithoutSigner,
+            doc: self.doc.clone(),
+        })
+    }
+}
+
+impl CreateBuilder<WithUpdateKeys, WithoutSigner, WithDocument> {
+    /// Add a signer to the builder.
+    #[must_use]
+    pub fn signer<S: Signer>(
+        self, signer: &S,
+    ) -> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
+        CreateBuilder {
+            method: self.method,
+            scid: self.scid,
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes,
+            witness: self.witness,
+            ttl: self.ttl,
+
+            update_keys: self.update_keys,
+            signer: WithSigner(signer),
+            doc: self.doc,
+        }
+    }
+}
+
+impl<U, S> CreateBuilder<U, S, WithDocument> {
     /// Retrieve the current document id (DID) from the builder.
     ///
     /// Note this will have a preliminary value based on the `SCID` placeholder
     /// and will be replaced during execution of the `build` method.
     #[must_use]
     pub fn did(&self) -> String {
-        self.doc.id.clone()
+        self.doc.0.id.clone()
     }
+}
 
+impl<U, S, D> CreateBuilder<U, S, D> {
     /// Set the DID to be portable or not (defaults to not portable).
     #[must_use]
     pub const fn portable(mut self, portable: bool) -> Self {
@@ -132,9 +230,11 @@ impl CreateBuilder {
         self.ttl = ttl;
         self
     }
+}
 
+impl<S: Signer> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
-    /// 
+    ///
     /// Provide a `Signer` to construct a data integrity proof. To add more
     /// proofs, call the `sign` method on the log entry after building.
     ///
@@ -144,27 +244,27 @@ impl CreateBuilder {
     /// log entry to calculate the `SCID` or version ID, or failing to replace
     /// the placeholder `SCID` with the calculated one. Will also fail if the
     /// provided signer fails to sign the log entry.
-    pub async fn build(self, signer: &impl Signer) -> anyhow::Result<CreateResult> {
+    pub async fn build(&self) -> anyhow::Result<CreateResult> {
         // Construct preliminary parameters.
         let params = Parameters {
-            method: self.method,
-            scid: self.scid,
-            update_keys: self.update_keys,
+            method: self.method.clone(),
+            scid: self.scid.clone(),
+            update_keys: self.update_keys.0.clone(),
             portable: self.portable,
-            next_key_hashes: self.next_key_hashes,
-            witness: self.witness,
+            next_key_hashes: self.next_key_hashes.clone(),
+            witness: self.witness.clone(),
             deactivated: false,
             ttl: self.ttl,
         };
 
         // Construct an initial log entry.
         let version_time =
-            self.doc.did_document_metadata.as_ref().map_or_else(Utc::now, |m| m.created);
+            self.doc.0.did_document_metadata.as_ref().map_or_else(Utc::now, |m| m.created);
         let initial_log_entry = DidLogEntry {
             version_id: SCID_PLACEHOLDER.to_string(),
             version_time,
             parameters: params.clone(),
-            state: self.doc.clone(),
+            state: self.doc.0.clone(),
             proof: vec![],
         };
 
@@ -183,7 +283,7 @@ impl CreateBuilder {
         entry.version_id = format!("1-{entry_hash}");
 
         // Sign (adds a proof to the log entry).
-        entry.sign(signer).await?;
+        entry.sign(self.signer.0).await?;
 
         Ok(CreateResult {
             did: entry.state.id.clone(),

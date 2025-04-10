@@ -4,7 +4,7 @@
 //!
 //! `did:<method>:<method-specific-id>[/<path>][?<query>][#<fragment>]`.
 
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::{Display, Write as _}, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -192,7 +192,7 @@ impl Url {
     pub fn resource_id(&self) -> String {
         let mut id = format!("did:{}:{}", self.method, self.id);
         if let Some(ref fragment) = self.fragment {
-            id.push_str(&format!("#{fragment}"));
+            let _ = write!(id, "#{fragment}");
         }
         id
     }

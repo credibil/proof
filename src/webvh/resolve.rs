@@ -15,7 +15,10 @@ use super::{
     DidLogEntry, WitnessEntry,
     verify::{verify_proofs, verify_witness},
 };
-use crate::{DidResolver, Document, Error, QueryParams, Url, webvh::SCID_PLACEHOLDER};
+use crate::{
+    DidResolver, Document, DocumentMetadataBuilder, Error, QueryParams, Url,
+    webvh::SCID_PLACEHOLDER,
+};
 
 impl Url {
     /// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
@@ -60,7 +63,7 @@ impl Url {
             if !path.is_empty() {
                 fp = path.join("/");
             }
-        };
+        }
         let url = format!("{url}{fp}");
 
         Ok(url)
@@ -76,18 +79,18 @@ impl Url {
 /// # Errors
 ///
 /// Will fail if the DID URL is invalid or the provider returns an error.
-pub async fn resolve(
-    url: &Url, resolver: &impl DidResolver,
-) -> crate::Result<Document> {
+pub async fn resolve(url: &Url, resolver: &impl DidResolver) -> crate::Result<Document> {
     // Generate the URL to fetch the DID list (log) document.
     let http_url = url.to_webvh_http().map_err(|e| Error::InvalidDid(e.to_string()))?;
 
-    // Perform an HTTP GET request to the URL for the DID log document. The
-    // client can use helper methods to unpack the `JSONL` file and extract the
-    // DID document.
-    resolver.resolve(&http_url).await.map_err(|e| {
-        Error::InvalidDid(format!("issue resolving did:web: {e}"))
-    })
+    // Perform an HTTP GET request to the URL for the DID log document.
+    //
+    // The client can use helper methods to unpack the `JSONL` file and extract
+    // the DID document.
+    resolver
+        .resolve(&http_url)
+        .await
+        .map_err(|e| Error::InvalidDid(format!("issue resolving did:web: {e}")))
 }
 
 /// Verification of the contents of the `did.jsonl` file and resolution into a
@@ -95,16 +98,16 @@ pub async fn resolve(
 ///
 /// To use this function, read the contents of the `did.jsonl` file into a
 /// vector of `DidLogEntry` structs and pass to this function.
-/// 
+///
 /// To skip verification of the witness proofs, pass `None` for the
 /// `witness_proofs` parameter.
 ///
 /// # Errors
 ///
 /// Will fail if the log entries are invalid.
+#[allow(clippy::too_many_lines)]
 pub async fn resolve_log(
-    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<QueryParams>,
-    resolver: &impl DidResolver,
+    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
 ) -> crate::Result<Document> {
     if log.is_empty() {
         return Err(Error::Other(anyhow!("log entries are empty")));
@@ -121,7 +124,7 @@ pub async fn resolve_log(
         // processed.
 
         // 2. Verify controller proofs.
-        if let Err(error) = verify_proofs(&log[i], resolver).await {
+        if let Err(error) = verify_proofs(&log[i]).await {
             return Err(Error::Other(error));
         }
 
@@ -144,12 +147,17 @@ pub async fn resolve_log(
             return Err(Error::Other(anyhow!("log entry time is in the future")));
         }
         if log[i].version_time <= prev_time {
-            return Err(Error::Other(anyhow!("log entry times are not monotonically increasing: {} -> {}", log[i].version_time, prev_time)));
+            return Err(Error::Other(anyhow!(
+                "log entry times are not monotonically increasing: {} -> {}",
+                log[i].version_time,
+                prev_time
+            )));
         }
 
         // 5. If the entry is the first one, verify the SCID.
         if i == 0 {
-            let initial_string = serde_json::to_string(&log[i]).map_err(|e| Error::Other(e.into()))?;
+            let initial_string =
+                serde_json::to_string(&log[i]).map_err(|e| Error::Other(e.into()))?;
             let replaced = initial_string.replace(&log[i].parameters.scid, SCID_PLACEHOLDER);
             let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)
                 .map_err(|e| Error::Other(e.into()))?;
@@ -166,6 +174,21 @@ pub async fn resolve_log(
         // 6. Record the state as the document to return (if everything else is
         // successful).
         doc = log[i].state.clone();
+
+        // Add method-specific metadata to the document from the log parameters.
+        let mut mdb = doc
+            .did_document_metadata
+            .as_ref()
+            .map_or_else(DocumentMetadataBuilder::new, DocumentMetadataBuilder::from);
+        mdb = mdb
+            .additional("versionId", log[i].version_id.clone())
+            .additional("versionTime", log[i].version_time.to_rfc3339())
+            .additional("scid", log[i].parameters.scid.clone())
+            .additional("portable", log[i].parameters.portable);
+        if log[i].parameters.witness.is_some() {
+            mdb = mdb.additional("witness", log[i].parameters.witness.clone());
+        }
+        doc.did_document_metadata = Some(mdb.build());
 
         // 7. If key pre-rotation is enabled, check the update keys match the
         // previous entry's next-key hashes.
@@ -190,7 +213,7 @@ pub async fn resolve_log(
         // 9. Check witness proofs if provided.
         if witness_proofs.is_some() && log[i].parameters.witness.is_some() {
             if let Some(witness_entries) = witness_proofs {
-                if let Err(error) = verify_witness(&log[i], witness_entries, resolver).await {
+                if let Err(error) = verify_witness(&log[i], witness_entries).await {
                     return Err(Error::Other(error));
                 }
             }
@@ -198,7 +221,7 @@ pub async fn resolve_log(
 
         // Check for explicit version ID or version time request. (Otherwise
         // the latest version is returned.)
-        if let Some(params) = &parameters {
+        if let Some(params) = parameters {
             if let Some(version_id) = &params.version_id {
                 if *version_id == log[i].version_id {
                     break;
@@ -237,7 +260,7 @@ mod test {
     struct MockResolver;
     impl DidResolver for MockResolver {
         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("./did-v3.json"))
+            serde_json::from_slice(include_bytes!("../../.samples/didwebvh.json"))
                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
         }
     }

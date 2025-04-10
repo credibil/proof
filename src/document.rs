@@ -126,10 +126,7 @@ impl Document {
     /// Retrieve a verification method by its ID.
     #[must_use]
     pub fn get_verification_method(&self, id: &str) -> Option<&VerificationMethod> {
-        self.verification_method
-            .as_ref()?
-            .iter()
-            .find(|vm| vm.id == id)
+        self.verification_method.as_ref()?.iter().find(|vm| vm.id == id)
     }
 }
 
@@ -350,6 +347,108 @@ pub struct DocumentMetadata {
     /// containing DID document.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub canonical_id: Option<String>,
+
+    /// Additional metadata specified by the DID method.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub additional: Option<HashMap<String, Value>>,
+}
+
+/// Builder for DID document metadata.
+#[derive(Clone, Debug, Default)]
+pub struct DocumentMetadataBuilder {
+    md: DocumentMetadata,
+}
+
+impl DocumentMetadataBuilder {
+    /// Creates a new `DocumentMetadataBuilder`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            md: DocumentMetadata::default(),
+        }
+    }
+
+    /// Creates a new `DocumentMetadataBuilder` from an existing
+    /// `DocumentMetadata`.
+    #[must_use]
+    pub fn from(md: &DocumentMetadata) -> Self {
+        Self { md: md.clone() }
+    }
+
+    /// Set the created timestamp.
+    #[must_use]
+    pub const fn created(mut self, created: &DateTime<Utc>) -> Self {
+        self.md.created = *created;
+        self
+    }
+
+    /// Set the updated timestamp.
+    #[must_use]
+    pub const fn updated(mut self, updated: &DateTime<Utc>) -> Self {
+        self.md.updated = Some(*updated);
+        self
+    }
+
+    /// Set the deactivated flag.
+    #[must_use]
+    pub const fn deactivated(mut self, deactivated: bool) -> Self {
+        self.md.deactivated = Some(deactivated);
+        self
+    }
+
+    /// Set the next update timestamp.
+    #[must_use]
+    pub const fn next_update(mut self, next_update: &DateTime<Utc>) -> Self {
+        self.md.next_update = Some(*next_update);
+        self
+    }
+
+    /// Set the version ID.
+    #[must_use]
+    pub fn version_id(mut self, version_id: &str) -> Self {
+        self.md.version_id = Some(version_id.into());
+        self
+    }
+
+    /// Set the next version ID.
+    #[must_use]
+    pub fn next_version_id(mut self, next_version_id: &str) -> Self {
+        self.md.next_version_id = Some(next_version_id.into());
+        self
+    }
+
+    /// Set the equivalent ID.
+    #[must_use]
+    pub fn equivalent_id(mut self, equivalent_id: &[&str]) -> Self {
+        self.md.equivalent_id = Some(equivalent_id.iter().map(|s| (*s).to_string()).collect());
+        self
+    }
+
+    /// Set the canonical ID.
+    #[must_use]
+    pub fn canonical_id(mut self, canonical_id: &str) -> Self {
+        self.md.canonical_id = Some(canonical_id.into());
+        self
+    }
+
+    /// Set an addition field
+    #[must_use]
+    pub fn additional(mut self, key: &str, value: impl Into<Value>) -> Self {
+        if let Some(additional) = &mut self.md.additional {
+            additional.insert(key.into(), value.into());
+        } else {
+            let mut additional = HashMap::new();
+            additional.insert(key.into(), value.into());
+            self.md.additional = Some(additional);
+        }
+        self
+    }
+
+    /// Build the metadata.
+    #[must_use]
+    pub fn build(self) -> DocumentMetadata {
+        self.md
+    }
 }
 
 /// Options that can be provided when creating a DID document.
@@ -390,45 +489,47 @@ impl Default for CreateOptions {
     }
 }
 
-/// A builder for creating a DID Document.
+/// Types of operation a `DocumentBuilder` can perform.
 #[derive(Clone, Debug, Default)]
-pub struct DocumentBuilder<O> {
-    /// Operation being performed
-    pub operation: O,
+pub enum DocumentBuilderOperation {
+    /// Create a new DID Document.
+    #[default]
+    Create,
 
-    // Document under construction
-    doc: Document,
+    /// Update an existing DID Document.
+    Update,
 }
 
-// Typestate state guards for a `DocumentBuilder`.
+/// A builder for creating a DID Document.
+#[derive(Clone, Debug, Default)]
+pub struct DocumentBuilder {
+    // Document under construction
+    doc: Document,
 
-/// The `DocumentBuilder` is being used to create new DID document.
-#[derive(Default)]
-pub struct Create;
-/// The `DocumentBuilder` is being used to update an existing DID document.
-#[derive(Default)]
-pub struct Update;
+    // Operation to perform
+    op: DocumentBuilderOperation,
+}
 
-impl<O> DocumentBuilder<O> {
+impl DocumentBuilder {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
-    pub fn new(did: &str) -> DocumentBuilder<Create> {
+    pub fn new(did: &str) -> Self {
         let doc = Document {
             id: did.to_string(),
             ..Document::default()
         };
-        DocumentBuilder {
-            operation: Create,
+        Self {
             doc,
+            op: DocumentBuilderOperation::Create,
         }
     }
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub fn from(doc: &Document) -> DocumentBuilder<Update> {
-        DocumentBuilder {
-            operation: Update,
+    pub fn from(doc: &Document) -> Self {
+        Self {
             doc: doc.clone(),
+            op: DocumentBuilderOperation::Update,
         }
     }
 
@@ -660,30 +761,26 @@ impl<O> DocumentBuilder<O> {
     /// be aware of the DID method context in which it is used to determine the
     /// reliability of the value.
     #[must_use]
-    pub fn did(&self) -> &str {
-        &self.doc.id
+    pub fn did(&self) -> String {
+        self.doc.id.clone()
     }
-}
 
-impl<Create> DocumentBuilder<Create> {
-    /// Set default metadata with created timestamp and build the DID Document.
+    /// Set metadata for the document.
+    #[must_use]
+    pub fn metadata(mut self, md: DocumentMetadata) -> Self {
+        self.doc.did_document_metadata = Some(md);
+        self
+    }
+
+    /// Update metadata with created or updated timestamp and build the DID
+    /// Document.
     #[must_use]
     pub fn build(mut self) -> Document {
-        let md = DocumentMetadata {
-            created: chrono::Utc::now(),
-            ..Default::default()
-        };
-        self.doc.did_document_metadata = Some(md);
-        self.doc
-    }
-}
-
-impl<Update> DocumentBuilder<Update> {
-    /// Construct a new DID `Document` with updated timestamp.
-    #[must_use]
-    pub fn update(mut self) -> Document {
         let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
-        md.updated = Some(chrono::Utc::now());
+        match self.op {
+            DocumentBuilderOperation::Create => md.created = chrono::Utc::now(),
+            DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
+        }
         self.doc.did_document_metadata = Some(md);
         self.doc
     }
@@ -816,7 +913,7 @@ pub enum VmKeyId {
     /// Append the document identifier (DID URL) with a prefix and an
     /// incrementing index. Use an empty string for the prefix if only the index
     /// is required.
-    /// 
+    ///
     /// # Examples
     /// With prefix `key-` and index `0`, the key ID will be
     /// `did:<method>:<method-specific-identifier>#key-0`.

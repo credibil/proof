@@ -14,15 +14,23 @@ use super::{verify::validate_witness, DidLogEntry, Witness};
 
 /// Builder for deactivating a DID document and associated log entry (or 2
 /// entries if there is key rotation).
-pub struct DeactivateBuilder {
+pub struct DeactivateBuilder<S> {
     update_keys: Vec<String>,
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
     log: Vec<DidLogEntry>,
     doc: Document,
+
+    signer: S,
 }
 
-impl DeactivateBuilder {
+/// Builder does not have a signer (can't build).
+pub struct WithoutSigner;
+
+/// Builder has a signer (can build).
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
+
+impl DeactivateBuilder<WithoutSigner> {
     /// Crate a new `DeactivateBuilder` populated with the current log entries.
     /// 
     /// It is assumed that the DID document is resolved from the last log entry
@@ -30,7 +38,7 @@ impl DeactivateBuilder {
     /// 
     /// # Errors
     /// Will fail if the log entries are not populated.
-    pub fn new(log: &[DidLogEntry]) -> anyhow::Result<Self> {
+    pub fn from(log: &[DidLogEntry]) -> anyhow::Result<Self> {
         let Some(last_entry) = log.last() else {
             bail!("log must not be empty.");
         };
@@ -40,6 +48,8 @@ impl DeactivateBuilder {
             witness: last_entry.parameters.witness.clone(),
             log: log.to_vec(),
             doc: last_entry.state.clone(),
+
+            signer: WithoutSigner,
         })
     }
 
@@ -129,6 +139,22 @@ impl DeactivateBuilder {
         self
     }
 
+    /// Provide a signer to sign the log entry.
+    #[must_use]
+    pub fn signer<S: Signer>(self, signer: &S) -> DeactivateBuilder<WithSigner<'_, S>> {
+        DeactivateBuilder {
+            update_keys: self.update_keys,
+            next_key_hashes: self.next_key_hashes,
+            witness: self.witness,
+            log: self.log,
+            doc: self.doc,
+
+            signer: WithSigner(signer),
+        }
+    }
+}
+
+impl<S: Signer> DeactivateBuilder<WithSigner<'_, S>> {
     /// Build the new log entry/entries.
     /// 
     /// If the last log entry has a non-empty `next_key_hashes`, two log entries
@@ -142,7 +168,7 @@ impl DeactivateBuilder {
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
     /// signer fails to sign the log entry.
-    pub async fn build(&self, signer: &impl Signer) -> anyhow::Result<DeactivateResult> {
+    pub async fn build(&self) -> anyhow::Result<DeactivateResult> {
         let mut log = self.log.clone();
         let Some(last_entry) = log.last() else {
             bail!("log must not be empty.");
@@ -172,7 +198,7 @@ impl DeactivateBuilder {
             version_number += 1;
             entry.version_id = format!("{version_number}-{entry_hash}");
 
-            entry.sign(signer).await?;
+            entry.sign(self.signer.0).await?;
             last_entry.clone_from(&entry);
             log.push(entry);
         }
@@ -203,7 +229,7 @@ impl DeactivateBuilder {
         version_number += 1;
         entry.version_id = format!("{version_number}-{entry_hash}");
 
-        entry.sign(signer).await?;
+        entry.sign(self.signer.0).await?;
         log.push(entry);
 
         Ok(DeactivateResult {

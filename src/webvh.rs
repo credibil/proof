@@ -17,6 +17,7 @@ use chrono::{DateTime, Utc};
 use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
@@ -24,9 +25,9 @@ use crate::Document;
 use super::Method;
 
 pub use resolve::*;
-pub use create::*;
-pub use deactivate::*;
-pub use update::*;
+pub use create::{CreateBuilder, CreateResult};
+pub use deactivate::{DeactivateBuilder, DeactivateResult};
+pub use update::{UpdateBuilder, UpdateResult};
 pub use url::*;
 pub use verify::*;
 
@@ -135,10 +136,9 @@ impl DidLogEntry {
     /// Construct a proof from a DID log entry.
     ///
     /// This function can be used to construct a controller's proof or a
-    /// witness's proof, but is intended to be used for witnesses. For
-    /// convenience, the `sign` method will construct a proof and add it to the
-    /// log entry and should be used instead of this method for a controller's
-    /// proof.
+    /// witness's proof. For convenience, the `sign` method will construct a
+    /// proof and add it to the log entry and should be used instead of this
+    /// method directly for a controller's proof.
     /// 
     /// # Errors
     /// 
@@ -149,6 +149,9 @@ impl DidLogEntry {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vm = signer.verification_method().await?;
+        // We have no way of passing the SCID to an infosec signer, so assume
+        // the signer has injected a placeholder and replace it here.
+        let vm = vm.replace(SCID_PLACEHOLDER, &self.parameters.scid);
 
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
@@ -156,7 +159,7 @@ impl DidLogEntry {
             cryptosuite: Some("eddsa-jcs-2022".to_string()),
             verification_method: vm,
             created: Some(Utc::now()),
-            proof_purpose: "authentication".to_string(),
+            proof_purpose: "assertionMethod".to_string(),
             ..Proof::default()
         };
         let config_data = serde_json_canonicalizer::to_string(&config)?;
@@ -222,6 +225,12 @@ pub struct Witness {
 
     /// The list of witnesses and their contributing weights.
     pub witnesses: Vec<WitnessWeight>,
+}
+
+impl From<Witness> for Value {
+    fn from(val: Witness) -> Self {
+        serde_json::to_value(val).unwrap_or_default()
+    }
 }
 
 /// The weight a witness contributes to the approval of a DID update.

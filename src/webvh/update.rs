@@ -1,5 +1,4 @@
 //! Update operation for the `did:webvh` method.
-//!
 
 use anyhow::bail;
 use chrono::Utc;
@@ -8,46 +7,84 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{DidResolver, Document};
+use crate::Document;
 
-use super::{DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness};
+use super::{
+    DidLog, DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness,
+};
 
 /// Builder to update a DID document and associated log entry.
 ///
 /// Use this to construct an [`UpdateResult`].
-pub struct UpdateBuilder {
+pub struct UpdateBuilder<S, D> {
     update_keys: Vec<String>,
     portable: bool,
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
     ttl: u64,
 
-    log: Vec<DidLogEntry>,
-    doc: Document,
+    log: DidLog,
+    signer: S,
+    doc: D,
 }
 
-impl UpdateBuilder {
-    /// Create a new `UpdateBuilder` populated with the current log entries and
-    /// the intended new DID document.
+/// Builder does not have a signer (can't build).
+pub struct WithoutSigner;
+
+/// Builder has a signer (can build).
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
+
+/// Builder does not have a document (can't build).
+#[derive(Clone, Debug)]
+pub struct WithoutDocument;
+
+/// Builder has a document (can build).
+#[derive(Clone, Debug)]
+pub struct WithDocument(Document);
+
+impl UpdateBuilder<WithoutSigner, WithoutDocument> {
+    /// Create a new `UpdateBuilder` populated with the current log entries.
     ///
     /// The log entries must be valid so this is tested, including verifying
     /// the witness proofs if provided. (To skip witness verification, pass None
     /// for the `witness_proofs` parameter.)
     ///
     /// # Errors
-    ///
     /// Returns an error if the log entries are not valid.
-    pub async fn new(
-        log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, document: &Document,
-        resolver: &impl DidResolver,
+    pub async fn from(
+        log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>,
     ) -> anyhow::Result<Self> {
         // Validate the current log entries by resolving the DID document.
-        let _ = resolve_log(log, witness_proofs, None, resolver).await?;
+        let _ = resolve_log(log, witness_proofs, None).await?;
+        let Some(last_entry) = log.last() else {
+            anyhow::bail!("log must not be empty.");
+        };
 
+        Ok(Self {
+            update_keys: last_entry.parameters.update_keys.clone(),
+            portable: last_entry.parameters.portable,
+            next_key_hashes: last_entry.parameters.next_key_hashes.clone(),
+            witness: last_entry.parameters.witness.clone(),
+            ttl: last_entry.parameters.ttl,
+
+            log: log.to_vec(),
+            doc: WithoutDocument,
+            signer: WithoutSigner,
+        })
+    }
+
+    /// Add the new DID document to the builder.
+    ///
+    /// # Errors
+    /// Checks the SCID hasn't changed and the document location hasn't changed
+    /// unless the original log entry allowed portability.
+    pub fn document(
+        &self, document: &Document,
+    ) -> anyhow::Result<UpdateBuilder<WithoutSigner, WithDocument>> {
         // Check the DID location hasn't changed unless the original log entry
         // allowed portability. If the location has changed, the SCID must be
         // unchanged.
-        let Some(last_entry) = log.last() else {
+        let Some(last_entry) = self.log.last() else {
             anyhow::bail!("log must not be empty.");
         };
         if last_entry.state.id != document.id {
@@ -63,19 +100,21 @@ impl UpdateBuilder {
                 anyhow::bail!("SCID has changed for portable DID.");
             }
         }
+        Ok(UpdateBuilder {
+            update_keys: self.update_keys.clone(),
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes.clone(),
+            witness: self.witness.clone(),
+            ttl: self.ttl,
 
-        Ok(Self {
-            update_keys: last_entry.parameters.update_keys.clone(),
-            portable: last_entry.parameters.portable,
-            next_key_hashes: last_entry.parameters.next_key_hashes.clone(),
-            witness: last_entry.parameters.witness.clone(),
-            ttl: last_entry.parameters.ttl,
-
-            log: log.to_vec(),
-            doc: document.clone(),
+            log: self.log.clone(),
+            doc: WithDocument(document.clone()),
+            signer: WithoutSigner,
         })
     }
+}
 
+impl UpdateBuilder<WithoutSigner, WithDocument> {
     /// Rotate the update keys.
     ///
     /// The new update keys provided, when hashed, must match the hash of the
@@ -179,6 +218,24 @@ impl UpdateBuilder {
         self
     }
 
+    /// Add a signer to the builder.
+    #[must_use]
+    pub fn signer<S: Signer>(self, signer: &S) -> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
+        UpdateBuilder {
+            update_keys: self.update_keys,
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes,
+            witness: self.witness,
+            ttl: self.ttl,
+
+            log: self.log,
+            doc: self.doc,
+            signer: WithSigner(signer),
+        }
+    }
+}
+
+impl<S: Signer> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
     /// Provide a `Signer` to construct a data integrity proof. To add more
@@ -189,7 +246,7 @@ impl UpdateBuilder {
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
     /// signer fails to sign the log entry.
-    pub async fn build(&self, signer: &impl Signer) -> anyhow::Result<UpdateResult> {
+    pub async fn build(&self) -> anyhow::Result<UpdateResult> {
         let mut log = self.log.clone();
         let Some(last_entry) = log.last() else {
             anyhow::bail!("log must not be empty.");
@@ -203,7 +260,7 @@ impl UpdateBuilder {
         params.ttl = self.ttl;
 
         let version_time = self
-            .doc
+            .doc.0
             .did_document_metadata
             .as_ref()
             .map_or_else(Utc::now, |m| m.updated.unwrap_or_else(Utc::now));
@@ -211,7 +268,7 @@ impl UpdateBuilder {
             version_id: last_entry.version_id.clone(),
             version_time,
             parameters: params.clone(),
-            state: self.doc.clone(),
+            state: self.doc.0.clone(),
             proof: vec![],
         };
 
@@ -225,13 +282,13 @@ impl UpdateBuilder {
         entry.version_id = format!("{version_number}-{entry_hash}");
 
         // Sign (adds a proof to the log entry).
-        entry.sign(signer).await?;
+        entry.sign(self.signer.0).await?;
 
         log.push(entry);
 
         Ok(UpdateResult {
-            did: self.doc.id.clone(),
-            document: self.doc.clone(),
+            did: self.doc.0.id.clone(),
+            document: self.doc.0.clone(),
             log,
         })
     }

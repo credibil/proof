@@ -5,12 +5,13 @@ use credibil_did::{
     KeyPurpose,
     core::{Kind, OneMany},
     document::{
-        Create, DocumentBuilder, MethodType, Service, VerificationMethod,
-        VerificationMethodBuilder, VmKeyId,
+        DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder,
+        VmKeyId,
     },
-    webvh::{Witness, WitnessWeight, CreateBuilder, default_did},
+    webvh::{CreateBuilder, Witness, WitnessWeight, default_did},
 };
-use kms::new_keyring;
+use credibil_infosec::Signer;
+use kms::Keyring;
 use serde_json::Value;
 
 use credibil_did::webvh::SCID_PLACEHOLDER;
@@ -21,25 +22,24 @@ use credibil_did::webvh::SCID_PLACEHOLDER;
 async fn create_success() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = new_keyring();
-    let update_multi = signer.verifying_key_multibase().await.expect("should get multibase key");
+    let mut signer = Keyring::new();
+    let update_jwk = signer.jwk("signing").expect("should get signing key");
+    let update_multi = signer.multibase("signing").expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    signer.add_key("id");
-    let id_jwk = signer.get_key("id").expect("should get key");
-    signer.add_key("vm");
-    let vm_jwk = signer.get_key("vm").expect("should get key");
+    let id_jwk = signer.jwk("id").expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&vm_jwk)
+    let vm = VerificationMethodBuilder::new(&update_jwk)
         .key_id(&did, VmKeyId::Authorization(id_jwk))
         .expect("should apply key ID")
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
+    signer.set_verification_method("signing").expect("should set verification method");
     let service = Service {
         id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
         type_: "LinkedVerifiablePresentation".to_string(),
@@ -47,37 +47,50 @@ async fn create_success() {
             "https://example.com/.well-known/whois".to_string(),
         )),
     };
-    let doc = DocumentBuilder::<Create>::new(&did)
+    let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
         .build();
 
-    let next_key = signer.next_key_jwk().expect("should get next key");
-    let next_multi = next_key.to_multibase().expect("should convert to multibase");
+    let next_multi = signer.next_multibase("signing").expect("should get next key");
 
+    let mut witness_keyring1 = Keyring::new();
+    witness_keyring1.set_verification_method("signing").expect("should set verification method");
+    let mut witness_keyring2 = Keyring::new();
+    witness_keyring2.set_verification_method("signing").expect("should set verification method");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: witness_keyring1
+                    .verification_method()
+                    .await
+                    .expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: new_keyring().did().to_string(),
+                id: witness_keyring2
+                    .verification_method()
+                    .await
+                    .expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
     };
 
-    let result = CreateBuilder::new(&update_keys, &doc)
-        .expect("should create builder")
+    let result = CreateBuilder::new()
+        .document(&doc)
+        .expect("should apply document")
+        .update_keys(&update_keys)
+        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
         .expect("witness information should be applied")
         .ttl(60)
-        .build(&signer)
+        .signer(&signer)
+        .build()
         .await
         .expect("should build document");
 
