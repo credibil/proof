@@ -16,6 +16,8 @@ Then using curl or Postman you can explore creating, updating, resolving and dea
 
 ### Create
 
+To create a did document:
+
 ```shell
 curl --location 'http://localhost:8080/create' \
 --header 'Content-Type: application/json' \
@@ -25,6 +27,34 @@ curl --location 'http://localhost:8080/create' \
 ### Update
 
 The update endpoint will rotate keys and add another verification method to the DID document. See the `UpdateRequest` struct in the `update.rs` file: you can define a key purpose for the verification method to add. If you leave this blank a general purpose verification method is added anyway.
+
+```shell
+curl --location 'http://localhost:8080/update' \
+--header 'Content-Type: application/json' \
+--data '{"add": "Authentication"}'
+```
+
+### Deactivate
+
+To deactivate a DID document:
+
+```shell
+curl --location --request POST 'http://localhost:8080/deactivate'
+```
+
+### Resolve
+
+To resolve the latest DID document make a `GET` request to the `.well-known/did.json` endpoint.
+
+```shell
+curl --location 'http://localhost:8080/.well-known/did.json'
+```
+
+You can also request a specific DID document from within the history by supplying the version ID. You can experiment with this by using the `create`, `update` and `deactivate` endpoints to populate a log of updates, then use a query parameter to target the version you want.
+
+```shell
+curl --location 'http://localhost:8080/.well-known/did.json?versionId=2-zhWiW3YwiSaUFfGkUZDg1GigfSozhoKe7Vdm5pXe1vE3'
+```
 
 ### Read JSON Log
 
