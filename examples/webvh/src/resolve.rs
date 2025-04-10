@@ -1,13 +1,13 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response}, BoxError,
 };
 use axum_extra::{TypedHeader, headers::Host, json_lines::JsonLines};
-use credibil_did::webvh::{DidLog, DidLogEntry};
+use credibil_did::{webvh::{resolve_log, DidLog, DidLogEntry}, Document, QueryParams};
 use futures_util::Stream;
 
-use crate::AppError;
+use crate::{AppError, AppJson};
 use crate::state::AppState;
 
 // Handler to read the DID log file (from memory in our case).
@@ -34,19 +34,20 @@ fn entries_as_stream(entries: DidLog) -> impl Stream<Item = Result<DidLogEntry, 
 }
 
 // Handler to resolve a DID document from a DID log file.
-// #[axum::debug_handler]
-// pub async fn resolve(
-//     State(state): State<AppState>, Query(params): Query<QueryParams>,
-//     TypedHeader(host): TypedHeader<Host>,
-// ) -> Result<AppJson<DidLog>, AppError> {
-//     let domain_and_path = format!("http://{host}");
+#[axum::debug_handler]
+pub async fn resolve(
+    State(state): State<AppState>, Query(params): Query<QueryParams>,
+    TypedHeader(host): TypedHeader<Host>,
+) -> Result<AppJson<Document>, AppError> {
+    let domain_and_path = format!("http://{host}");
 
-//     tracing::debug!("resolving DID document for {domain_and_path}");
+    tracing::debug!("resolving DID document for {domain_and_path}");
 
-//     let log = state.log.lock().await;
-//     let entries = log
-//         .get_log(&domain_and_path)
-//         .ok_or_else(|| return AppError::Status(StatusCode::NOT_FOUND, "No log found".into()))?;
+    let log = state.log.lock().await;
+    let entries = log
+        .get_log(&domain_and_path)
+        .ok_or_else(|| return AppError::Status(StatusCode::NOT_FOUND, "No log found".into()))?;
+    let doc = resolve_log(&entries, None, Some(&params)).await?;
 
-//     Ok(AppJson(did))
-// }
+    Ok(AppJson(doc))
+}

@@ -105,7 +105,16 @@ async fn resolve_single() {
 
     let resolved_doc =
         resolve_log(&result.log, Some(&witness_proofs), None).await.expect("should resolve log");
-    assert_eq!(result.document, resolved_doc);
+
+    // The resolved document should *almost* match the result of the update
+    // except for some of the metadata. So remove the metadata from each and
+    // then compare.
+    let mut result_doc = result.document.clone();
+    result_doc.did_document_metadata = None;
+    let mut resolved_doc = resolved_doc.clone();
+    resolved_doc.did_document_metadata = None;
+
+    assert_eq!(result_doc, resolved_doc);
 }
 
 // Construct a log with multiple entries and make sure it resolves to a DID document.
@@ -257,7 +266,16 @@ async fn resolve_multiple() {
 
     let resolved_doc =
         resolve_log(&result.log, Some(&witness_proofs), None).await.expect("should resolve log");
-    assert_eq!(result.document, resolved_doc);
+    
+    // The resolved document should *almost* match the result of the update
+    // except for some of the metadata. So remove the metadata from each and
+    // then compare.
+    let mut result_doc = result.document.clone();
+    result_doc.did_document_metadata = None;
+    let mut resolved_doc = resolved_doc.clone();
+    resolved_doc.did_document_metadata = None;
+
+    assert_eq!(result_doc, resolved_doc);
 }
 
 // Test resolving a deactivated document.

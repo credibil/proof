@@ -33,6 +33,7 @@ async fn main() {
     let router = Router::new()
         .route("/create", post(create::create))
         .route("/.well-known/did.jsonl", get(resolve::read))
+        .route("/.well-known/did.json", get(resolve::resolve))
         .route("/update", post(update::update))
         .route("/deactivate", post(deactivate::deactivate))
         .layer(cors)

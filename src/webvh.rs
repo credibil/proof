@@ -17,6 +17,7 @@ use chrono::{DateTime, Utc};
 use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
@@ -224,6 +225,12 @@ pub struct Witness {
 
     /// The list of witnesses and their contributing weights.
     pub witnesses: Vec<WitnessWeight>,
+}
+
+impl From<Witness> for Value {
+    fn from(val: Witness) -> Self {
+        serde_json::to_value(val).unwrap_or_default()
+    }
 }
 
 /// The weight a witness contributes to the approval of a DID update.
