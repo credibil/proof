@@ -3,9 +3,10 @@
 //!
 
 use credibil_did::KeyPurpose;
-use credibil_did::core::{Kind, OneMany};
+use credibil_did::core::Kind;
 use credibil_did::document::{
-    DocumentBuilder, MethodType, Service, VerificationMethod, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
+    VmKeyId,
 };
 use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
@@ -13,7 +14,6 @@ use credibil_did::webvh::{
 };
 use credibil_infosec::Signer;
 use kms::Keyring;
-use serde_json::Value;
 
 // Test the happy path of creating then deactivating a `did:webvh` document and
 // log entries. Should just work without errors.
@@ -39,13 +39,10 @@ async fn create_then_deactivate() {
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     signer.set_verification_method("signing").expect("should set verification method");
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -133,13 +130,10 @@ async fn update_then_deactivate() {
         .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     signer.set_verification_method("signing").expect("should set verification method");
-    let service = Service {
-        id: format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER),
-        type_: "LinkedVerifiablePresentation".to_string(),
-        service_endpoint: OneMany::<Kind<Value>>::One(Kind::String(
-            "https://example.com/.well-known/whois".to_string(),
-        )),
-    };
+    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+        .service_type(&"LinkedVerifiablePresentation")
+        .endpoint_str(&"https://example.com/.well-known/whois")
+        .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
