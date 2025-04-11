@@ -1,7 +1,7 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_did::{
-    KeyPurpose, ServiceBuilder,
+    KeyPurpose, PublicKeyFormat, ServiceBuilder,
     core::Kind,
     document::{
         DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
@@ -20,26 +20,29 @@ async fn resolve_single() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
     let mut signer = Keyring::new();
-    let update_jwk = signer.jwk("signing").expect("should get signing key");
     let update_multi = signer.multibase("signing").expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_jwk = signer.jwk("id").expect("should get key");
+    let id_multi = signer.multibase("id").expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
+
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
         .endpoint_str(&"https://example.com/.well-known/whois")
         .build();
+
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -120,21 +123,22 @@ async fn resolve_multiple() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
     let mut signer = Keyring::new();
-    let update_jwk = signer.jwk("signing").expect("should get signing key");
     let update_multi = signer.multibase("signing").expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_jwk = signer.jwk("id").expect("should get key");
+    let id_multi = signer.multibase("id").expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
@@ -195,7 +199,6 @@ async fn resolve_multiple() {
 
     // Rotate the signing key.
     signer.rotate().expect("should rotate keys on signer");
-    let new_update_jwk = signer.jwk("signing").expect("should get signing key");
     let new_update_multi = signer.multibase("signing").expect("should get multibase key");
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
@@ -203,14 +206,16 @@ async fn resolve_multiple() {
     let new_next_multi = signer.next_multibase("signing").expect("should get next key");
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
-    let id_jwk = signer.jwk("id").expect("should get key");
+    let id_multi = signer.multibase("id").expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(&new_update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: new_update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     // Add a reference-based verification method as a for-instance.
@@ -278,26 +283,29 @@ async fn resolve_deactivated() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
     let mut signer = Keyring::new();
-    let update_jwk = signer.jwk("signing").expect("should get signing key");
     let update_multi = signer.multibase("signing").expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_jwk = signer.jwk("id").expect("should get key");
+    let id_multi = signer.multibase("id").expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
+
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
         .endpoint_str(&"https://example.com/.well-known/whois")
         .build();
+
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -353,7 +361,6 @@ async fn resolve_deactivated() {
 
     // Rotate the signing key.
     signer.rotate().expect("should rotate keys on signer");
-    let new_update_jwk = signer.jwk("signing").expect("should get signing key");
     let new_update_multi = signer.multibase("signing").expect("should get multibase key");
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
@@ -361,14 +368,16 @@ async fn resolve_deactivated() {
     let new_next_multi = signer.next_multibase("signing").expect("should get next key");
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
-    let id_jwk = signer.jwk("id").expect("should get key");
+    let id_multi = signer.multibase("id").expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(&new_update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: new_update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     // Add a reference-based verification method as a for-instance.

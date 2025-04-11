@@ -6,7 +6,8 @@ use axum_extra::{TypedHeader, headers::Host};
 use credibil_did::core::Kind;
 use credibil_did::webvh::UpdateBuilder;
 use credibil_did::{
-    DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, PublicKeyFormat, VerificationMethod, VerificationMethodBuilder,
+    VmKeyId,
 };
 use credibil_did::{
     KeyPurpose,
@@ -39,7 +40,6 @@ pub async fn update(
 
     // Rotate keys
     keyring.rotate()?;
-    let update_jwk = keyring.jwk("signing")?;
     let update_multi = keyring.multibase("signing")?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
@@ -48,7 +48,7 @@ pub async fn update(
     let next_keys: Vec<&str> = next_keys.iter().map(|s| s.as_str()).collect();
 
     // Get a new ID key for the new verification method.
-    let id_jwk = keyring.replace("id")?;
+    let id_multi = keyring.replace("id")?.to_multibase()?;
 
     // Resolve the latest DID document from the log and start building the
     // update.
@@ -63,10 +63,12 @@ pub async fn update(
     let mut db = DocumentBuilder::from(&current_doc);
 
     // Create a new verification method.
-    let vm = VerificationMethodBuilder::new(&update_jwk)
-        .key_id(&current_doc.id, VmKeyId::Authorization(id_jwk))?
-        .method_type(&MethodType::Ed25519VerificationKey2020)?
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: update_multi,
+    })
+    .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))?
+    .method_type(&MethodType::Ed25519VerificationKey2020)?
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     db = db.add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?;
 
