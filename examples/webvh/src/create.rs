@@ -4,8 +4,8 @@ use axum::Json;
 use axum::extract::State;
 use axum_extra::{TypedHeader, headers::Host};
 use credibil_did::{
-    DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder,
-    VmKeyId,
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
     core::Kind,
     webvh::{CreateBuilder, CreateResult, default_did},
 };
@@ -29,18 +29,19 @@ pub async fn create(
 
     let mut keyring = state.keyring.lock().await;
 
-    let update_jwk = keyring.jwk("signing")?;
     let update_multi = keyring.multibase("signing")?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let id_jwk = keyring.jwk("id")?;
+    let id_multi = keyring.multibase("id")?;
     let did = default_did(&domain_and_path)?;
     let next_key = keyring.next_multibase("signing")?;
 
-    let vm = VerificationMethodBuilder::new(&update_jwk)
-        .key_id(&did, VmKeyId::Authorization(id_jwk))?
-        .method_type(&MethodType::Ed25519VerificationKey2020)?
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        public_key_multibase: update_multi,
+    })
+    .key_id(&did, VmKeyId::Authorization(id_multi))?
+    .method_type(&MethodType::Ed25519VerificationKey2020)?
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     keyring.set_verification_method("signing")?;
 

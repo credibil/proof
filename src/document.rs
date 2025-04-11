@@ -10,14 +10,14 @@ use anyhow::bail;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
 use credibil_infosec::jose::jwk::PublicKeyJwk;
-use curve25519_dalek::edwards::CompressedEdwardsY;
+use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::KeyPurpose;
 use crate::core::{Kind, OneMany};
 use crate::error::Error;
+use crate::{KeyPurpose, X25519_CODEC};
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -858,6 +858,73 @@ impl DocumentBuilder {
         Ok(self)
     }
 
+    /// This method will create a new `X25519` key agreement verification method
+    /// from the `Ed25519` signing key.
+    ///
+    /// You must pass in the ID of the signing verification method that already
+    /// exists in the document being built, so ensure to call
+    /// `add_verification_method` with `KeyPurpose::VerificationMethod` before
+    /// calling this method.
+    ///
+    /// NOTE: In general, a signing key should never be used for encryption,
+    /// so this method should only be used where the DID method gives you no
+    /// choice. In the case of this crate, an error will be returned if the DID
+    /// method is anything other than `did:key`.
+    ///
+    /// # Errors
+    /// If the conversion from `Ed25519` to `X25519` fails, an error will be
+    /// returned, including testing the assumption that the signing key is
+    /// `Ed25519` in the first place. An error is also returned if there is no
+    /// existing verification method with the given ID or if the DID method is
+    /// not `did:key`.
+    pub fn derive_key_agreement(mut self, vm_id: &str) -> anyhow::Result<Self> {
+        if !self.doc.id.starts_with("did:key:") {
+            bail!("derive_key_agreement is only supported for did:key");
+        }
+        let vm = self
+            .doc
+            .get_verification_method(vm_id)
+            .ok_or_else(|| anyhow::anyhow!("verification method not found"))?;
+        if vm.type_ != MethodType::Ed25519VerificationKey2020 {
+            bail!("verification method is not an Ed25519 public key");
+        }
+
+        let jwk = match &vm.key {
+            PublicKeyFormat::PublicKeyJwk { public_key_jwk } => public_key_jwk.clone(),
+            PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
+                PublicKeyJwk::from_multibase(public_key_multibase)?
+            }
+        };
+        let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
+
+        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] = key_bytes.try_into().map_err(|_| {
+            Error::InvalidPublicKey(format!("public key is not {PUBLIC_KEY_LENGTH} bytes"))
+        })?;
+        let verifier = VerifyingKey::from_bytes(&verifier_bytes)
+            .map_err(|e| Error::InvalidPublicKey(format!("public key is not correct size: {e}")))?;
+        let x25519_bytes = verifier.to_montgomery().to_bytes();
+
+        // base58B encode the raw key
+        let mut multi_bytes = vec![];
+        multi_bytes.extend_from_slice(&X25519_CODEC);
+        multi_bytes.extend_from_slice(&x25519_bytes);
+        let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
+
+        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+            public_key_multibase: multikey,
+        })
+        .key_id(&self.did(), VmKeyId::Did)?
+        .method_type(&MethodType::X25519KeyAgreementKey2020)?
+        .build();
+
+        self.doc
+            .key_agreement
+            .get_or_insert(vec![])
+            .push(Kind::Object(vm));
+
+        Ok(self)
+    }
+
     /// Retrieve the current `DID` from the builder.
     ///
     /// Note that although the `DID` (document identifier) is called for in the
@@ -894,17 +961,16 @@ impl DocumentBuilder {
 /// A builder for creating a verification method.
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
-    vm_key: PublicKeyJwk,
+    vm_key: PublicKeyFormat,
     did: String,
     kid: String,
     method: MethodType,
-    format: PublicKeyFormat,
 }
 
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(verifying_key: &PublicKeyJwk) -> Self {
+    pub fn new(verifying_key: &PublicKeyFormat) -> Self {
         Self {
             vm_key: verifying_key.clone(),
             ..Default::default()
@@ -924,11 +990,17 @@ impl VerificationMethodBuilder {
                 self.kid.clone_from(&self.did);
             }
             VmKeyId::Authorization(auth_key) => {
-                let mb = auth_key.to_multibase()?;
-                self.kid = format!("{did}#{mb}");
+                self.kid = format!("{did}#{auth_key}");
             }
             VmKeyId::Verification => {
-                let mb = self.vm_key.to_multibase()?;
+                let mb = match &self.vm_key {
+                    PublicKeyFormat::PublicKeyJwk { public_key_jwk } => {
+                        public_key_jwk.to_multibase()?
+                    }
+                    PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
+                        public_key_multibase.clone()
+                    }
+                };
                 self.kid = format!("{did}#{mb}");
             }
             VmKeyId::Index(prefix, index) => {
@@ -944,47 +1016,33 @@ impl VerificationMethodBuilder {
     /// [`derive_key_agreement`] instead of this function.
     ///
     /// # Errors
-    ///
-    /// Will fail if required format is multibase but the public key cannot be
-    /// decoded into bytes.
+    /// Will fail if required format does not match the provided key format.
     pub fn method_type(mut self, mtype: &MethodType) -> anyhow::Result<Self> {
+        match &self.vm_key {
+            PublicKeyFormat::PublicKeyJwk { .. } => {
+                if !matches!(
+                    mtype,
+                    MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019
+                ) {
+                    bail!(
+                        "JWK key format only supports JsonWebKey2020 and EcdsaSecp256k1VerificationKey2019"
+                    );
+                }
+            }
+            PublicKeyFormat::PublicKeyMultibase { .. } => {
+                if !matches!(
+                    mtype,
+                    MethodType::Multikey
+                        | MethodType::Ed25519VerificationKey2020
+                        | MethodType::X25519KeyAgreementKey2020
+                ) {
+                    bail!(
+                        "Multibase key format only supports Multikey, Ed25519VerificationKey2020 and X25519KeyAgreementKey2020"
+                    );
+                }
+            }
+        }
         self.method = mtype.clone();
-        self.format = match mtype {
-            MethodType::Multikey
-            | MethodType::Ed25519VerificationKey2020
-            | MethodType::X25519KeyAgreementKey2020 => {
-                // multibase encode the public key
-                PublicKeyFormat::PublicKeyMultibase {
-                    public_key_multibase: self.vm_key.to_multibase()?,
-                }
-            }
-            MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019 => {
-                PublicKeyFormat::PublicKeyJwk {
-                    public_key_jwk: self.vm_key.clone(),
-                }
-            }
-        };
-        Ok(self)
-    }
-
-    /// Special case for specifying the public key format: derive a `X25519` key
-    /// agreement verification method from an `Ed25519` key.
-    ///
-    /// # Errors
-    ///
-    /// Will fail if decoding or computing the Edwards Curve point fails.
-    pub fn derive_key_agreement(mut self) -> anyhow::Result<Self> {
-        // derive an X25519 public encryption key from the Ed25519 key
-        let key_bytes = Base64UrlUnpadded::decode_vec(&self.vm_key.x)?;
-        let edwards_y = CompressedEdwardsY::from_slice(&key_bytes)?;
-        let Some(edwards_point) = edwards_y.decompress() else {
-            bail!("Edwards Y cannot be decompressed to a point");
-        };
-        let x25519_bytes = edwards_point.to_montgomery().to_bytes();
-        self.method = MethodType::X25519KeyAgreementKey2020;
-        self.format = PublicKeyFormat::PublicKeyMultibase {
-            public_key_multibase: multibase::encode(Base::Base58Btc, x25519_bytes),
-        };
         Ok(self)
     }
 
@@ -995,7 +1053,7 @@ impl VerificationMethodBuilder {
             id: self.kid,
             controller: self.did,
             type_: self.method,
-            key: self.format,
+            key: self.vm_key,
             ..VerificationMethod::default()
         }
     }
@@ -1007,9 +1065,9 @@ pub enum VmKeyId {
     /// Use the DID as the identifier without any fragment.
     Did,
 
-    /// Use the provided authorization key and construct a multibase value from
-    /// that to append to the document identifier (DID URL).
-    Authorization(PublicKeyJwk),
+    /// Use the provided multibase authorization key and append to the document
+    /// identifier (DID URL).
+    Authorization(String),
 
     /// Use the verification method key from the `DidOperator` to construct a
     /// multibase value to append to the document identifier (DID URL).
