@@ -4,8 +4,10 @@
 use super::{DidLogEntry, Witness, WitnessEntry};
 
 use anyhow::bail;
-use credibil_infosec::{proof::w3c::Proof, PublicKeyJwk};
+use credibil_infosec::PublicKeyJwk;
 use sha2::Digest;
+
+use crate::proof::w3c::Proof;
 
 /// Verify the controller's proofs in a log entry.
 ///
