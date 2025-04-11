@@ -14,14 +14,14 @@ mod resolve;
 mod verify;
 
 use chrono::{DateTime, Utc};
-use credibil_infosec::{proof::w3c::Proof, Algorithm, Signer};
+use credibil_infosec::{Algorithm, Signer};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
-use crate::Document;
+use crate::{Document, proof::w3c::Proof};
 use super::Method;
 
 pub use resolve::*;

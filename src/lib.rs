@@ -18,6 +18,7 @@ pub mod document;
 mod error;
 pub mod jwk;
 pub mod key;
+pub mod proof;
 mod resolve;
 pub mod web;
 pub mod webvh;
