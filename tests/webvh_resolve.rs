@@ -1,15 +1,11 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_did::{
-    KeyPurpose, PublicKeyFormat, ServiceBuilder,
-    core::Kind,
-    document::{
+    core::Kind, document::{
         DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
-    },
-    webvh::{
-        CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
-        WitnessWeight, default_did, resolve_log,
-    },
+    }, key::url::did_from_jwk, webvh::{
+        default_did, resolve_log, CreateBuilder, DeactivateBuilder, UpdateBuilder, Witness, WitnessEntry, WitnessWeight, SCID_PLACEHOLDER
+    }, KeyPurpose, PublicKeyFormat, ServiceBuilder
 };
 use credibil_infosec::Signer;
 use kms::Keyring;
@@ -51,31 +47,23 @@ async fn resolve_single() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
     };
-
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let result = CreateBuilder::new()
         .document(&doc)
@@ -152,31 +140,23 @@ async fn resolve_multiple() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
     };
-
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let create_result = CreateBuilder::new()
         .document(&doc)
@@ -314,31 +294,23 @@ async fn resolve_deactivated() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
     };
-
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let create_result = CreateBuilder::new()
         .document(&doc)

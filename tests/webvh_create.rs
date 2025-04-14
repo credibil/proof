@@ -2,9 +2,13 @@
 //! entry.
 
 use credibil_did::{
-    core::Kind, document::{
+    KeyPurpose, PublicKeyFormat, ServiceBuilder,
+    core::Kind,
+    document::{
         DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
-    }, webvh::{default_did, CreateBuilder, Witness, WitnessWeight}, KeyPurpose, PublicKeyFormat, ServiceBuilder
+    },
+    key::url::did_from_jwk,
+    webvh::{CreateBuilder, Witness, WitnessWeight, default_did},
 };
 use credibil_infosec::Signer;
 use kms::Keyring;
@@ -29,19 +33,18 @@ async fn create_success() {
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
         public_key_multibase: update_multi,
     })
-        .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+    .key_id(&did, VmKeyId::Authorization(id_multi))
+    .expect("should apply key ID")
+    .method_type(&MethodType::Ed25519VerificationKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
         .endpoint_str(&"https://example.com/.well-known/whois")
         .build();
-    
+
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
@@ -50,25 +53,19 @@ async fn create_success() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],

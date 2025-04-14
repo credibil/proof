@@ -7,6 +7,7 @@ use credibil_did::document::{
     DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
     VmKeyId,
 };
+use credibil_did::key::url::did_from_jwk;
 use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
     default_did,
@@ -39,7 +40,6 @@ async fn create_then_deactivate() {
     .expect("should apply method type")
     .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
@@ -54,25 +54,19 @@ async fn create_then_deactivate() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
@@ -133,7 +127,6 @@ async fn update_then_deactivate() {
     .expect("should apply method type")
     .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    signer.set_verification_method("signing").expect("should set verification method");
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type(&"LinkedVerifiablePresentation")
@@ -148,25 +141,19 @@ async fn update_then_deactivate() {
 
     let next_multi = signer.next_multibase("signing").expect("should get next key");
 
-    let mut witness_keyring1 = Keyring::new();
-    witness_keyring1.set_verification_method("signing").expect("should set verification method");
-    let mut witness_keyring2 = Keyring::new();
-    witness_keyring2.set_verification_method("signing").expect("should set verification method");
+    let witness_keyring1 = Keyring::new();
+    let vk1 = witness_keyring1.verifying_key().await.expect("should get verifying key");
+    let witness_keyring2 = Keyring::new();
+    let vk2 = witness_keyring2.verifying_key().await.expect("should get verifying key");
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: witness_keyring1
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk1).expect("should get verifying key as did:key"),
                 weight: 50,
             },
             WitnessWeight {
-                id: witness_keyring2
-                    .verification_method()
-                    .await
-                    .expect("should get verifying key as did:key"),
+                id: did_from_jwk(&vk2).expect("should get verifying key as did:key"),
                 weight: 40,
             },
         ],
@@ -211,7 +198,6 @@ async fn update_then_deactivate() {
     .expect("should apply method type")
     .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    signer.set_verification_method("signing").expect("should set verification method");
 
     // Add another reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");

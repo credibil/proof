@@ -148,11 +148,8 @@ impl DidLogEntry {
         if signer.algorithm() != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
-        let vm = signer.verification_method().await?;
-        // We have no way of passing the SCID to an infosec signer, so assume
-        // the signer has injected a placeholder and replace it here.
-        let vm = vm.replace(SCID_PLACEHOLDER, &self.parameters.scid);
-
+        let vk = signer.verifying_key().await?;
+        let vm = crate::key::url::did_from_jwk(&vk)?;
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
             type_: "DataIntegrityProof".to_string(),

@@ -12,6 +12,7 @@
 pub mod operator;
 pub mod resolver;
 mod resolve;
+pub mod url;
 
 pub use resolve::*;
 
