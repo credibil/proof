@@ -6,7 +6,7 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, Resolvable, core::Kind};
+use crate::{Document, SignerExt, core::Kind};
 
 use super::{
     BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness,
@@ -43,7 +43,7 @@ pub struct NoSigner;
 
 /// Builder has a signer (can build).
 #[derive(Clone, Debug)]
-pub struct WithSigner<'a, S: Resolvable>(pub &'a S);
+pub struct WithSigner<'a, S: SignerExt>(pub &'a S);
 
 /// Builder does not have a document (can't build).
 #[derive(Clone, Debug)]
@@ -159,7 +159,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
 impl CreateBuilder<WithUpdateKeys, NoSigner, WithDocument> {
     /// Add a signer to the builder.
     #[must_use]
-    pub fn signer<S: Resolvable>(
+    pub fn signer<S: SignerExt>(
         self, signer: &S,
     ) -> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
         CreateBuilder {
@@ -231,7 +231,7 @@ impl<U, S, D> CreateBuilder<U, S, D> {
     }
 }
 
-impl<S: Resolvable> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
+impl<S: SignerExt> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
     /// Provide a `Provable` `Signer` to construct a data integrity proof. To

@@ -22,7 +22,7 @@ use sha2::Digest;
 use uuid::Uuid;
 
 use super::Method;
-use crate::{Document, Resolvable, proof::w3c::Proof};
+use crate::{Document, SignerExt, proof::w3c::Proof};
 
 pub use create::{CreateBuilder, CreateResult};
 pub use deactivate::{DeactivateBuilder, DeactivateResult};
@@ -125,7 +125,7 @@ impl DidLogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn sign(&mut self, signer: &impl Resolvable) -> anyhow::Result<()> {
+    pub async fn sign(&mut self, signer: &impl SignerExt) -> anyhow::Result<()> {
         let proof = self.proof(signer).await?;
         self.proof.push(proof);
         Ok(())
@@ -142,7 +142,7 @@ impl DidLogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn proof(&self, signer: &impl Resolvable) -> anyhow::Result<Proof> {
+    pub async fn proof(&self, signer: &impl SignerExt) -> anyhow::Result<Proof> {
         if signer.algorithm() != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }

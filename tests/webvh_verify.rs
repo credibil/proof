@@ -1,7 +1,7 @@
 //! Tests to verify log entries.
 
 use credibil_did::{
-    KeyPurpose, PublicKeyFormat, Resolvable,
+    KeyPurpose, PublicKeyFormat, SignerExt,
     core::Kind,
     document::{
         DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,

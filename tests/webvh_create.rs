@@ -2,7 +2,7 @@
 //! entry.
 
 use credibil_did::{
-    KeyPurpose, PublicKeyFormat, Resolvable, ServiceBuilder,
+    KeyPurpose, PublicKeyFormat, SignerExt, ServiceBuilder,
     core::Kind,
     document::{
         DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,

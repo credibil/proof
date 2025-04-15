@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::Resolvable;
+use credibil_did::SignerExt;
 use credibil_infosec::{Algorithm, PublicKeyJwk, Signer, jose::jws::Key};
 use ed25519_dalek::{Signer as _, SigningKey};
 use rand::rngs::OsRng;
@@ -151,7 +151,7 @@ impl Signer for Keyring {
     }
 }
 
-impl Resolvable for Keyring {
+impl SignerExt for Keyring {
     async fn verification_method(&self) -> anyhow::Result<Key> {
         let Some(secret) = self.keys.get("signing") else {
             return Err(anyhow!("signing key for verification method not found"));

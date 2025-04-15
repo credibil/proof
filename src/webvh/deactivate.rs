@@ -8,7 +8,7 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, Resolvable};
+use crate::{Document, SignerExt};
 
 use super::{DidLogEntry, Witness, verify::validate_witness};
 
@@ -154,7 +154,7 @@ impl DeactivateBuilder<WithoutSigner> {
     }
 }
 
-impl<S: Resolvable> DeactivateBuilder<WithSigner<'_, S>> {
+impl<S: SignerExt> DeactivateBuilder<WithSigner<'_, S>> {
     /// Build the new log entry/entries.
     ///
     /// If the last log entry has a non-empty `next_key_hashes`, two log entries

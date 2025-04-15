@@ -11,7 +11,7 @@ use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
     default_did,
 };
-use credibil_did::{KeyPurpose, PublicKeyFormat, Resolvable};
+use credibil_did::{KeyPurpose, PublicKeyFormat, SignerExt};
 use credibil_infosec::jose::jws::Key;
 use kms::Keyring;
 

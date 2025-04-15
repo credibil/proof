@@ -7,7 +7,7 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, Resolvable};
+use crate::{Document, SignerExt};
 
 use super::{
     DidLog, DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness,
@@ -235,7 +235,7 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
     }
 }
 
-impl<S: Resolvable> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
+impl<S: SignerExt> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
     /// Provide a `Provable` `Signer` to construct a data integrity proof. To

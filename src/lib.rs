@@ -89,11 +89,11 @@ impl Display for Method {
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// [`Resolvable`] is used to provide public key material that can be used for
+/// [`SignerExt`] is used to provide public key material that can be used for
 /// signature verification.
 /// 
 /// Extends the `credibil_infosec::Signer` trait.
-pub trait Resolvable: Signer + Send + Sync {
+pub trait SignerExt: Signer + Send + Sync {
     /// The verification method the verifier should use to verify the signer's
     /// signature. This is typically a DID URL + # + verification key ID.
     ///
