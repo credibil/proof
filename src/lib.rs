@@ -27,6 +27,7 @@ mod url;
 use std::{fmt::{Display, Formatter}, future::Future, str::FromStr};
 
 use anyhow::anyhow;
+use credibil_infosec::{jose::jws::Key, Signer};
 use serde::{Deserialize, Serialize};
 
 pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
@@ -87,6 +88,19 @@ impl Display for Method {
 
 /// Returns DID-specific errors.
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// [`Resolvable`] is used to provide public key material that can be used for
+/// signature verification.
+/// 
+/// Extends the `credibil_infosec::Signer` trait.
+pub trait Resolvable: Signer + Send + Sync {
+    /// The verification method the verifier should use to verify the signer's
+    /// signature. This is typically a DID URL + # + verification key ID.
+    ///
+    /// Async and fallible because the implementer may need to access key
+    /// information to construct the method reference.
+    fn verification_method(&self) -> impl Future<Output = anyhow::Result<Key>> + Send;
+}
 
 /// [`DidResolver`] is used to proxy the resolution of a DID document. 
 ///

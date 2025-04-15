@@ -2,12 +2,11 @@
 //!
 use anyhow::bail;
 use chrono::Utc;
-use credibil_infosec::Signer;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, core::Kind};
+use crate::{Document, Resolvable, core::Kind};
 
 use super::{
     BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness,
@@ -32,7 +31,7 @@ pub struct CreateBuilder<U, S, D> {
 
 /// Builder does not have update keys (can't build).
 #[derive(Clone, Debug)]
-pub struct WithoutUpdateKeys;
+pub struct NoUpdateKeys;
 
 /// Builder has update keys (can build).
 #[derive(Clone, Debug)]
@@ -40,21 +39,21 @@ pub struct WithUpdateKeys(Vec<String>);
 
 /// Builder does not have a signer (can't build).
 #[derive(Clone, Debug)]
-pub struct WithoutSigner;
+pub struct NoSigner;
 
 /// Builder has a signer (can build).
 #[derive(Clone, Debug)]
-pub struct WithSigner<'a, S: Signer>(pub &'a S);
+pub struct WithSigner<'a, S: Resolvable>(pub &'a S);
 
 /// Builder does not have a document (can't build).
 #[derive(Clone, Debug)]
-pub struct WithoutDocument;
+pub struct NoDocument;
 
 /// Builder has a document (can build).
 #[derive(Clone, Debug)]
 pub struct WithDocument(Document);
 
-impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
+impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     /// Create a new `CreateBuilder`.
     #[must_use]
     pub fn new() -> Self {
@@ -66,9 +65,9 @@ impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
             witness: None,
             ttl: 0,
 
-            update_keys: WithoutUpdateKeys,
-            signer: WithoutSigner,
-            doc: WithoutDocument,
+            update_keys: NoUpdateKeys,
+            signer: NoSigner,
+            doc: NoDocument,
         }
     }
 
@@ -86,7 +85,7 @@ impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
     /// `did:webvh:{SCID}:<host_and_path>` string.
     pub fn document(
         &self, document: &Document,
-    ) -> anyhow::Result<CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument>> {
+    ) -> anyhow::Result<CreateBuilder<NoUpdateKeys, NoSigner, WithDocument>> {
         // The document ID must resemble a `did:webvh:{SCID}:<host_and_path>`
         // string.
         if !document.id.starts_with(&format!("did:{METHOD}:{SCID_PLACEHOLDER}")) {
@@ -111,20 +110,20 @@ impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
             witness: self.witness.clone(),
             ttl: self.ttl,
 
-            update_keys: WithoutUpdateKeys,
-            signer: WithoutSigner,
+            update_keys: NoUpdateKeys,
+            signer: NoSigner,
             doc: WithDocument(doc),
         })
     }
 }
 
-impl Default for CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithoutDocument> {
+impl Default for CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument> {
+impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
     /// Add update keys.
     ///
     /// Update keys are the multibase-encoded public keys that can be used by
@@ -134,7 +133,7 @@ impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument> {
     /// Will fail if the update keys are empty.
     pub fn update_keys(
         &self, update_keys: &[&str],
-    ) -> anyhow::Result<CreateBuilder<WithUpdateKeys, WithoutSigner, WithDocument>> {
+    ) -> anyhow::Result<CreateBuilder<WithUpdateKeys, NoSigner, WithDocument>> {
         // The update keys cannot be empty.
         if update_keys.is_empty() {
             bail!("update keys must not be empty.");
@@ -151,16 +150,16 @@ impl CreateBuilder<WithoutUpdateKeys, WithoutSigner, WithDocument> {
             update_keys: WithUpdateKeys(
                 update_keys.iter().map(std::string::ToString::to_string).collect(),
             ),
-            signer: WithoutSigner,
+            signer: NoSigner,
             doc: self.doc.clone(),
         })
     }
 }
 
-impl CreateBuilder<WithUpdateKeys, WithoutSigner, WithDocument> {
+impl CreateBuilder<WithUpdateKeys, NoSigner, WithDocument> {
     /// Add a signer to the builder.
     #[must_use]
-    pub fn signer<S: Signer>(
+    pub fn signer<S: Resolvable>(
         self, signer: &S,
     ) -> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
         CreateBuilder {
@@ -232,11 +231,11 @@ impl<U, S, D> CreateBuilder<U, S, D> {
     }
 }
 
-impl<S: Signer> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
+impl<S: Resolvable> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
-    /// Provide a `Signer` to construct a data integrity proof. To add more
-    /// proofs, call the `sign` method on the log entry after building.
+    /// Provide a `Provable` `Signer` to construct a data integrity proof. To
+    /// add more proofs, call the `sign` method on the log entry after building.
     ///
     /// # Errors
     ///

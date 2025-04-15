@@ -1,48 +1,46 @@
 //! # DID Web with Verifiable History
-//! 
+//!
 //! The `did:webvh` method is an enhanced version of the `did:web` method that
 //! includes the ability to resolve a full history of the DID document through
 //! a chain of updates.
-//! 
+//!
 //! See: <https://identity.foundation/didwebvh/next/>
 
 mod create;
 mod deactivate;
+mod resolve;
 mod update;
 mod url;
-mod resolve;
 mod verify;
 
 use chrono::{DateTime, Utc};
-use credibil_infosec::{Algorithm, Signer};
+use credibil_infosec::{Algorithm, jose::jws::Key};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
-use crate::{Document, proof::w3c::Proof};
 use super::Method;
+use crate::{Document, Resolvable, proof::w3c::Proof};
 
-pub use resolve::*;
 pub use create::{CreateBuilder, CreateResult};
 pub use deactivate::{DeactivateBuilder, DeactivateResult};
+pub use resolve::*;
 pub use update::{UpdateBuilder, UpdateResult};
 pub use url::*;
 pub use verify::*;
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
-/// 
+///
 /// Gets replaced by the generated SCID when constructing a DID document and
 /// log entry.
 pub const SCID_PLACEHOLDER: &str = "{SCID}";
 
-pub (crate) const METHOD: &str = "webvh";
-pub (crate) const VERSION: &str = "0.5";
-pub (crate) const BASE_CONTEXT: [&str; 2] = [
-    "https://www.w3.org/ns/did/v1",
-    "https://w3id.org/security/multikey/v1",
-];
+pub(crate) const METHOD: &str = "webvh";
+pub(crate) const VERSION: &str = "0.5";
+pub(crate) const BASE_CONTEXT: [&str; 2] =
+    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1"];
 
 /// `DidWebVh` provides a type for implementing `did:webvh` operation and
 /// resolution methods.
@@ -79,7 +77,7 @@ pub struct DidLogEntry {
     pub state: Document,
 
     /// Signed data integrity proof.
-    /// 
+    ///
     /// Note that in the final construction of a DID log entry, the `proof` is
     /// required. However, it is not required when constructing the hash of the
     /// log entry so is made skippable here here to support the build algorithm.
@@ -89,9 +87,9 @@ pub struct DidLogEntry {
 
 impl DidLogEntry {
     /// Generate a log entry hash.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return an error if the entry fails serialization.
     pub fn hash(&self) -> anyhow::Result<String> {
         let entry = serde_json_canonicalizer::to_string(self)?;
@@ -101,9 +99,9 @@ impl DidLogEntry {
     }
 
     /// Verify the hash of the log entry.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return an error if the version ID has an unexpected format or if
     /// the hash does not match the hash computed from the previous log entry.
     pub fn verify_hash(&self, previous_version: &str) -> anyhow::Result<()> {
@@ -122,12 +120,12 @@ impl DidLogEntry {
     }
 
     /// Construct a controller's data integrity proof for the log entry.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn sign(&mut self, signer: &impl Signer) -> anyhow::Result<()> {
+    pub async fn sign(&mut self, signer: &impl Resolvable) -> anyhow::Result<()> {
         let proof = self.proof(signer).await?;
         self.proof.push(proof);
         Ok(())
@@ -139,25 +137,25 @@ impl DidLogEntry {
     /// witness's proof. For convenience, the `sign` method will construct a
     /// proof and add it to the log entry and should be used instead of this
     /// method directly for a controller's proof.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn proof(&self, signer: &impl Signer) -> anyhow::Result<Proof> {
+    pub async fn proof(&self, signer: &impl Resolvable) -> anyhow::Result<Proof> {
         if signer.algorithm() != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vm = signer.verification_method().await?;
-        // We have no way of passing the SCID to an infosec signer, so assume
-        // the signer has injected a placeholder and replace it here.
-        let vm = vm.replace(SCID_PLACEHOLDER, &self.parameters.scid);
+        let Key::KeyId(key_id) = &vm else {
+            return Err(anyhow::anyhow!("verification method must be a key id"));
+        };
 
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
             type_: "DataIntegrityProof".to_string(),
             cryptosuite: Some("eddsa-jcs-2022".to_string()),
-            verification_method: vm,
+            verification_method: key_id.to_string(),
             created: Some(Utc::now()),
             proof_purpose: "assertionMethod".to_string(),
             ..Proof::default()
@@ -179,8 +177,8 @@ impl DidLogEntry {
 }
 
 /// Parameters for a DID log entry.
-/// 
-/// 
+///
+///
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {

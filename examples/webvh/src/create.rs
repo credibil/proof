@@ -43,7 +43,6 @@ pub async fn create(
     .method_type(&MethodType::Ed25519VerificationKey2020)?
     .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    keyring.set_verification_method("signing")?;
 
     tracing::debug!("keys established");
 

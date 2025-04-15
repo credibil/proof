@@ -4,7 +4,8 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::{Algorithm, PublicKeyJwk, Signer};
+use credibil_did::Resolvable;
+use credibil_infosec::{Algorithm, PublicKeyJwk, Signer, jose::jws::Key};
 use ed25519_dalek::{Signer as _, SigningKey};
 use rand::rngs::OsRng;
 
@@ -12,27 +13,18 @@ use rand::rngs::OsRng;
 pub struct Keyring {
     keys: HashMap<String, String>,
     next_keys: HashMap<String, String>,
-    verification_method: String,
 }
 
 impl Keyring {
-    // Create a new keyring.
+    // Create a new keyring and add a signing key.
     #[must_use]
     pub fn new() -> Self {
-        Self {
+        let mut kr = Self {
             keys: HashMap::new(),
             next_keys: HashMap::new(),
-            verification_method: String::new(),
-        }
-    }
-
-    // Set the key ID to use for the verification method for the keyring.
-    pub fn set_verification_method(&mut self, vm: impl ToString + Clone) -> anyhow::Result<()> {
-        if self.keys.get(&vm.to_string()).is_none() {
-            self.add_key(vm.clone())?;
-        }
-        self.verification_method = vm.to_string();
-        Ok(())
+        };
+        kr.add_key("signing").expect("should add signing key");
+        kr
     }
 
     // Add a newly generated key to the keyring and corresponding next key.
@@ -59,7 +51,7 @@ impl Keyring {
         let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
         self.next_keys.insert(id.to_string(), next_key);
 
-        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)        
+        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
     }
 
     // Rotate keys
@@ -85,9 +77,9 @@ impl Keyring {
             Some(secret) => secret,
             None => {
                 self.add_key(id.clone())?;
-                self.keys.get(&id.to_string()).ok_or_else(|| {
-                    anyhow!("key not found after generating new key")
-                })?
+                self.keys
+                    .get(&id.to_string())
+                    .ok_or_else(|| anyhow!("key not found after generating new key"))?
             }
         };
         let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
@@ -157,13 +149,12 @@ impl Signer for Keyring {
     fn algorithm(&self) -> Algorithm {
         Algorithm::EdDSA
     }
+}
 
-    async fn verification_method(&self) -> anyhow::Result<String> {
-        if self.verification_method.is_empty() {
-            return Err(anyhow!("verification method not set"));
-        }
-        let Some(secret) = self.keys.get(&self.verification_method) else {
-            return Err(anyhow!("key for verification method not found"));
+impl Resolvable for Keyring {
+    async fn verification_method(&self) -> anyhow::Result<Key> {
+        let Some(secret) = self.keys.get("signing") else {
+            return Err(anyhow!("signing key for verification method not found"));
         };
         let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
         let secret_key: ed25519_dalek::SecretKey =
@@ -171,8 +162,7 @@ impl Signer for Keyring {
         let signing_key = SigningKey::from_bytes(&secret_key);
         let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
         let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
-        let multibase = jwk.to_multibase()?;
-        let vm = format!("did:key:{}#{}", multibase, multibase);
-        Ok(vm)
+        let vm = credibil_did::key::did_from_jwk(&jwk)?;
+        Ok(Key::KeyId(vm))
     }
 }

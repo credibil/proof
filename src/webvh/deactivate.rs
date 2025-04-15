@@ -1,5 +1,5 @@
 //! Deactivate (revoke) operation for the `did:webvh` method.
-//! 
+//!
 
 use anyhow::bail;
 use chrono::Utc;
@@ -8,9 +8,9 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::Document;
+use crate::{Document, Resolvable};
 
-use super::{verify::validate_witness, DidLogEntry, Witness};
+use super::{DidLogEntry, Witness, verify::validate_witness};
 
 /// Builder for deactivating a DID document and associated log entry (or 2
 /// entries if there is key rotation).
@@ -32,10 +32,10 @@ pub struct WithSigner<'a, S: Signer>(pub &'a S);
 
 impl DeactivateBuilder<WithoutSigner> {
     /// Crate a new `DeactivateBuilder` populated with the current log entries.
-    /// 
+    ///
     /// It is assumed that the DID document is resolved from the last log entry
     /// otherwise an update operation should be used ahead of this.
-    /// 
+    ///
     /// # Errors
     /// Will fail if the log entries are not populated.
     pub fn from(log: &[DidLogEntry]) -> anyhow::Result<Self> {
@@ -154,16 +154,17 @@ impl DeactivateBuilder<WithoutSigner> {
     }
 }
 
-impl<S: Signer> DeactivateBuilder<WithSigner<'_, S>> {
+impl<S: Resolvable> DeactivateBuilder<WithSigner<'_, S>> {
     /// Build the new log entry/entries.
-    /// 
+    ///
     /// If the last log entry has a non-empty `next_key_hashes`, two log entries
     /// will be created: one to nullify the `next_key_hashes` and one to
     /// deactivate the DID.
-    /// 
-    /// Provide a `Signer` to construct a data integrity proof. To add more
-    /// proofs, call the `sign` method on the log entry/entries after building.
-    /// 
+    ///
+    /// Provide a `Provable` `Signer` to construct a data integrity proof. To
+    /// add more proofs, call the `sign` method on the log entry/entries after
+    /// building.
+    ///
     /// # Errors
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
