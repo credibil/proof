@@ -1,11 +1,10 @@
-//! Helper functions for converting HTTP URLs into `did:webvh` DIDs.
+//! Helper functions for converting HTTP URLs into `did:web` DIDs.
+//! use std::fmt::Write;
 
 use std::fmt::Write;
 
 use anyhow::bail;
 use url::Url;
-
-use super::SCID_PLACEHOLDER;
 
 /// Convert an HTTP URL into a host and path separated by colons suitable
 /// for use in a `did:webvh` DID.
@@ -57,7 +56,7 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
 /// parsed.
 pub fn default_did(url: &str) -> anyhow::Result<String> {
     let host_and_path = parse_url(url)?;
-    Ok(format!("did:webvh:{SCID_PLACEHOLDER}:{host_and_path}"))
+    Ok(format!("did:web:{host_and_path}"))
 }
 
 #[cfg(test)]

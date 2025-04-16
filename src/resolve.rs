@@ -55,7 +55,7 @@ pub async fn dereference_url(
 /// includes cases that don't make sense, like asking a `did:key` for a service
 /// endpoint.
 ///
-/// TOOD: Rename to `derefence` when possible.
+/// TOOD: Rename to `dereference` when possible.
 pub async fn deref2(url: &Url, resolver: &impl DidResolver) -> crate::Result<Resource> {
     match url.method {
         Method::Jwk => jwk::resolve(url),
@@ -111,7 +111,7 @@ pub async fn dereference(
     let resolution = match method {
         "key" => key::DidKey::resolve(&did)?,
         "jwk" => jwk::DidJwk::resolve(&did, opts, resolver)?,
-        "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
+        // "web" => web::DidWeb::resolve(&did, opts, resolver).await?,
         _ => return Err(Error::MethodNotSupported(format!("{method} is not supported"))),
     };
 
