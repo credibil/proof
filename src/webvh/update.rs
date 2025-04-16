@@ -7,7 +7,7 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::Document;
+use crate::{Document, SignerExt};
 
 use super::{
     DidLog, DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness,
@@ -235,11 +235,11 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
     }
 }
 
-impl<S: Signer> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
+impl<S: SignerExt> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
-    /// Provide a `Signer` to construct a data integrity proof. To add more
-    /// proofs, call the `sign` method on the log entry after building.
+    /// Provide a `Provable` `Signer` to construct a data integrity proof. To
+    /// add more proofs, call the `sign` method on the log entry after building.
     ///
     /// # Errors
     ///
@@ -260,7 +260,8 @@ impl<S: Signer> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
         params.ttl = self.ttl;
 
         let version_time = self
-            .doc.0
+            .doc
+            .0
             .did_document_metadata
             .as_ref()
             .map_or_else(Utc::now, |m| m.updated.unwrap_or_else(Utc::now));
