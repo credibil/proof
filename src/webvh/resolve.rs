@@ -252,7 +252,7 @@ mod test {
     use anyhow::anyhow;
     use insta::assert_json_snapshot as assert_snapshot;
 
-    use crate::{Document, resolve::dereference_url};
+    use crate::{Document, resolve::dereference};
 
     use super::*;
 
@@ -270,7 +270,7 @@ mod test {
         const DID_URL: &str = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
 
         let dereferenced =
-            dereference_url(DID_URL, &MockResolver).await.expect("should dereference");
+            dereference(DID_URL, &MockResolver).await.expect("should dereference");
         assert_snapshot!("deref_webvh", dereferenced);
     }
 
