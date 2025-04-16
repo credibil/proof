@@ -1,5 +1,4 @@
 //! Helper functions for converting HTTP URLs into `did:web` DIDs.
-//! use std::fmt::Write;
 
 use std::fmt::Write;
 
