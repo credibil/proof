@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use crate::core::{Kind, OneMany};
 use crate::error::Error;
-use crate::KeyPurpose;
+use crate::{KeyPurpose, BASE_CONTEXT};
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -954,6 +954,12 @@ impl DocumentBuilder {
             DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
         }
         self.doc.did_document_metadata = Some(md);
+        for ctx in &BASE_CONTEXT {
+            let c = Kind::String((*ctx).to_string());
+            if !self.doc.context.contains(&c) {
+                self.doc.context.push(c);
+            }
+        }
         self.doc
     }
 }
