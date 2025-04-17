@@ -10,7 +10,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
+use crate::document::{Document, Service, VerificationMethod};
 use crate::error::Error;
 use crate::{DidResolver, Method, Url, key, web, webvh};
 
@@ -92,66 +92,6 @@ pub fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
     Err(Error::NotFound(format!("verification method {url} not found in document")))
 }
 
-/// Used to pass addtional values to a `resolve` and `dereference` methods. Any
-/// properties used should be registered in the DID Specification Registries.
-///
-/// The `accept` property is common to all resolver implementations. It is used
-/// by users to specify the Media Type when calling the `resolve_representation`
-/// method. For example:
-///
-/// ```json
-/// {
-///    "accept": "application/did+ld+json"
-/// }
-/// ```
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Options {
-    /// [`accept`](https://www.w3.org/TR/did-spec-registries/#accept) resolution option.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub accept: Option<ContentType>,
-}
-
-/// Returned by `resolve` DID methods.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Resolved {
-    /// The DID resolution context.
-    #[serde(rename = "@context")]
-    pub context: String,
-
-    /// Resolution metadata.
-    pub metadata: Metadata,
-
-    /// The DID document.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub document: Option<Document>,
-
-    /// DID document metadata.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub document_metadata: Option<DocumentMetadata>,
-}
-
-/// `Dereferenced` contains the result of dereferencing a DID URL.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Dereferenced {
-    /// A metadata structure consisting of values relating to the results of the
-    /// DID URL dereferencing process. MUST NOT be empty in the case of an
-    /// error.
-    pub metadata: Metadata,
-
-    /// The dereferenced resource corresponding to the DID URL. MUST be empty if
-    /// dereferencing was unsuccessful. MUST be empty if dereferencing is
-    /// unsuccessful.
-    pub content_stream: Option<Resource>,
-
-    /// Metadata about the `content_stream`. If `content_stream` is a DID
-    /// document, this MUST be `DidDocumentMetadata`. If dereferencing is
-    /// unsuccessful, MUST be empty.
-    pub content_metadata: Option<ContentMetadata>,
-}
-
 /// Resource represents the DID document resource returned as a result of DID
 /// dereferencing. The resource is a DID document or a subset of a DID document.
 #[allow(clippy::large_enum_variant)]
@@ -203,65 +143,12 @@ pub enum ContentType {
     #[default]
     #[serde(rename = "application/did+ld+json")]
     DidLdJson,
-    //
-    // /// The JSON-LD Media Type.
-    // #[serde(rename = "application/ld+json")]
-    // LdJson,
+    
+    /// The JSON-LD Media Type.
+    #[serde(rename = "application/ld+json")]
+    LdJson,
+
     /// JSON list document.
     #[serde(rename = "text/jsonl")]
     JsonL,
 }
-
-/// Metadata about the `content_stream`. If `content_stream` is a DID document,
-/// this MUST be `DidDocumentMetadata`. If dereferencing is unsuccessful, MUST
-/// be empty.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ContentMetadata {
-    /// The DID document metadata.
-    #[serde(flatten)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub document_metadata: Option<DocumentMetadata>,
-}
-
-// TODO: Re-create these tests alongside respective resolvers.
-// #[cfg(test)]
-// mod test {
-//     use anyhow::anyhow;
-//     use insta::assert_json_snapshot as assert_snapshot;
-
-//     use super::*;
-
-//     #[derive(Clone)]
-//     struct MockResolver;
-//     impl DidResolver for MockResolver {
-//         async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-//             serde_json::from_slice(include_bytes!("./web/did-ecdsa.json"))
-//                 .map_err(|e| anyhow!("issue deserializing document: {e}"))
-//         }
-//     }
-
-//     #[test]
-//     fn error_code() {
-//         let err = Error::MethodNotSupported("Method not supported".into());
-//         assert_eq!(err.message(), "Method not supported");
-//     }
-
-//     #[test]
-//     fn deref_web() {
-//         const DID_URL: &str = "did:web:demo.credibil.io#key-0";
-
-//         let dereferenced =
-//             dereference(DID_URL, None, MockResolver).expect("should dereference");
-//         assert_snapshot!("deref_web", dereferenced);
-//     }
-
-//     #[test]
-//     fn deref_key() {
-//         const DID_URL: &str = "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
-
-//         let dereferenced =
-//             dereference(DID_URL, None, MockResolver).expect("should dereference");
-//         assert_snapshot!("deref_key", dereferenced);
-//     }
-// }

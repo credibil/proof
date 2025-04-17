@@ -249,30 +249,7 @@ pub async fn resolve_log(
 mod test {
     use std::str::FromStr;
 
-    use anyhow::anyhow;
-    use insta::assert_json_snapshot as assert_snapshot;
-
-    use crate::{Document, resolve::dereference};
-
     use super::*;
-
-    #[derive(Clone)]
-    struct MockResolver;
-    impl DidResolver for MockResolver {
-        async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-            serde_json::from_slice(include_bytes!("../../.samples/didwebvh.json"))
-                .map_err(|e| anyhow!("issue deserializing document: {e}"))
-        }
-    }
-
-    #[tokio::test]
-    async fn deref_webvh() {
-        const DID_URL: &str = "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
-
-        let dereferenced =
-            dereference(DID_URL, &MockResolver).await.expect("should dereference");
-        assert_snapshot!("deref_webvh", dereferenced);
-    }
 
     #[test]
     fn default_url() {

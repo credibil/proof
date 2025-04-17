@@ -116,14 +116,6 @@ pub trait DidResolver: Send + Sync + Clone {
     fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send;
 }
 
-/// [`DidOperator`] is used by implementers to provide material required for DID
-/// document operations — creation, update, etc.
-pub trait DidOperator: Send + Sync {
-    /// Provides verification material to be used for the specified
-    /// verification method.
-    fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
-}
-
 /// The purpose key material will be used for.
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize, Eq)]
 pub enum KeyPurpose {
