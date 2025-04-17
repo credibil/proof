@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::document::{Document, DocumentMetadata, Service, VerificationMethod};
 use crate::error::Error;
-use crate::{DidResolver, Method, Url, jwk, key, web, webvh};
+use crate::{DidResolver, Method, Url, key, web, webvh};
 
 /// Dereference a DID URL into a resource.
 ///
@@ -56,7 +56,6 @@ pub async fn dereference(
 /// endpoint.
 pub async fn deref_url(url: &Url, resolver: &impl DidResolver) -> crate::Result<Resource> {
     match url.method {
-        Method::Jwk => jwk::resolve(url),
         Method::Key => key::resolve(url),
         Method::Web => {
             let doc = web::resolve(url, resolver).await?;
