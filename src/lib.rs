@@ -39,9 +39,6 @@ pub use url::*;
 pub const BASE_CONTEXT: [&str; 3] =
     ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1", "https://w3id.org/security/suites/jws-2020/v1"];
 
-const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
-const X25519_CODEC: [u8; 2] = [0xec, 0x01];
-
 /// DID methods supported by this crate.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Method {

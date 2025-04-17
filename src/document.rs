@@ -9,7 +9,7 @@ use std::fmt::{self, Display, Formatter};
 use anyhow::bail;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use credibil_infosec::jose::jwk::PublicKeyJwk;
+use credibil_infosec::jose::jwk::{PublicKeyJwk, X25519_CODEC};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use crate::core::{Kind, OneMany};
 use crate::error::Error;
-use crate::{KeyPurpose, X25519_CODEC};
+use crate::KeyPurpose;
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
