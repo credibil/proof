@@ -49,7 +49,7 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
 /// information.
 /// 
 /// The output is a `did:webvh` DID with the `{SCID}` placeholder and path
-/// converted frm the provided HTTP URL.
+/// converted from the provided HTTP URL.
 ///
 /// # Errors
 /// 

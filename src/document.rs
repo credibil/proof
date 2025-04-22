@@ -332,7 +332,7 @@ impl DocumentBuilder {
     }
 
     /// Add a verification method that is a verifying key and optionally create
-    /// a derived key agreement (`did:key` only).
+    /// a derived key agreement.
     ///
     /// This is a shortcut for adding a verification method that constructs the
     /// verification method from a `PublicKeyJwk` and adds it to the document,
@@ -349,9 +349,7 @@ impl DocumentBuilder {
     ///
     /// # Errors
     /// Will fail if the JWK cannot be converted to a multibase string or if the
-    /// conversion from `Ed25519` to `X25519` fails. Will also fail if the
-    /// document being built is not a `did:key` document and the key agreement
-    /// option has been set to `true`.
+    /// conversion from `Ed25519` to `X25519` fails.
     pub fn add_verifying_key(
         mut self, jwk: &PublicKeyJwk, key_agreement: bool,
     ) -> anyhow::Result<Self> {
@@ -364,9 +362,6 @@ impl DocumentBuilder {
         .build();
         self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
         if key_agreement {
-            if !self.doc.id.starts_with("did:key:") {
-                bail!("deriving a key agreement is only supported for did:key");
-            }
             let ka = vm.derive_key_agreement()?;
             self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
         }
@@ -446,19 +441,16 @@ impl DocumentBuilder {
     ///
     /// NOTE: In general, a signing key should never be used for encryption,
     /// so this method should only be used where the DID method gives you no
-    /// choice. In the case of this crate, an error will be returned if the DID
-    /// method is anything other than `did:key`.
+    /// choice, such as `did:key`.
+    /// 
+    /// TODO: Consider returning an error if not `did:key`.
     ///
     /// # Errors
     /// If the conversion from `Ed25519` to `X25519` fails, an error will be
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place. An error is also returned if there is no
-    /// existing verification method with the given ID or if the DID method is
-    /// not `did:key`.
+    /// existing verification method with the given ID.
     pub fn derive_key_agreement(mut self, vm_id: &str) -> anyhow::Result<Self> {
-        if !self.doc.id.starts_with("did:key:") {
-            bail!("derive_key_agreement is only supported for did:key");
-        }
         let vm = self
             .doc
             .get_verification_method(vm_id)

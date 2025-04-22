@@ -6,9 +6,7 @@ use anyhow::bail;
 use url::Url;
 
 /// Convert an HTTP URL into a host and path separated by colons suitable
-/// for use in a `did:webvh` DID.
-/// 
-/// Does not prepend the `did:webvh:` prefix or `SCID`.
+/// for use in a `did:web` DID.
 ///
 /// The provided url should be a valid HTTP URL.
 ///
@@ -41,13 +39,13 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
     Ok(host)
 }
 
-/// Construct a default `did:webvh` DID from a URL.
+/// Construct a default `did:webv` DID from a URL.
 ///
 /// The provided url should be a valid HTTP URL. See `parse_url` for more
 /// information.
 /// 
-/// The output is a `did:webvh` DID with the `{SCID}` placeholder and path
-/// converted frm the provided HTTP URL.
+/// The output is a `did:web` DID with the path converted from the provided HTTP
+/// URL.
 ///
 /// # Errors
 /// 
