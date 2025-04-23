@@ -8,12 +8,8 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-// TODO: add support for the following:
-//   key type: EcdsaSecp256k1VerificationKey2019 | JsonWebKey2020 |
-// Ed25519VerificationKey2020 |             Ed25519VerificationKey2018 |
-// X25519KeyAgreementKey2019   crv: Ed25519 | secp256k1 | P-256 | P-384 | p-521
-
 pub mod core;
+pub mod did;
 pub mod document;
 mod error;
 pub mod key;
@@ -34,6 +30,11 @@ pub use document::*;
 pub use resolve::*;
 pub use error::Error;
 pub use url::*;
+
+// TODO: set context based on key format:
+// - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
+// - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
+// Perhaps
 
 /// Candidate contexts to add to a DID document.
 pub const BASE_CONTEXT: [&str; 3] =

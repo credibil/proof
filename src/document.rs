@@ -945,49 +945,6 @@ impl Display for MethodType {
     }
 }
 
-
-/// Options that can be provided when creating a DID document.
-// TODO: Remove this and use builders instead.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateOptions {
-    /// Verification method type.
-    pub method_type: MethodType,
-
-    /// Default context for the DID document. SHOULD be set to
-    /// `"https://www.w3.org/ns/did/v1"`.
-    pub default_context: String,
-
-    /// Enable experimental public key types. SHOULD be set to "false".
-    pub enable_experimental_public_key_types: bool,
-
-    /// Will add a `keyAgreement` object to the DID document.
-    pub enable_encryption_key_derivation: bool,
-
-    // service_endpoints: Vec<Value>,
-    // verification_methods: Vec<Value>,
-    // authentication: Vec<Value>,
-    /// Additional options.
-    #[serde(flatten)]
-    pub additional: Option<HashMap<String, String>>,
-}
-
-impl Default for CreateOptions {
-    fn default() -> Self {
-        Self {
-            method_type: MethodType::default(),
-            enable_experimental_public_key_types: false,
-            default_context: "https://www.w3.org/ns/did/v1".to_string(),
-            enable_encryption_key_derivation: false,
-            additional: None,
-        }
-    }
-}
-
-// // TODO: set context based on key format:
-// // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
-// // - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
-
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
