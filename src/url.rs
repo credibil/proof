@@ -4,15 +4,26 @@
 //!
 //! `did:<method>:<method-specific-id>[/<path>][?<query>][#<fragment>]`.
 
-use std::{fmt::{Display, Write as _}, str::FromStr};
+use std::{
+    fmt::{Display, Write as _},
+    str::FromStr,
+};
 
+use anyhow::bail;
+use nom::{
+    Err as NomErr, IResult, Parser,
+    bytes::complete::{is_not, tag, take, take_until},
+    combinator::{opt, rest},
+    error::{Error as NomError, ErrorKind},
+    sequence::{preceded, terminated},
+};
 use serde::{Deserialize, Serialize};
 
 use super::Method;
 use crate::error::Error;
 
 /// Structure of a DID URL.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Url {
     /// DID method.
     ///
@@ -109,74 +120,12 @@ impl FromStr for Url {
     /// If the string is not a valid format or portions of the string cannot be
     /// de-serialized into the expected types, an error is returned.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split(':').collect::<Vec<_>>();
-        println!("parts: {parts:?}");
-        if parts.len() < 3 {
-            return Err(super::Error::InvalidDidUrl(s.to_string()));
-        }
-        if parts[0] != "did" {
-            return Err(super::Error::InvalidDidUrl(format!("{s} does not start with 'did'")));
-        }
-        let method = Method::from_str(parts[1])?;
-
-        // Get some help from standard URL parsing by converting the DID URL to
-        // an HTTP one.
-        let domain = parts[parts.len() - 1];
-        let domain = domain.replace("%3A", ":");
-        let fake_url = format!("https://{domain}");
-        let url = url::Url::parse(&fake_url)
-            .map_err(|e| Error::InvalidDidUrl(format!("issue parsing URL: {e}")))?;
-        let host = url.host_str().ok_or_else(|| {
-            Error::InvalidDidUrl(format!("issue parsing host from URL: {fake_url}"))
-        })?;
-        let mut id = parts[2..parts.len()-1].join(":");
-        if id.is_empty() {
-            id = host.to_string();
-        } else {
-            id = format!("{id}:{host}");
-        }
-        let port = url.port().map(|p| p.to_string());
-        if let Some(p) = port {
-            id = format!("{id}%3A{p}");
-        }
-        let mut path: Option<Vec<&str>> = url.path_segments().map(std::iter::Iterator::collect);
-        if let Some(p) = &path {
-            if p.is_empty() {
-                path = None;
-            } else if p.len() == 1 {
-                if p[0].is_empty() {
-                    path = None;
-                }
-            } else {
-                path = Some(p.clone());
+        match Self::parse(s) {
+            Ok(url) => Ok(url),
+            Err(err) => {
+                Err(Error::InvalidDidUrl(format!("failed to parse DID URL: {err}")))
             }
         }
-        let path: Option<Vec<String>> =
-            path.map(|p| p.into_iter().map(std::string::ToString::to_string).collect());
-
-        let query = match url.query() {
-            Some(q) => {
-                match serde_querystring::from_str::<QueryParams>(
-                    q,
-                    serde_querystring::ParseMode::UrlEncoded,
-                ) {
-                    Ok(qp) => Some(qp),
-                    Err(e) => {
-                        return Err(Error::InvalidDidUrl(format!("issue parsing query: {e}")));
-                    }
-                }
-            }
-            None => None,
-        };
-        let fragment = url.fragment().map(std::string::ToString::to_string);
-
-        Ok(Self {
-            method,
-            id,
-            path,
-            query,
-            fragment,
-        })
     }
 }
 
@@ -203,6 +152,19 @@ impl Url {
     #[must_use]
     pub fn did(&self) -> String {
         format!("did:{}:{}", self.method, self.id)
+    }
+
+    /// Parse a string into a DID URL if possible.
+    /// 
+    /// # Errors
+    /// If any internal parsing fails, an error is returned.
+    pub fn parse(s: &str) -> anyhow::Result<Self> {
+        match parse_url(s) {
+            Ok((_, url)) => Ok(url),
+            Err(err) => {
+                bail!("failed to parse DID URL: {err}");
+            }
+        }
     }
 }
 
@@ -240,6 +202,71 @@ pub struct QueryParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hl")]
     pub hashlink: Option<String>,
+}
+
+fn scheme(input: &str) -> IResult<&str, &str> {
+    terminated(tag("did"), tag(":")).parse(input)
+}
+
+fn method(input: &str) -> IResult<&str, Method> {
+    let (next, method) = take_until(":").parse(input)?;
+    let method = Method::from_str(method)
+        .map_err(|_| NomErr::Error(NomError::new(method, ErrorKind::TakeUntil)))?;
+    let (next, _) = take(1usize).parse(next)?;
+    Ok((next, method))
+}
+
+fn id(input: &str) -> IResult<&str, &str> {
+    is_not("%/?#").parse(input)
+}
+
+fn port(input: &str) -> IResult<&str, u16> {
+    let (next, p) = preceded(tag("%3A"), is_not("/?#")).parse(input)?;
+    let p = p.parse::<u16>().map_err(|_| NomErr::Error(NomError::new(p, ErrorKind::IsNot)))?;
+    Ok((next, p))
+}
+
+fn path(input: &str) -> IResult<&str, Vec<String>> {
+    let (next, p) = preceded(tag("/"), is_not("?#")).parse(input)?;
+    Ok((next, p.split('/').map(std::string::ToString::to_string).collect()))
+}
+
+fn query(input: &str) -> IResult<&str, QueryParams> {
+    let (next, q) = preceded(tag("?"), is_not("#")).parse(input)?;
+    let mut params = QueryParams::default();
+    for param in q.split('&') {
+        let (key, value) = param.split_once('=').unwrap_or((param, ""));
+        match key {
+            "service" => params.service = Some(value.to_string()),
+            "relativeRef" | "relative-ref" => params.relative_ref = Some(value.to_string()),
+            "versionId" => params.version_id = Some(value.to_string()),
+            "versionTime" => params.version_time = Some(value.to_string()),
+            "hl" => params.hashlink = Some(value.to_string()),
+            _ => {}
+        }
+    }
+    Ok((next, params))
+}
+
+fn fragment(input: &str) -> IResult<&str, &str> {
+    preceded(tag("#"), rest).parse(input)
+}
+
+fn parse_url(input: &str) -> IResult<&str, Url> {
+    let (next, _scheme) = scheme(input)?;
+    let (next, (parsed_method, parsed_id, parsed_port, parsed_path, parsed_query, parsed_fragment)) =
+        (method, id, opt(port), opt(path), opt(query), opt(fragment)).parse(next)?;
+    let id = parsed_port.map_or_else(|| parsed_id.to_string(), |p| format!("{parsed_id}%3A{p}"));
+    Ok((
+        next,
+        Url {
+            method: parsed_method,
+            id,
+            path: parsed_path,
+            query: parsed_query,
+            fragment: parsed_fragment.map(str::to_string),
+        },
+    ))
 }
 
 #[cfg(test)]
@@ -328,8 +355,28 @@ mod tests {
         assert_eq!(url.id, "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io");
         assert_eq!(url.path, None);
         assert_eq!(url.query, None);
-        assert_eq!(url.fragment, Some("z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv".to_string()));
-        assert_eq!(url.resource_id(), "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv");
-        assert_eq!(url.to_string(), "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv");
+        assert_eq!(
+            url.fragment,
+            Some("z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv".to_string())
+        );
+        assert_eq!(
+            url.resource_id(),
+            "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+        assert_eq!(
+            url.to_string(),
+            "did:webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+    }
+
+    #[test]
+    fn web_url_with_fragment() {
+        let s = "did:web:credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0".to_string();
+        let url = Url::from_str(&s).expect("should parse url");
+        assert_eq!(url.method, Method::Web);
+        assert_eq!(url.id, "credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk");
+        assert_eq!(url.path, None);
+        assert_eq!(url.query, None);
+        assert_eq!(url.fragment, Some("key0".to_string()));
     }
 }
