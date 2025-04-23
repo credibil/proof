@@ -9,18 +9,10 @@
 //! - <https://w3c-ccg.github.io/did-method-key>
 //! - <https://w3c.github.io/did-resolution>
 
-pub mod operator;
 mod resolve;
-pub mod resolver;
 
 use credibil_infosec::PublicKeyJwk;
 pub use resolve::*;
-
-/// `DidKey` provides a type for implementing `did:key` operation and
-/// resolution methods.
-/// TODO: Remove this. Just need the namespace, not a receiver.
-#[allow(clippy::module_name_repetitions)]
-pub struct DidKey;
 
 /// Construct a `did:key` from a public key.
 ///

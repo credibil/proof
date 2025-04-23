@@ -9,7 +9,7 @@ use std::fmt::{self, Display, Formatter};
 use anyhow::bail;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use credibil_infosec::jose::jwk::PublicKeyJwk;
+use credibil_infosec::jose::jwk::{PublicKeyJwk, X25519_CODEC};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use crate::core::{Kind, OneMany};
 use crate::error::Error;
-use crate::{KeyPurpose, X25519_CODEC};
+use crate::{BASE_CONTEXT, KeyPurpose};
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -127,470 +127,6 @@ impl Document {
     #[must_use]
     pub fn get_verification_method(&self, id: &str) -> Option<&VerificationMethod> {
         self.verification_method.as_ref()?.iter().find(|vm| vm.id == id)
-    }
-}
-
-/// Services are used to express ways of communicating with the DID subject or
-/// associated entities.
-///
-/// They can be any type of service the DID subject wants
-/// to advertise, including decentralized identity management services for
-/// further discovery, authentication, authorization, or interaction.
-///
-/// Service information is often service specific. For example, a reference to
-/// an encrypted messaging service can detail how to initiate the encrypted link
-/// before messaging begins.
-///
-/// Due to privacy concerns, revealing public information through services, such
-/// as social media accounts, personal websites, and email addresses, is
-/// discouraged.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct Service {
-    /// A URI unique to the service.
-    pub id: String,
-
-    /// The service type. SHOULD be registered in the DID Specification
-    /// Registries.
-    #[serde(rename = "type")]
-    pub type_: String,
-
-    /// One or more endpoints for the service.
-    #[allow(clippy::struct_field_names)]
-    pub service_endpoint: OneMany<Kind<Value>>,
-}
-
-/// Service builder
-#[derive(Clone, Debug, Default)]
-pub struct ServiceBuilder<T, E> {
-    id: String,
-    service_type: T,
-    endpoint: E,
-}
-
-/// Service builder does not have a type specified (can't build)
-#[derive(Clone, Debug)]
-pub struct WithoutType;
-
-/// Service builder has a type specified (can build)
-#[derive(Clone, Debug)]
-pub struct WithType(String);
-
-/// Service builder does not have an endpoint specified (can't build)
-#[derive(Clone, Debug)]
-pub struct WithoutEndpoint;
-
-/// Service builder has at least one endpoint specified (can build)
-#[derive(Clone, Debug)]
-pub struct WithEndpoint(Vec<Kind<Value>>);
-
-impl ServiceBuilder<WithoutType, WithoutEndpoint> {
-    /// Creates a new `ServiceBuilder` with the given service ID.
-    #[must_use]
-    pub fn new(id: &impl ToString) -> Self {
-        Self {
-            id: id.to_string(),
-            service_type: WithoutType,
-            endpoint: WithoutEndpoint,
-        }
-    }
-
-    /// Specify the service type.
-    #[must_use]
-    pub fn service_type(
-        &self, service_type: &impl ToString,
-    ) -> ServiceBuilder<WithType, WithoutEndpoint> {
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: WithType(service_type.to_string()),
-            endpoint: WithoutEndpoint,
-        }
-    }
-}
-
-impl ServiceBuilder<WithType, WithoutEndpoint> {
-    /// Specify a string-based service endpoint.
-    #[must_use]
-    pub fn endpoint_str(&self, endpoint: &impl ToString) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = Kind::String(endpoint.to_string());
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: self.service_type.clone(),
-            endpoint: WithEndpoint(vec![ep]),
-        }
-    }
-
-    /// Specify a JSON-based service endpoint.
-    #[must_use]
-    pub fn endpoint_json(&self, endpoint: &Value) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = Kind::Object(endpoint.clone());
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: self.service_type.clone(),
-            endpoint: WithEndpoint(vec![ep]),
-        }
-    }
-}
-
-impl ServiceBuilder<WithType, WithEndpoint> {
-    /// Add a string-based service endpoint.
-    #[must_use]
-    pub fn add_endpoint_str(mut self, endpoint: &impl ToString) -> Self {
-        let ep = Kind::String(endpoint.to_string());
-        self.endpoint.0.push(ep);
-        self
-    }
-
-    /// Add a JSON-based service endpoint.
-    #[must_use]
-    pub fn add_endpoint_json(mut self, endpoint: &Value) -> Self {
-        let ep = Kind::Object(endpoint.clone());
-        self.endpoint.0.push(ep);
-        self
-    }
-
-    /// Build the service.
-    #[must_use]
-    pub fn build(self) -> Service {
-        let ep = if self.endpoint.0.len() == 1 {
-            OneMany::One(self.endpoint.0[0].clone())
-        } else {
-            OneMany::Many(self.endpoint.0)
-        };
-        Service {
-            id: self.id,
-            type_: self.service_type.0,
-            service_endpoint: ep,
-        }
-    }
-}
-
-/// A DID document can express verification methods, such as cryptographic
-/// public keys, which can be used to authenticate or authorize interactions
-/// with the DID subject or associated parties.
-///
-/// For example, a cryptographic
-/// public key can be used as a verification method with respect to a digital
-/// signature; in such usage, it verifies that the signer could use the
-/// associated cryptographic private key. Verification methods might take many
-/// parameters. An example of this is a set of five cryptographic keys from
-/// which any three are required to contribute to a cryptographic threshold
-/// signature.
-///
-/// MAY include additional properties which can be determined from the
-/// verification method as registered in the
-/// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries/).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct VerificationMethod {
-    /// Only used when the verification method uses terms not defined in the
-    /// containing document.
-    #[serde(rename = "@context")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context: Option<Kind<Value>>,
-
-    /// A DID that identifies the verification method.
-    pub id: String,
-
-    /// The type of verification method. SHOULD be a registered type in the
-    /// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
-    #[serde(rename = "type")]
-    pub type_: MethodType,
-
-    /// The DID of the controller of the verification method.
-    pub controller: String,
-
-    /// The format of the public key material.
-    #[serde(flatten)]
-    pub key: PublicKeyFormat,
-}
-
-/// The format of the public key material.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all_fields = "camelCase")]
-#[serde(untagged)]
-pub enum PublicKeyFormat {
-    /// The key is encoded as a Multibase string.
-    PublicKeyMultibase {
-        /// The public key encoded as a Multibase.
-        public_key_multibase: String,
-    },
-
-    /// The key is encoded as a JWK.
-    PublicKeyJwk {
-        /// The public key encoded as a JWK.
-        public_key_jwk: PublicKeyJwk,
-    },
-}
-
-impl Default for PublicKeyFormat {
-    fn default() -> Self {
-        Self::PublicKeyMultibase {
-            public_key_multibase: String::new(),
-        }
-    }
-}
-
-impl PublicKeyFormat {
-    /// Return the key as a JWK
-    ///
-    /// # Errors
-    /// Will return an error if the key is multibase encoded and cannot be
-    /// decoded.
-    pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
-        match self {
-            Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::PublicKeyMultibase { public_key_multibase } => {
-                PublicKeyJwk::from_multibase(public_key_multibase)
-                    .map_err(|e| Error::InvalidPublicKey(e.to_string()))
-            }
-        }
-    }
-
-    /// Return the key as a multibase string.
-    ///
-    /// # Errors
-    /// Will return an error if the key is a JWK and cannot be encoded as a
-    /// multibase string.
-    pub fn multibase(&self) -> crate::Result<String> {
-        match self {
-            Self::PublicKeyJwk { public_key_jwk } => {
-                public_key_jwk.to_multibase().map_err(|e| Error::InvalidPublicKey(e.to_string()))
-            }
-            Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
-        }
-    }
-}
-
-/// Verification method types supported by this library. SHOULD be registered in
-/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all_fields = "camelCase")]
-pub enum MethodType {
-    /// Generic Multi-key format.
-    #[default]
-    Multikey,
-
-    /// `ED25519` Verification key, version 2020.
-    Ed25519VerificationKey2020,
-
-    /// `X25519` Key Agreement Key, version 2020.
-    X25519KeyAgreementKey2020,
-
-    /// JSON Web Key (JWK), version 2020.
-    JsonWebKey2020,
-
-    /// Secp256k1 Verification Key, version 2019.
-    EcdsaSecp256k1VerificationKey2019,
-}
-
-impl Display for MethodType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Multikey => write!(f, "Multikey"),
-            Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
-            Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
-            Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
-            Self::EcdsaSecp256k1VerificationKey2019 => {
-                write!(f, "EcdsaSecp256k1VerificationKey2019")
-            }
-        }
-    }
-}
-
-// // TODO: set context based on key format:
-// // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
-// // - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
-
-/// DID document metadata. This typically does not change unless the DID
-/// document changes.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[allow(clippy::module_name_repetitions)]
-pub struct DocumentMetadata {
-    /// Timestamp of the Create operation.
-    /// An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
-    pub created: DateTime<Utc>,
-
-    /// Timestamp of the last Update operation. Omitted if an Update operation
-    /// has never been performed. May be the same value as the `created`
-    /// property when the difference between the two timestamps is less than
-    /// one second. An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated: Option<DateTime<Utc>>,
-
-    /// MUST be set to true if the DID has been deactivated. Optional if the DID
-    /// has not been deactivated.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deactivated: Option<bool>,
-
-    /// May be set if the document version is not the latest. Indicates the
-    /// timestamp of the next Update operation as an XMLSCHEMA11-2
-    /// (RFC3339).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_update: Option<DateTime<Utc>>,
-
-    /// Used to indicate the version of the last Update operation. SHOULD be
-    /// set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_id: Option<String>,
-
-    /// MAY be set if the document version is not the latest. It indicates the
-    /// version of the next Update operation.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_version_id: Option<String>,
-
-    /// Used when a DID method needs to define different forms of a DID that are
-    /// logically equivalent. For example, when a DID takes one form prior to
-    /// registration in a verifiable data registry and another form after such
-    /// registration.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub equivalent_id: Option<Vec<String>>,
-
-    /// Identical to the `equivalent_id` property except that it is a single
-    /// value AND the DID is the canonical ID for the DID subject within the
-    /// containing DID document.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub canonical_id: Option<String>,
-
-    /// Additional metadata specified by the DID method.
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub additional: Option<HashMap<String, Value>>,
-}
-
-/// Builder for DID document metadata.
-#[derive(Clone, Debug, Default)]
-pub struct DocumentMetadataBuilder {
-    md: DocumentMetadata,
-}
-
-impl DocumentMetadataBuilder {
-    /// Creates a new `DocumentMetadataBuilder`.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            md: DocumentMetadata::default(),
-        }
-    }
-
-    /// Creates a new `DocumentMetadataBuilder` from an existing
-    /// `DocumentMetadata`.
-    #[must_use]
-    pub fn from(md: &DocumentMetadata) -> Self {
-        Self { md: md.clone() }
-    }
-
-    /// Set the created timestamp.
-    #[must_use]
-    pub const fn created(mut self, created: &DateTime<Utc>) -> Self {
-        self.md.created = *created;
-        self
-    }
-
-    /// Set the updated timestamp.
-    #[must_use]
-    pub const fn updated(mut self, updated: &DateTime<Utc>) -> Self {
-        self.md.updated = Some(*updated);
-        self
-    }
-
-    /// Set the deactivated flag.
-    #[must_use]
-    pub const fn deactivated(mut self, deactivated: bool) -> Self {
-        self.md.deactivated = Some(deactivated);
-        self
-    }
-
-    /// Set the next update timestamp.
-    #[must_use]
-    pub const fn next_update(mut self, next_update: &DateTime<Utc>) -> Self {
-        self.md.next_update = Some(*next_update);
-        self
-    }
-
-    /// Set the version ID.
-    #[must_use]
-    pub fn version_id(mut self, version_id: &str) -> Self {
-        self.md.version_id = Some(version_id.into());
-        self
-    }
-
-    /// Set the next version ID.
-    #[must_use]
-    pub fn next_version_id(mut self, next_version_id: &str) -> Self {
-        self.md.next_version_id = Some(next_version_id.into());
-        self
-    }
-
-    /// Set the equivalent ID.
-    #[must_use]
-    pub fn equivalent_id(mut self, equivalent_id: &[&str]) -> Self {
-        self.md.equivalent_id = Some(equivalent_id.iter().map(|s| (*s).to_string()).collect());
-        self
-    }
-
-    /// Set the canonical ID.
-    #[must_use]
-    pub fn canonical_id(mut self, canonical_id: &str) -> Self {
-        self.md.canonical_id = Some(canonical_id.into());
-        self
-    }
-
-    /// Set an addition field
-    #[must_use]
-    pub fn additional(mut self, key: &str, value: impl Into<Value>) -> Self {
-        if let Some(additional) = &mut self.md.additional {
-            additional.insert(key.into(), value.into());
-        } else {
-            let mut additional = HashMap::new();
-            additional.insert(key.into(), value.into());
-            self.md.additional = Some(additional);
-        }
-        self
-    }
-
-    /// Build the metadata.
-    #[must_use]
-    pub fn build(self) -> DocumentMetadata {
-        self.md
-    }
-}
-
-/// Options that can be provided when creating a DID document.
-// TODO: Remove this and use builders instead.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateOptions {
-    /// Verification method type.
-    pub method_type: MethodType,
-
-    /// Default context for the DID document. SHOULD be set to
-    /// `"https://www.w3.org/ns/did/v1"`.
-    pub default_context: String,
-
-    /// Enable experimental public key types. SHOULD be set to "false".
-    pub enable_experimental_public_key_types: bool,
-
-    /// Will add a `keyAgreement` object to the DID document.
-    pub enable_encryption_key_derivation: bool,
-
-    // service_endpoints: Vec<Value>,
-    // verification_methods: Vec<Value>,
-    // authentication: Vec<Value>,
-    /// Additional options.
-    #[serde(flatten)]
-    pub additional: Option<HashMap<String, String>>,
-}
-
-impl Default for CreateOptions {
-    fn default() -> Self {
-        Self {
-            method_type: MethodType::default(),
-            enable_experimental_public_key_types: false,
-            default_context: "https://www.w3.org/ns/did/v1".to_string(),
-            enable_encryption_key_derivation: false,
-            additional: None,
-        }
     }
 }
 
@@ -795,6 +331,43 @@ impl DocumentBuilder {
         Ok(self)
     }
 
+    /// Add a verification method that is a verifying key and optionally create
+    /// a derived key agreement.
+    ///
+    /// This is a shortcut for adding a verification method that constructs the
+    /// verification method from a `PublicKeyJwk` and adds it to the document,
+    /// then optionally derives an `X25519` key agreement from it.
+    ///
+    /// # Note
+    ///
+    /// 1. The verification key format will be multibase encoded, derived from
+    ///    the JWK passed in. This is hard-coded for this function.
+    ///
+    /// 2. The key identifier will be `{did}#key-0`.
+    ///
+    /// If you have other needs, use `add_verification_method` instead.
+    ///
+    /// # Errors
+    /// Will fail if the JWK cannot be converted to a multibase string or if the
+    /// conversion from `Ed25519` to `X25519` fails.
+    pub fn add_verifying_key(
+        mut self, jwk: &PublicKeyJwk, key_agreement: bool,
+    ) -> anyhow::Result<Self> {
+        let vk = jwk.to_multibase()?;
+        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+            public_key_multibase: vk,
+        })
+        .key_id(&self.did(), VmKeyId::Index("key".to_string(), 0))?
+        .method_type(&MethodType::Ed25519VerificationKey2020)?
+        .build();
+        self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
+        if key_agreement {
+            let ka = vm.derive_key_agreement()?;
+            self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
+        }
+        Ok(self)
+    }
+
     /// Remove a verification method.
     ///
     /// # Errors
@@ -858,8 +431,8 @@ impl DocumentBuilder {
         Ok(self)
     }
 
-    /// This method will create a new `X25519` key agreement verification method
-    /// from the `Ed25519` signing key.
+    /// Create a new `X25519` key agreement verification method from the
+    /// `Ed25519` signing key.
     ///
     /// You must pass in the ID of the signing verification method that already
     /// exists in the document being built, so ensure to call
@@ -868,59 +441,23 @@ impl DocumentBuilder {
     ///
     /// NOTE: In general, a signing key should never be used for encryption,
     /// so this method should only be used where the DID method gives you no
-    /// choice. In the case of this crate, an error will be returned if the DID
-    /// method is anything other than `did:key`.
+    /// choice, such as `did:key`.
+    /// 
+    /// TODO: Consider returning an error if not `did:key`.
     ///
     /// # Errors
     /// If the conversion from `Ed25519` to `X25519` fails, an error will be
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place. An error is also returned if there is no
-    /// existing verification method with the given ID or if the DID method is
-    /// not `did:key`.
+    /// existing verification method with the given ID.
     pub fn derive_key_agreement(mut self, vm_id: &str) -> anyhow::Result<Self> {
-        if !self.doc.id.starts_with("did:key:") {
-            bail!("derive_key_agreement is only supported for did:key");
-        }
         let vm = self
             .doc
             .get_verification_method(vm_id)
             .ok_or_else(|| anyhow::anyhow!("verification method not found"))?;
-        if vm.type_ != MethodType::Ed25519VerificationKey2020 {
-            bail!("verification method is not an Ed25519 public key");
-        }
+        let ka = vm.derive_key_agreement()?;
 
-        let jwk = match &vm.key {
-            PublicKeyFormat::PublicKeyJwk { public_key_jwk } => public_key_jwk.clone(),
-            PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
-                PublicKeyJwk::from_multibase(public_key_multibase)?
-            }
-        };
-        let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
-
-        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] = key_bytes.try_into().map_err(|_| {
-            Error::InvalidPublicKey(format!("public key is not {PUBLIC_KEY_LENGTH} bytes"))
-        })?;
-        let verifier = VerifyingKey::from_bytes(&verifier_bytes)
-            .map_err(|e| Error::InvalidPublicKey(format!("public key is not correct size: {e}")))?;
-        let x25519_bytes = verifier.to_montgomery().to_bytes();
-
-        // base58B encode the raw key
-        let mut multi_bytes = vec![];
-        multi_bytes.extend_from_slice(&X25519_CODEC);
-        multi_bytes.extend_from_slice(&x25519_bytes);
-        let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
-            public_key_multibase: multikey,
-        })
-        .key_id(&self.did(), VmKeyId::Did)?
-        .method_type(&MethodType::X25519KeyAgreementKey2020)?
-        .build();
-
-        self.doc
-            .key_agreement
-            .get_or_insert(vec![])
-            .push(Kind::Object(vm));
+        self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
 
         Ok(self)
     }
@@ -954,7 +491,239 @@ impl DocumentBuilder {
             DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
         }
         self.doc.did_document_metadata = Some(md);
+        for ctx in &BASE_CONTEXT {
+            let c = Kind::String((*ctx).to_string());
+            if !self.doc.context.contains(&c) {
+                self.doc.context.push(c);
+            }
+        }
         self.doc
+    }
+}
+
+/// Services are used to express ways of communicating with the DID subject or
+/// associated entities.
+///
+/// They can be any type of service the DID subject wants
+/// to advertise, including decentralized identity management services for
+/// further discovery, authentication, authorization, or interaction.
+///
+/// Service information is often service specific. For example, a reference to
+/// an encrypted messaging service can detail how to initiate the encrypted link
+/// before messaging begins.
+///
+/// Due to privacy concerns, revealing public information through services, such
+/// as social media accounts, personal websites, and email addresses, is
+/// discouraged.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Service {
+    /// A URI unique to the service.
+    pub id: String,
+
+    /// The service type. SHOULD be registered in the DID Specification
+    /// Registries.
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    /// One or more endpoints for the service.
+    #[allow(clippy::struct_field_names)]
+    pub service_endpoint: OneMany<Kind<Value>>,
+}
+
+/// Service builder
+#[derive(Clone, Debug, Default)]
+pub struct ServiceBuilder<T, E> {
+    id: String,
+    service_type: T,
+    endpoint: E,
+}
+
+/// Service builder does not have a type specified (can't build)
+#[derive(Clone, Debug)]
+pub struct WithoutType;
+
+/// Service builder has a type specified (can build)
+#[derive(Clone, Debug)]
+pub struct WithType(String);
+
+/// Service builder does not have an endpoint specified (can't build)
+#[derive(Clone, Debug)]
+pub struct WithoutEndpoint;
+
+/// Service builder has at least one endpoint specified (can build)
+#[derive(Clone, Debug)]
+pub struct WithEndpoint(Vec<Kind<Value>>);
+
+impl ServiceBuilder<WithoutType, WithoutEndpoint> {
+    /// Creates a new `ServiceBuilder` with the given service ID.
+    #[must_use]
+    pub fn new(id: &impl ToString) -> Self {
+        Self {
+            id: id.to_string(),
+            service_type: WithoutType,
+            endpoint: WithoutEndpoint,
+        }
+    }
+
+    /// Specify the service type.
+    #[must_use]
+    pub fn service_type(
+        &self, service_type: &impl ToString,
+    ) -> ServiceBuilder<WithType, WithoutEndpoint> {
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: WithType(service_type.to_string()),
+            endpoint: WithoutEndpoint,
+        }
+    }
+}
+
+impl ServiceBuilder<WithType, WithoutEndpoint> {
+    /// Specify a string-based service endpoint.
+    #[must_use]
+    pub fn endpoint_str(&self, endpoint: &impl ToString) -> ServiceBuilder<WithType, WithEndpoint> {
+        let ep = Kind::String(endpoint.to_string());
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: self.service_type.clone(),
+            endpoint: WithEndpoint(vec![ep]),
+        }
+    }
+
+    /// Specify a JSON-based service endpoint.
+    #[must_use]
+    pub fn endpoint_json(&self, endpoint: &Value) -> ServiceBuilder<WithType, WithEndpoint> {
+        let ep = Kind::Object(endpoint.clone());
+        ServiceBuilder {
+            id: self.id.clone(),
+            service_type: self.service_type.clone(),
+            endpoint: WithEndpoint(vec![ep]),
+        }
+    }
+}
+
+impl ServiceBuilder<WithType, WithEndpoint> {
+    /// Add a string-based service endpoint.
+    #[must_use]
+    pub fn add_endpoint_str(mut self, endpoint: &impl ToString) -> Self {
+        let ep = Kind::String(endpoint.to_string());
+        self.endpoint.0.push(ep);
+        self
+    }
+
+    /// Add a JSON-based service endpoint.
+    #[must_use]
+    pub fn add_endpoint_json(mut self, endpoint: &Value) -> Self {
+        let ep = Kind::Object(endpoint.clone());
+        self.endpoint.0.push(ep);
+        self
+    }
+
+    /// Build the service.
+    #[must_use]
+    pub fn build(self) -> Service {
+        let ep = if self.endpoint.0.len() == 1 {
+            OneMany::One(self.endpoint.0[0].clone())
+        } else {
+            OneMany::Many(self.endpoint.0)
+        };
+        Service {
+            id: self.id,
+            type_: self.service_type.0,
+            service_endpoint: ep,
+        }
+    }
+}
+
+/// A DID document can express verification methods, such as cryptographic
+/// public keys, which can be used to authenticate or authorize interactions
+/// with the DID subject or associated parties.
+///
+/// For example, a cryptographic
+/// public key can be used as a verification method with respect to a digital
+/// signature; in such usage, it verifies that the signer could use the
+/// associated cryptographic private key. Verification methods might take many
+/// parameters. An example of this is a set of five cryptographic keys from
+/// which any three are required to contribute to a cryptographic threshold
+/// signature.
+///
+/// MAY include additional properties which can be determined from the
+/// verification method as registered in the
+/// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries/).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct VerificationMethod {
+    /// Only used when the verification method uses terms not defined in the
+    /// containing document.
+    #[serde(rename = "@context")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context: Option<Kind<Value>>,
+
+    /// A DID that identifies the verification method.
+    pub id: String,
+
+    /// The type of verification method. SHOULD be a registered type in the
+    /// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+    #[serde(rename = "type")]
+    pub type_: MethodType,
+
+    /// The DID of the controller of the verification method.
+    pub controller: String,
+
+    /// The format of the public key material.
+    #[serde(flatten)]
+    pub key: PublicKeyFormat,
+}
+
+impl VerificationMethod {
+    /// Infer the DID from the key ID.
+    #[must_use]
+    pub fn did(&self) -> String {
+        self.id.split('#').next().unwrap_or_default().to_string()
+    }
+    
+    /// Create a new `X25519` key agreement verification method from the
+    /// `Ed25519` signing key.
+    /// 
+    /// # Errors
+    /// If the conversion from `Ed25519` to `X25519` fails, an error will be
+    /// returned, including testing the assumption that the signing key is
+    /// `Ed25519` in the first place.
+    pub fn derive_key_agreement(&self) -> anyhow::Result<Self> {
+        if self.type_ != MethodType::Ed25519VerificationKey2020 {
+            bail!("verification method is not an Ed25519 public key");
+        }
+
+        let jwk = match &self.key {
+            PublicKeyFormat::PublicKeyJwk { public_key_jwk } => public_key_jwk.clone(),
+            PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
+                PublicKeyJwk::from_multibase(public_key_multibase)?
+            }
+        };
+        let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
+
+        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] = key_bytes.try_into().map_err(|_| {
+            Error::InvalidPublicKey(format!("public key is not {PUBLIC_KEY_LENGTH} bytes"))
+        })?;
+        let verifier = VerifyingKey::from_bytes(&verifier_bytes)
+            .map_err(|e| Error::InvalidPublicKey(format!("public key is not correct size: {e}")))?;
+        let x25519_bytes = verifier.to_montgomery().to_bytes();
+
+        // base58B encode the raw key
+        let mut multi_bytes = vec![];
+        multi_bytes.extend_from_slice(&X25519_CODEC);
+        multi_bytes.extend_from_slice(&x25519_bytes);
+        let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
+
+        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+            public_key_multibase: multikey,
+        })
+        .key_id(&self.did(), VmKeyId::Did)?
+        .method_type(&MethodType::X25519KeyAgreementKey2020)?
+        .build();
+
+        Ok(vm)
     }
 }
 
@@ -1081,4 +850,294 @@ pub enum VmKeyId {
     /// With prefix `key-` and index `0`, the key ID will be
     /// `did:<method>:<method-specific-identifier>#key-0`.
     Index(String, u32),
+}
+
+/// The format of the public key material.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all_fields = "camelCase")]
+#[serde(untagged)]
+pub enum PublicKeyFormat {
+    /// The key is encoded as a Multibase string.
+    PublicKeyMultibase {
+        /// The public key encoded as a Multibase.
+        public_key_multibase: String,
+    },
+
+    /// The key is encoded as a JWK.
+    PublicKeyJwk {
+        /// The public key encoded as a JWK.
+        public_key_jwk: PublicKeyJwk,
+    },
+}
+
+impl Default for PublicKeyFormat {
+    fn default() -> Self {
+        Self::PublicKeyMultibase {
+            public_key_multibase: String::new(),
+        }
+    }
+}
+
+impl PublicKeyFormat {
+    /// Return the key as a JWK
+    ///
+    /// # Errors
+    /// Will return an error if the key is multibase encoded and cannot be
+    /// decoded.
+    pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
+        match self {
+            Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
+            Self::PublicKeyMultibase { public_key_multibase } => {
+                PublicKeyJwk::from_multibase(public_key_multibase)
+                    .map_err(|e| Error::InvalidPublicKey(e.to_string()))
+            }
+        }
+    }
+
+    /// Return the key as a multibase string.
+    ///
+    /// # Errors
+    /// Will return an error if the key is a JWK and cannot be encoded as a
+    /// multibase string.
+    pub fn multibase(&self) -> crate::Result<String> {
+        match self {
+            Self::PublicKeyJwk { public_key_jwk } => {
+                public_key_jwk.to_multibase().map_err(|e| Error::InvalidPublicKey(e.to_string()))
+            }
+            Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
+        }
+    }
+}
+
+/// Verification method types supported by this library. SHOULD be registered in
+/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all_fields = "camelCase")]
+pub enum MethodType {
+    /// Generic Multi-key format.
+    #[default]
+    Multikey,
+
+    /// `ED25519` Verification key, version 2020.
+    Ed25519VerificationKey2020,
+
+    /// `X25519` Key Agreement Key, version 2020.
+    X25519KeyAgreementKey2020,
+
+    /// JSON Web Key (JWK), version 2020.
+    JsonWebKey2020,
+
+    /// Secp256k1 Verification Key, version 2019.
+    EcdsaSecp256k1VerificationKey2019,
+}
+
+impl Display for MethodType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Multikey => write!(f, "Multikey"),
+            Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
+            Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
+            Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
+            Self::EcdsaSecp256k1VerificationKey2019 => {
+                write!(f, "EcdsaSecp256k1VerificationKey2019")
+            }
+        }
+    }
+}
+
+
+/// Options that can be provided when creating a DID document.
+// TODO: Remove this and use builders instead.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOptions {
+    /// Verification method type.
+    pub method_type: MethodType,
+
+    /// Default context for the DID document. SHOULD be set to
+    /// `"https://www.w3.org/ns/did/v1"`.
+    pub default_context: String,
+
+    /// Enable experimental public key types. SHOULD be set to "false".
+    pub enable_experimental_public_key_types: bool,
+
+    /// Will add a `keyAgreement` object to the DID document.
+    pub enable_encryption_key_derivation: bool,
+
+    // service_endpoints: Vec<Value>,
+    // verification_methods: Vec<Value>,
+    // authentication: Vec<Value>,
+    /// Additional options.
+    #[serde(flatten)]
+    pub additional: Option<HashMap<String, String>>,
+}
+
+impl Default for CreateOptions {
+    fn default() -> Self {
+        Self {
+            method_type: MethodType::default(),
+            enable_experimental_public_key_types: false,
+            default_context: "https://www.w3.org/ns/did/v1".to_string(),
+            enable_encryption_key_derivation: false,
+            additional: None,
+        }
+    }
+}
+
+// // TODO: set context based on key format:
+// // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
+// // - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
+
+/// DID document metadata. This typically does not change unless the DID
+/// document changes.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[allow(clippy::module_name_repetitions)]
+pub struct DocumentMetadata {
+    /// Timestamp of the Create operation.
+    /// An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
+    pub created: DateTime<Utc>,
+
+    /// Timestamp of the last Update operation. Omitted if an Update operation
+    /// has never been performed. May be the same value as the `created`
+    /// property when the difference between the two timestamps is less than
+    /// one second. An XMLSCHEMA11-2 (RFC3339) e.g. 2010-01-01T19:23:24Z.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated: Option<DateTime<Utc>>,
+
+    /// MUST be set to true if the DID has been deactivated. Optional if the DID
+    /// has not been deactivated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deactivated: Option<bool>,
+
+    /// May be set if the document version is not the latest. Indicates the
+    /// timestamp of the next Update operation as an XMLSCHEMA11-2
+    /// (RFC3339).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_update: Option<DateTime<Utc>>,
+
+    /// Used to indicate the version of the last Update operation. SHOULD be
+    /// set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version_id: Option<String>,
+
+    /// MAY be set if the document version is not the latest. It indicates the
+    /// version of the next Update operation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_version_id: Option<String>,
+
+    /// Used when a DID method needs to define different forms of a DID that are
+    /// logically equivalent. For example, when a DID takes one form prior to
+    /// registration in a verifiable data registry and another form after such
+    /// registration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub equivalent_id: Option<Vec<String>>,
+
+    /// Identical to the `equivalent_id` property except that it is a single
+    /// value AND the DID is the canonical ID for the DID subject within the
+    /// containing DID document.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical_id: Option<String>,
+
+    /// Additional metadata specified by the DID method.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub additional: Option<HashMap<String, Value>>,
+}
+
+/// Builder for DID document metadata.
+#[derive(Clone, Debug, Default)]
+pub struct DocumentMetadataBuilder {
+    md: DocumentMetadata,
+}
+
+impl DocumentMetadataBuilder {
+    /// Creates a new `DocumentMetadataBuilder`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            md: DocumentMetadata::default(),
+        }
+    }
+
+    /// Creates a new `DocumentMetadataBuilder` from an existing
+    /// `DocumentMetadata`.
+    #[must_use]
+    pub fn from(md: &DocumentMetadata) -> Self {
+        Self { md: md.clone() }
+    }
+
+    /// Set the created timestamp.
+    #[must_use]
+    pub const fn created(mut self, created: &DateTime<Utc>) -> Self {
+        self.md.created = *created;
+        self
+    }
+
+    /// Set the updated timestamp.
+    #[must_use]
+    pub const fn updated(mut self, updated: &DateTime<Utc>) -> Self {
+        self.md.updated = Some(*updated);
+        self
+    }
+
+    /// Set the deactivated flag.
+    #[must_use]
+    pub const fn deactivated(mut self, deactivated: bool) -> Self {
+        self.md.deactivated = Some(deactivated);
+        self
+    }
+
+    /// Set the next update timestamp.
+    #[must_use]
+    pub const fn next_update(mut self, next_update: &DateTime<Utc>) -> Self {
+        self.md.next_update = Some(*next_update);
+        self
+    }
+
+    /// Set the version ID.
+    #[must_use]
+    pub fn version_id(mut self, version_id: &str) -> Self {
+        self.md.version_id = Some(version_id.into());
+        self
+    }
+
+    /// Set the next version ID.
+    #[must_use]
+    pub fn next_version_id(mut self, next_version_id: &str) -> Self {
+        self.md.next_version_id = Some(next_version_id.into());
+        self
+    }
+
+    /// Set the equivalent ID.
+    #[must_use]
+    pub fn equivalent_id(mut self, equivalent_id: &[&str]) -> Self {
+        self.md.equivalent_id = Some(equivalent_id.iter().map(|s| (*s).to_string()).collect());
+        self
+    }
+
+    /// Set the canonical ID.
+    #[must_use]
+    pub fn canonical_id(mut self, canonical_id: &str) -> Self {
+        self.md.canonical_id = Some(canonical_id.into());
+        self
+    }
+
+    /// Set an addition field
+    #[must_use]
+    pub fn additional(mut self, key: &str, value: impl Into<Value>) -> Self {
+        if let Some(additional) = &mut self.md.additional {
+            additional.insert(key.into(), value.into());
+        } else {
+            let mut additional = HashMap::new();
+            additional.insert(key.into(), value.into());
+            self.md.additional = Some(additional);
+        }
+        self
+    }
+
+    /// Build the metadata.
+    #[must_use]
+    pub fn build(self) -> DocumentMetadata {
+        self.md
+    }
 }

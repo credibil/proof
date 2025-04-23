@@ -21,7 +21,6 @@ use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
-use super::Method;
 use crate::{Document, SignerExt, proof::w3c::Proof};
 
 pub use create::{CreateBuilder, CreateResult};
@@ -39,19 +38,8 @@ pub const SCID_PLACEHOLDER: &str = "{SCID}";
 
 pub(crate) const METHOD: &str = "webvh";
 pub(crate) const VERSION: &str = "0.5";
-pub(crate) const BASE_CONTEXT: [&str; 2] =
-    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1"];
-
-/// `DidWebVh` provides a type for implementing `did:webvh` operation and
-/// resolution methods.
-#[derive(Clone, Debug)]
-pub struct DidWebVh;
-
-impl From<DidWebVh> for Method {
-    fn from(_: DidWebVh) -> Self {
-        Self::WebVh
-    }
-}
+pub(crate) const BASE_CONTEXT: [&str; 3] =
+    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1", "https://w3id.org/security/suites/jws-2020/v1"];
 
 /// A `DidLog` is a set of log entries for a DID document.
 pub type DidLog = Vec<DidLogEntry>;

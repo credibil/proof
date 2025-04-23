@@ -16,7 +16,6 @@
 pub mod core;
 pub mod document;
 mod error;
-pub mod jwk;
 pub mod key;
 pub mod proof;
 mod resolve;
@@ -36,23 +35,21 @@ pub use resolve::*;
 pub use error::Error;
 pub use url::*;
 
-const ED25519_CODEC: [u8; 2] = [0xed, 0x01];
-const X25519_CODEC: [u8; 2] = [0xec, 0x01];
+/// Candidate contexts to add to a DID document.
+pub const BASE_CONTEXT: [&str; 3] =
+    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1", "https://w3id.org/security/suites/jws-2020/v1"];
 
 /// DID methods supported by this crate.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
-    /// The `did:jwk` method.
-    Jwk,
-
-    /// The `did:key` method.
+    /// `did:key`
     #[default]
     Key,
 
-    /// The `did:web` method.
+    /// `did:web`
     Web,
 
-    /// The `did:webvh` method.
+    /// `did:webvh`
     WebVh,
 }
 
@@ -66,7 +63,6 @@ impl FromStr for Method {
     /// Returns an error if the string is not a valid method.
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "jwk" => Ok(Self::Jwk),
             "key" => Ok(Self::Key),
             "web" => Ok(Self::Web),
             "webvh" => Ok(Self::WebVh),
@@ -78,7 +74,6 @@ impl FromStr for Method {
 impl Display for Method {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Jwk => write!(f, "jwk"),
             Self::Key => write!(f, "key"),
             Self::Web => write!(f, "web"),
             Self::WebVh => write!(f, "webvh"),
@@ -119,14 +114,6 @@ pub trait DidResolver: Send + Sync + Clone {
     ///
     /// Returns an error if the DID URL cannot be resolved.
     fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send;
-}
-
-/// [`DidOperator`] is used by implementers to provide material required for DID
-/// document operations — creation, update, etc.
-pub trait DidOperator: Send + Sync {
-    /// Provides verification material to be used for the specified
-    /// verification method.
-    fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk>;
 }
 
 /// The purpose key material will be used for.

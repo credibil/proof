@@ -69,12 +69,6 @@ impl Error {
     }
 }
 
-// impl From<anyhow::Error> for Error {
-//     fn from(err: anyhow::Error) -> Self {
-//         Self
-//     }
-// }
-
 #[cfg(test)]
 mod test {
     use super::*;
