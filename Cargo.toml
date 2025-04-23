@@ -46,7 +46,7 @@ serde-jsonlines = "0.7.0"
 
 [workspace]
 members = [
-    "examples/kms",
+    "crates/kms",
     "examples/webvh",
 ]
 resolver = "2"
@@ -82,7 +82,7 @@ base64ct = { version = "1.6.0", features = ["std"] }
 credibil-did = { path = "." } 
 credibil-infosec = "0.1.2"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
-kms = { path = "examples/kms" }
+kms = { path = "crates/kms" }
 multibase = "0.9.1"
 rand = "0.8.5"
 serde = { version = "1.0.218", features = ["derive"] }
