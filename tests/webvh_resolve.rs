@@ -1,6 +1,6 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
-use credibil_did::{
+use credibil_identity::{
     KeyPurpose, PublicKeyFormat, SignerExt, ServiceBuilder,
     core::Kind,
     document::{

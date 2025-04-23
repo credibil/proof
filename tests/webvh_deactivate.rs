@@ -2,16 +2,16 @@
 //! entries.
 //!
 
-use credibil_did::core::Kind;
-use credibil_did::document::{
+use credibil_identity::core::Kind;
+use credibil_identity::document::{
     DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
     VmKeyId,
 };
-use credibil_did::webvh::{
+use credibil_identity::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
     default_did,
 };
-use credibil_did::{KeyPurpose, PublicKeyFormat, SignerExt};
+use credibil_identity::{KeyPurpose, PublicKeyFormat, SignerExt};
 use credibil_infosec::jose::jws::Key;
 use kms::Keyring;
 

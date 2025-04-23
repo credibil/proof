@@ -1,7 +1,7 @@
 //! Tests for the creation of a new `did:webvh` document and associated log
 //! entry.
 
-use credibil_did::{
+use credibil_identity::{
     KeyPurpose, PublicKeyFormat, SignerExt, ServiceBuilder,
     core::Kind,
     document::{
@@ -12,7 +12,7 @@ use credibil_did::{
 use credibil_infosec::jose::jws::Key;
 use kms::Keyring;
 
-use credibil_did::webvh::SCID_PLACEHOLDER;
+use credibil_identity::webvh::SCID_PLACEHOLDER;
 
 // Test the happy path of creating a new `did:webvh` document and associated log
 // entry. Should just work without errors.

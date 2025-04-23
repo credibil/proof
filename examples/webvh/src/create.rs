@@ -3,7 +3,7 @@
 use axum::Json;
 use axum::extract::State;
 use axum_extra::{TypedHeader, headers::Host};
-use credibil_did::{
+use credibil_identity::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
     core::Kind,

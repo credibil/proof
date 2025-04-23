@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use credibil_did::{
+use credibil_identity::{
     core::Kind, document_resource, web, DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, Resource, ServiceBuilder, Url, VerificationMethod, VerificationMethodBuilder, VmKeyId
 };
 use kms::Keyring;

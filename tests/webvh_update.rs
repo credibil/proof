@@ -1,7 +1,7 @@
 //! Tests for the update of an existing `did:webvh` document and associated log
 //! entry.
 
-use credibil_did::{
+use credibil_identity::{
     KeyPurpose, PublicKeyFormat, SignerExt,
     core::Kind,
     document::{

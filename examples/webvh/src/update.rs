@@ -3,13 +3,13 @@
 use axum::extract::State;
 use axum::{Json, http::StatusCode};
 use axum_extra::{TypedHeader, headers::Host};
-use credibil_did::core::Kind;
-use credibil_did::webvh::UpdateBuilder;
-use credibil_did::{
+use credibil_identity::core::Kind;
+use credibil_identity::webvh::UpdateBuilder;
+use credibil_identity::{
     DocumentBuilder, MethodType, PublicKeyFormat, VerificationMethod, VerificationMethodBuilder,
     VmKeyId,
 };
-use credibil_did::{
+use credibil_identity::{
     KeyPurpose,
     webvh::{UpdateResult, resolve_log},
 };

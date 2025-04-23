@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 use credibil_infosec::{Algorithm, PublicKeyJwk, Signer, jose::jws::Key};
 use ed25519_dalek::{Signer as _, SigningKey};
 use rand::rngs::OsRng;
@@ -162,7 +162,7 @@ impl SignerExt for Keyring {
         let signing_key = SigningKey::from_bytes(&secret_key);
         let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
         let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
-        let vm = credibil_did::key::did_from_jwk(&jwk)?;
+        let vm = credibil_identity::key::did_from_jwk(&jwk)?;
         Ok(Key::KeyId(vm))
     }
 }

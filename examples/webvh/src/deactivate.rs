@@ -2,7 +2,7 @@
 
 use axum::{extract::State, http::StatusCode};
 use axum_extra::{TypedHeader, headers::Host};
-use credibil_did::webvh::{DeactivateBuilder, DeactivateResult};
+use credibil_identity::webvh::{DeactivateBuilder, DeactivateResult};
 
 use crate::{AppError, AppJson, state::AppState};
 

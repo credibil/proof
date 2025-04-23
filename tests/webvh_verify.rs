@@ -1,6 +1,6 @@
 //! Tests to verify log entries.
 
-use credibil_did::{
+use credibil_identity::{
     KeyPurpose, PublicKeyFormat, SignerExt,
     core::Kind,
     document::{
