@@ -1,5 +1,4 @@
-//! Deactivate (revoke) operation for the `did:webvh` method.
-//!
+//! Update operation for the `did:webvh` method.
 
 use anyhow::bail;
 use chrono::Utc;
@@ -8,20 +7,26 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, SignerExt};
+use crate::SignerExt;
+use crate::did::Document;
 
-use super::{DidLogEntry, Witness, verify::validate_witness};
+use super::{
+    DidLog, DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness,
+};
 
-/// Builder for deactivating a DID document and associated log entry (or 2
-/// entries if there is key rotation).
-pub struct DeactivateBuilder<S> {
+/// Builder to update a DID document and associated log entry.
+///
+/// Use this to construct an [`UpdateResult`].
+pub struct UpdateBuilder<S, D> {
     update_keys: Vec<String>,
+    portable: bool,
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
-    log: Vec<DidLogEntry>,
-    doc: Document,
+    ttl: u64,
 
+    log: DidLog,
     signer: S,
+    doc: D,
 }
 
 /// Builder does not have a signer (can't build).
@@ -30,29 +35,87 @@ pub struct WithoutSigner;
 /// Builder has a signer (can build).
 pub struct WithSigner<'a, S: Signer>(pub &'a S);
 
-impl DeactivateBuilder<WithoutSigner> {
-    /// Crate a new `DeactivateBuilder` populated with the current log entries.
+/// Builder does not have a document (can't build).
+#[derive(Clone, Debug)]
+pub struct WithoutDocument;
+
+/// Builder has a document (can build).
+#[derive(Clone, Debug)]
+pub struct WithDocument(Document);
+
+impl UpdateBuilder<WithoutSigner, WithoutDocument> {
+    /// Create a new `UpdateBuilder` populated with the current log entries.
     ///
-    /// It is assumed that the DID document is resolved from the last log entry
-    /// otherwise an update operation should be used ahead of this.
+    /// The log entries must be valid so this is tested, including verifying
+    /// the witness proofs if provided. (To skip witness verification, pass None
+    /// for the `witness_proofs` parameter.)
     ///
     /// # Errors
-    /// Will fail if the log entries are not populated.
-    pub fn from(log: &[DidLogEntry]) -> anyhow::Result<Self> {
+    /// Returns an error if the log entries are not valid.
+    pub async fn from(
+        log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>,
+    ) -> anyhow::Result<Self> {
+        // Validate the current log entries by resolving the DID document.
+        let _ = resolve_log(log, witness_proofs, None).await?;
         let Some(last_entry) = log.last() else {
-            bail!("log must not be empty.");
+            anyhow::bail!("log must not be empty.");
         };
+
         Ok(Self {
             update_keys: last_entry.parameters.update_keys.clone(),
+            portable: last_entry.parameters.portable,
             next_key_hashes: last_entry.parameters.next_key_hashes.clone(),
             witness: last_entry.parameters.witness.clone(),
-            log: log.to_vec(),
-            doc: last_entry.state.clone(),
+            ttl: last_entry.parameters.ttl,
 
+            log: log.to_vec(),
+            doc: WithoutDocument,
             signer: WithoutSigner,
         })
     }
 
+    /// Add the new DID document to the builder.
+    ///
+    /// # Errors
+    /// Checks the SCID hasn't changed and the document location hasn't changed
+    /// unless the original log entry allowed portability.
+    pub fn document(
+        &self, document: &Document,
+    ) -> anyhow::Result<UpdateBuilder<WithoutSigner, WithDocument>> {
+        // Check the DID location hasn't changed unless the original log entry
+        // allowed portability. If the location has changed, the SCID must be
+        // unchanged.
+        let Some(last_entry) = self.log.last() else {
+            anyhow::bail!("log must not be empty.");
+        };
+        if last_entry.state.id != document.id {
+            if !last_entry.parameters.portable {
+                anyhow::bail!("location has changed for non-portable DID.");
+            }
+            let parts = last_entry.state.id.split(':').collect::<Vec<&str>>();
+            if parts.len() < 4 {
+                anyhow::bail!("invalid DID format.");
+            }
+            let starts_with = format!("did:webvh:{}:", parts[2]);
+            if !document.id.starts_with(&starts_with) {
+                anyhow::bail!("SCID has changed for portable DID.");
+            }
+        }
+        Ok(UpdateBuilder {
+            update_keys: self.update_keys.clone(),
+            portable: self.portable,
+            next_key_hashes: self.next_key_hashes.clone(),
+            witness: self.witness.clone(),
+            ttl: self.ttl,
+
+            log: self.log.clone(),
+            doc: WithDocument(document.clone()),
+            signer: WithoutSigner,
+        })
+    }
+}
+
+impl UpdateBuilder<WithoutSigner, WithDocument> {
     /// Rotate the update keys.
     ///
     /// The new update keys provided, when hashed, must match the hash of the
@@ -113,6 +176,14 @@ impl DeactivateBuilder<WithoutSigner> {
         Ok(self)
     }
 
+    /// Set the DID to be portable or not. (Will inherit the current setting
+    /// unless overridden here.)
+    #[must_use]
+    pub const fn portable(mut self, portable: bool) -> Self {
+        self.portable = portable;
+        self
+    }
+
     /// Add a set of witnesses expected to provide proofs for this update.
     ///
     /// If this function is not called, the witness information from the last
@@ -139,111 +210,95 @@ impl DeactivateBuilder<WithoutSigner> {
         self
     }
 
-    /// Provide a signer to sign the log entry.
+    /// Set the permissable cache time in seconds for the DID. Will stay the
+    /// same as the current log entry if not overridden here. Defaults to 0 if
+    /// not previously set.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &S) -> DeactivateBuilder<WithSigner<'_, S>> {
-        DeactivateBuilder {
+    pub const fn ttl(mut self, ttl: u64) -> Self {
+        self.ttl = ttl;
+        self
+    }
+
+    /// Add a signer to the builder.
+    #[must_use]
+    pub fn signer<S: Signer>(self, signer: &S) -> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
+        UpdateBuilder {
             update_keys: self.update_keys,
+            portable: self.portable,
             next_key_hashes: self.next_key_hashes,
             witness: self.witness,
+            ttl: self.ttl,
+
             log: self.log,
             doc: self.doc,
-
             signer: WithSigner(signer),
         }
     }
 }
 
-impl<S: SignerExt> DeactivateBuilder<WithSigner<'_, S>> {
-    /// Build the new log entry/entries.
-    ///
-    /// If the last log entry has a non-empty `next_key_hashes`, two log entries
-    /// will be created: one to nullify the `next_key_hashes` and one to
-    /// deactivate the DID.
+impl<S: SignerExt> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
+    /// Build the new log entry.
     ///
     /// Provide a `Provable` `Signer` to construct a data integrity proof. To
-    /// add more proofs, call the `sign` method on the log entry/entries after
-    /// building.
+    /// add more proofs, call the `sign` method on the log entry after building.
     ///
     /// # Errors
+    ///
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
     /// signer fails to sign the log entry.
-    pub async fn build(&self) -> anyhow::Result<DeactivateResult> {
+    pub async fn build(&self) -> anyhow::Result<UpdateResult> {
         let mut log = self.log.clone();
         let Some(last_entry) = log.last() else {
-            bail!("log must not be empty.");
+            anyhow::bail!("log must not be empty.");
         };
-        let mut last_entry = last_entry.clone();
 
         let mut params = last_entry.parameters.clone();
         params.update_keys.clone_from(&self.update_keys);
+        params.portable = self.portable;
+        params.next_key_hashes.clone_from(&self.next_key_hashes);
         params.witness.clone_from(&self.witness);
+        params.ttl = self.ttl;
 
-        if last_entry.parameters.next_key_hashes.is_some() {
-            params.next_key_hashes = None;
-            let mut entry = DidLogEntry {
-                version_id: last_entry.version_id.clone(),
-                version_time: Utc::now(),
-                parameters: params.clone(),
-                state: self.doc.clone(),
-                proof: vec![],
-            };
-
-            let entry_hash = entry.hash()?;
-            let parts = last_entry.version_id.split('-').collect::<Vec<&str>>();
-            if parts.len() != 2 {
-                bail!("log entry version ID has an unexpected format");
-            }
-            let mut version_number = parts[0].parse::<u64>()?;
-            version_number += 1;
-            entry.version_id = format!("{version_number}-{entry_hash}");
-
-            entry.sign(self.signer.0).await?;
-            last_entry.clone_from(&entry);
-            log.push(entry);
-        }
-
-        params.update_keys = Vec::new();
-        params.next_key_hashes = None;
-        params.deactivated = true;
-        let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
-        md.updated = Some(Utc::now());
-        md.deactivated = Some(true);
-        let mut doc = self.doc.clone();
-        doc.did_document_metadata = Some(md);
-
+        let version_time = self
+            .doc
+            .0
+            .did_document_metadata
+            .as_ref()
+            .map_or_else(Utc::now, |m| m.updated.unwrap_or_else(Utc::now));
         let mut entry = DidLogEntry {
             version_id: last_entry.version_id.clone(),
-            version_time: Utc::now(),
+            version_time,
             parameters: params.clone(),
-            state: doc.clone(),
+            state: self.doc.0.clone(),
             proof: vec![],
         };
 
         let entry_hash = entry.hash()?;
         let parts = last_entry.version_id.split('-').collect::<Vec<&str>>();
         if parts.len() != 2 {
-            bail!("unexpected version ID format");
+            anyhow::bail!("unexpected version ID format.");
         }
         let mut version_number = parts[0].parse::<u64>()?;
         version_number += 1;
         entry.version_id = format!("{version_number}-{entry_hash}");
 
+        // Sign (adds a proof to the log entry).
         entry.sign(self.signer.0).await?;
+
         log.push(entry);
 
-        Ok(DeactivateResult {
-            did: doc.id.clone(),
-            document: doc,
+        Ok(UpdateResult {
+            did: self.doc.0.id.clone(),
+            document: self.doc.0.clone(),
             log,
         })
     }
 }
 
-/// Output of an `deactivate` operation.
+/// Output of an `update` operation.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct DeactivateResult {
+pub struct UpdateResult {
     /// The `did:webvh` DID.
     pub did: String,
 

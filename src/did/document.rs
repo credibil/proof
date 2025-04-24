@@ -5,8 +5,9 @@
 
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
 use credibil_infosec::jose::jwk::{PublicKeyJwk, X25519_CODEC};
@@ -15,9 +16,59 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::BASE_CONTEXT;
 use crate::core::{Kind, OneMany};
-use crate::error::Error;
-use crate::{BASE_CONTEXT, KeyPurpose};
+
+/// The purpose key material will be used for.
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize, Eq)]
+pub enum KeyPurpose {
+    /// The document's `verification_method` field.
+    VerificationMethod,
+
+    /// The document's `authentication` field.
+    Authentication,
+
+    /// The document's `assertion_method` field.
+    AssertionMethod,
+
+    /// The document's `key_agreement` field.
+    KeyAgreement,
+
+    /// The document's `capability_invocation` field.
+    CapabilityInvocation,
+
+    /// The document's `capability_delegation` field.
+    CapabilityDelegation,
+}
+
+impl Display for KeyPurpose {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VerificationMethod => write!(f, "verificationMethod"),
+            Self::Authentication => write!(f, "authentication"),
+            Self::AssertionMethod => write!(f, "assertionMethod"),
+            Self::KeyAgreement => write!(f, "keyAgreement"),
+            Self::CapabilityInvocation => write!(f, "capabilityInvocation"),
+            Self::CapabilityDelegation => write!(f, "capabilityDelegation"),
+        }
+    }
+}
+
+impl FromStr for KeyPurpose {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "verificationMethod" => Ok(Self::VerificationMethod),
+            "authentication" => Ok(Self::Authentication),
+            "assertionMethod" => Ok(Self::AssertionMethod),
+            "keyAgreement" => Ok(Self::KeyAgreement),
+            "capabilityInvocation" => Ok(Self::CapabilityInvocation),
+            "capabilityDelegation" => Ok(Self::CapabilityDelegation),
+            _ => Err(anyhow!("invalid key purpose")),
+        }
+    }
+}
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -442,7 +493,7 @@ impl DocumentBuilder {
     /// NOTE: In general, a signing key should never be used for encryption,
     /// so this method should only be used where the DID method gives you no
     /// choice, such as `did:key`.
-    /// 
+    ///
     /// TODO: Consider returning an error if not `did:key`.
     ///
     /// # Errors
@@ -682,10 +733,10 @@ impl VerificationMethod {
     pub fn did(&self) -> String {
         self.id.split('#').next().unwrap_or_default().to_string()
     }
-    
+
     /// Create a new `X25519` key agreement verification method from the
     /// `Ed25519` signing key.
-    /// 
+    ///
     /// # Errors
     /// If the conversion from `Ed25519` to `X25519` fails, an error will be
     /// returned, including testing the assumption that the signing key is
@@ -703,11 +754,9 @@ impl VerificationMethod {
         };
         let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
 
-        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] = key_bytes.try_into().map_err(|_| {
-            Error::InvalidPublicKey(format!("public key is not {PUBLIC_KEY_LENGTH} bytes"))
-        })?;
-        let verifier = VerifyingKey::from_bytes(&verifier_bytes)
-            .map_err(|e| Error::InvalidPublicKey(format!("public key is not correct size: {e}")))?;
+        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] =
+            key_bytes.try_into().map_err(|_| anyhow!("unable to coerce vec to slice"))?;
+        let verifier = VerifyingKey::from_bytes(&verifier_bytes)?;
         let x25519_bytes = verifier.to_montgomery().to_bytes();
 
         // base58B encode the raw key
@@ -884,12 +933,11 @@ impl PublicKeyFormat {
     /// # Errors
     /// Will return an error if the key is multibase encoded and cannot be
     /// decoded.
-    pub fn jwk(&self) -> crate::Result<PublicKeyJwk> {
+    pub fn jwk(&self) -> anyhow::Result<PublicKeyJwk> {
         match self {
             Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
             Self::PublicKeyMultibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)
-                    .map_err(|e| Error::InvalidPublicKey(e.to_string()))
             }
         }
     }
@@ -899,11 +947,9 @@ impl PublicKeyFormat {
     /// # Errors
     /// Will return an error if the key is a JWK and cannot be encoded as a
     /// multibase string.
-    pub fn multibase(&self) -> crate::Result<String> {
+    pub fn multibase(&self) -> anyhow::Result<String> {
         match self {
-            Self::PublicKeyJwk { public_key_jwk } => {
-                public_key_jwk.to_multibase().map_err(|e| Error::InvalidPublicKey(e.to_string()))
-            }
+            Self::PublicKeyJwk { public_key_jwk } => public_key_jwk.to_multibase(),
             Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
         }
     }

@@ -3,10 +3,10 @@
 use axum::Json;
 use axum::extract::State;
 use axum_extra::{TypedHeader, headers::Host};
-use credibil_identity::{
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
-    core::Kind,
     webvh::{CreateBuilder, CreateResult, default_did},
 };
 use serde::{Deserialize, Serialize};

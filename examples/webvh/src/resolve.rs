@@ -4,7 +4,7 @@ use axum::{
     response::{IntoResponse, Response}, BoxError,
 };
 use axum_extra::{TypedHeader, headers::Host, json_lines::JsonLines};
-use credibil_identity::{webvh::{resolve_log, DidLog, DidLogEntry}, Document, QueryParams};
+use credibil_identity::did::{webvh::{resolve_log, DidLog, DidLogEntry}, Document, QueryParams};
 use futures_util::Stream;
 
 use crate::{AppError, AppJson};

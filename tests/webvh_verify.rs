@@ -1,15 +1,12 @@
 //! Tests to verify log entries.
 
-use credibil_identity::{
-    KeyPurpose, PublicKeyFormat, SignerExt,
-    core::Kind,
-    document::{
-        DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
-        VmKeyId,
-    },
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
     webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs},
 };
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use kms::Keyring;
 
 // Create a minimal document and then verify the proof. Should verify without

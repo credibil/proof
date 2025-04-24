@@ -20,7 +20,6 @@ use nom::{
 use serde::{Deserialize, Serialize};
 
 use super::Method;
-use crate::error::Error;
 
 /// Structure of a DID URL.
 #[derive(Clone, Debug, Default)]
@@ -109,7 +108,7 @@ impl Display for Url {
 }
 
 impl FromStr for Url {
-    type Err = super::Error;
+    type Err = anyhow::Error;
 
     /// Parse a string if possible into a strongly typed DID URL struct.
     ///
@@ -119,13 +118,8 @@ impl FromStr for Url {
     /// # Errors:
     /// If the string is not a valid format or portions of the string cannot be
     /// de-serialized into the expected types, an error is returned.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Self::parse(s) {
-            Ok(url) => Ok(url),
-            Err(err) => {
-                Err(Error::InvalidDidUrl(format!("failed to parse DID URL: {err}")))
-            }
-        }
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        Self::parse(s)
     }
 }
 

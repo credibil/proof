@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 
-use credibil_identity::webvh::DidLog;
+use credibil_identity::did::webvh::DidLog;
 
 #[derive(Clone, Debug)]
 pub struct Log {

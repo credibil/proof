@@ -1,17 +1,15 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
-use credibil_identity::{
-    KeyPurpose, PublicKeyFormat, SignerExt, ServiceBuilder,
-    core::Kind,
-    document::{
-        DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
-    },
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
     webvh::{
         CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
         WitnessWeight, default_did, resolve_log,
     },
 };
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use kms::Keyring;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.

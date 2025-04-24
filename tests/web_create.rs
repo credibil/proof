@@ -1,6 +1,10 @@
 //! Tests for the creation of a new `did:web` document.
 
-use credibil_identity::{core::Kind, web, DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod, VerificationMethodBuilder, VmKeyId};
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId, web,
+};
 use kms::Keyring;
 
 // Test the happy path of creating a new `did:web` document. Should just work

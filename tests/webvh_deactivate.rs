@@ -3,16 +3,15 @@
 //!
 
 use credibil_identity::core::Kind;
-use credibil_identity::document::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
-    VmKeyId,
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
+    webvh::{
+        CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
+        default_did,
+    },
 };
-use credibil_identity::webvh::{
-    CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
-    default_did,
-};
-use credibil_identity::{KeyPurpose, PublicKeyFormat, SignerExt};
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use kms::Keyring;
 
 // Test the happy path of creating then deactivating a `did:webvh` document and

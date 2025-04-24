@@ -14,14 +14,16 @@ mod url;
 mod verify;
 
 use chrono::{DateTime, Utc};
-use credibil_infosec::{Algorithm, jose::jws::Key};
+use credibil_infosec::Algorithm;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
 use uuid::Uuid;
 
-use crate::{Document, SignerExt, proof::w3c::Proof};
+use crate::{Key, SignerExt};
+use crate::did::Document;
+use crate::proof::w3c::Proof;
 
 pub use create::{CreateBuilder, CreateResult};
 pub use deactivate::{DeactivateBuilder, DeactivateResult};
@@ -38,8 +40,6 @@ pub const SCID_PLACEHOLDER: &str = "{SCID}";
 
 pub(crate) const METHOD: &str = "webvh";
 pub(crate) const VERSION: &str = "0.5";
-pub(crate) const BASE_CONTEXT: [&str; 3] =
-    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1", "https://w3id.org/security/suites/jws-2020/v1"];
 
 /// A `DidLog` is a set of log entries for a DID document.
 pub type DidLog = Vec<DidLogEntry>;
