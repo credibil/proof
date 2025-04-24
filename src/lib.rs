@@ -41,6 +41,17 @@ impl Default for Key {
     }
 }
 
+impl TryInto<credibil_infosec::jose::jws::Key> for Key {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<credibil_infosec::jose::jws::Key, Self::Error> {
+        match self {
+            Self::KeyId(kid) => Ok(credibil_infosec::jose::jws::Key::KeyId(kid)),
+            Self::Jwk(jwk) => Ok(credibil_infosec::jose::jws::Key::Jwk(jwk)),
+        }
+    }
+}
+
 /// [`SignerExt`] is used to provide public key material that can be used for
 /// signature verification.
 /// 
