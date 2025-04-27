@@ -20,7 +20,6 @@ use nom::{
 use serde::{Deserialize, Serialize};
 
 use super::Method;
-use crate::error::Error;
 
 /// Structure of a DID URL.
 #[derive(Clone, Debug, Default)]
@@ -109,7 +108,7 @@ impl Display for Url {
 }
 
 impl FromStr for Url {
-    type Err = super::Error;
+    type Err = anyhow::Error;
 
     /// Parse a string if possible into a strongly typed DID URL struct.
     ///
@@ -119,13 +118,8 @@ impl FromStr for Url {
     /// # Errors:
     /// If the string is not a valid format or portions of the string cannot be
     /// de-serialized into the expected types, an error is returned.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Self::parse(s) {
-            Ok(url) => Ok(url),
-            Err(err) => {
-                Err(Error::InvalidDidUrl(format!("failed to parse DID URL: {err}")))
-            }
-        }
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        Self::parse(s)
     }
 }
 
@@ -379,4 +373,128 @@ mod tests {
         assert_eq!(url.query, None);
         assert_eq!(url.fragment, Some("key0".to_string()));
     }
+
+    //--- Parser low level tests -----------------------------------------------
+
+    #[test]
+    fn test_parse_scheme() {
+        let s = "wibble:key:123456789abcdefghi#key-1";
+        assert!(scheme(s).is_err());
+        let s = "did:key:123456789abcdefghi#key-1";
+        let (next, did) = scheme(s).expect("should parse scheme");
+        assert_eq!(did, "did");
+        assert_eq!(next, "key:123456789abcdefghi#key-1");
+    }
+
+    #[test]
+    fn test_parse_method() {
+        let s = "wibble:123456789abcdefghi#key-1";
+        assert!(method(s).is_err());
+        let s = "key:123456789abcdefghi#key-1";
+        let (next, m) = method(s).expect("should parse method");
+        assert_eq!(m, Method::Key);
+        assert_eq!(next, "123456789abcdefghi#key-1");
+        let s = "web:credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0";
+        let (next, m) = method(s).expect("should parse method");
+        assert_eq!(m, Method::Web);
+        assert_eq!(
+            next,
+            "credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0"
+        );
+        let s = "webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+        let (next, m) = method(s).expect("should parse method");
+        assert_eq!(m, Method::WebVh);
+        assert_eq!(
+            next,
+            "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+    }
+
+    #[test]
+    fn test_parse_id() {
+        let s = "123456789abcdefghi#key-1";
+        let (next, i) = id(s).expect("should parse id");
+        assert_eq!(i, "123456789abcdefghi");
+        assert_eq!(next, "#key-1");
+        let s = "123456789abcdefghi/path/to/resource#key-1";
+        let (next, i) = id(s).expect("should parse id");
+        assert_eq!(i, "123456789abcdefghi");
+        assert_eq!(next, "/path/to/resource#key-1");
+        let s = "123456789abcdefghi?service=example#key-1";
+        let (next, i) = id(s).expect("should parse id");
+        assert_eq!(i, "123456789abcdefghi");
+        assert_eq!(next, "?service=example#key-1");
+        let s = "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+        let (next, i) = id(s).expect("should parse id");
+        assert_eq!(
+            i,
+            "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io"
+        );
+        assert_eq!(
+            next,
+            "%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+    }
+
+    #[test]
+    fn test_parse_port() {
+        let s = "?service=example#key-1";
+        assert!(port(s).is_err());
+        let s = "%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+        let (next, p) = port(s).expect("should parse port");
+        assert_eq!(p, 8080);
+        assert_eq!(
+            next,
+            "/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+    }
+
+    #[test]
+    fn test_parse_path() {
+        let s = "?service=example#key-1";
+        assert!(path(s).is_err());
+        let s = "/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+        let (next, p) = path(s).expect("should parse path");
+        assert_eq!(
+            p,
+            vec!["path".to_string(), "to".to_string(), "resource".to_string()]
+        );
+        assert_eq!(
+            next,
+            "?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
+        );
+    }
+
+    #[test]
+    fn test_parse_query() {
+        let s = "#key-1";
+        assert!(query(s).is_err());
+        let s = "?service=example#key-1";
+        let (next, q) = query(s).expect("should parse query");
+        assert_eq!(q.service, Some("example".to_string()));
+        assert_eq!(q.relative_ref, None);
+        assert_eq!(q.version_id, None);
+        assert_eq!(q.version_time, None);
+        assert_eq!(q.hashlink, None);
+        assert_eq!(next, "#key-1");
+        let s = "?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
+        let (next, q) = query(s).expect("should parse query");
+        assert_eq!(q.service, Some("example".to_string()));
+        assert_eq!(q.relative_ref, None);
+        assert_eq!(q.version_id, None);
+        assert_eq!(q.version_time, None);
+        assert_eq!(q.hashlink, Some("hashlink".to_string()));
+        assert_eq!(next, "#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv");
+    }
+
+    #[test]
+    fn test_parse_fragment() {
+        let s = "?service=example#key-1";
+        assert!(fragment(s).is_err());
+        let s = "#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6M-Lv";
+        let (next, f) = fragment(s).expect("should parse fragment");
+        assert_eq!(f, "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6M-Lv");
+        assert_eq!(next, "");
+    }
+
 }

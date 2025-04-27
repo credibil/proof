@@ -15,7 +15,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 base64ct.workspace = true
-credibil-did = { path = "../.." }
+credibil-identity = { path = "../.." }
 credibil-infosec.workspace = true
 ed25519-dalek.workspace = true
 multibase.workspace = true

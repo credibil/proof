@@ -8,81 +8,49 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-// TODO: add support for the following:
-//   key type: EcdsaSecp256k1VerificationKey2019 | JsonWebKey2020 |
-// Ed25519VerificationKey2020 |             Ed25519VerificationKey2018 |
-// X25519KeyAgreementKey2019   crv: Ed25519 | secp256k1 | P-256 | P-384 | p-521
-
 pub mod core;
-pub mod document;
-mod error;
-pub mod key;
+pub mod did;
 pub mod proof;
-mod resolve;
-pub mod web;
-pub mod webvh;
-mod url;
 
-use std::{fmt::{Display, Formatter}, future::Future, str::FromStr};
+use std::future::Future;
 
-use anyhow::anyhow;
-use credibil_infosec::{jose::jws::Key, Signer};
+use credibil_infosec::{PublicKeyJwk, Signer};
 use serde::{Deserialize, Serialize};
 
-pub use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-pub use document::*;
-pub use resolve::*;
-pub use error::Error;
-pub use url::*;
+/// Types of public key material supported by this crate.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Key {
+    /// Contains a key ID that a verifier can use to dereference a key.
+    /// 
+    /// For example, if the identity is bound to a DID, the key ID refers
+    /// to a DID URL which identifies a particular key in the DID Document
+    /// that describes the identity.
+    /// 
+    /// Alternatively, the ID may refer to a key inside a JWKS.
+    #[serde(rename = "kid")]
+    KeyId(String),
 
-/// Candidate contexts to add to a DID document.
-pub const BASE_CONTEXT: [&str; 3] =
-    ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/multikey/v1", "https://w3id.org/security/suites/jws-2020/v1"];
-
-/// DID methods supported by this crate.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum Method {
-    /// `did:key`
-    #[default]
-    Key,
-
-    /// `did:web`
-    Web,
-
-    /// `did:webvh`
-    WebVh,
+    /// Contains the key material the new Credential shall be bound to.
+    #[serde(rename = "jwk")]
+    Jwk(PublicKeyJwk),
 }
 
-impl FromStr for Method {
-    type Err = Error;
-
-    /// Parse a string into a [`Method`].
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the string is not a valid method.
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "key" => Ok(Self::Key),
-            "web" => Ok(Self::Web),
-            "webvh" => Ok(Self::WebVh),
-            _ => Err(Error::MethodNotSupported(s.to_string())),
-        }
+impl Default for Key {
+    fn default() -> Self {
+        Self::KeyId(String::new())
     }
 }
 
-impl Display for Method {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl TryInto<credibil_infosec::jose::jws::Key> for Key {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<credibil_infosec::jose::jws::Key, Self::Error> {
         match self {
-            Self::Key => write!(f, "key"),
-            Self::Web => write!(f, "web"),
-            Self::WebVh => write!(f, "webvh"),
+            Self::KeyId(kid) => Ok(credibil_infosec::jose::jws::Key::KeyId(kid)),
+            Self::Jwk(jwk) => Ok(credibil_infosec::jose::jws::Key::Jwk(jwk)),
         }
     }
 }
-
-/// Returns DID-specific errors.
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// [`SignerExt`] is used to provide public key material that can be used for
 /// signature verification.
@@ -97,72 +65,33 @@ pub trait SignerExt: Signer + Send + Sync {
     fn verification_method(&self) -> impl Future<Output = anyhow::Result<Key>> + Send;
 }
 
-/// [`DidResolver`] is used to proxy the resolution of a DID document. 
+/// Return value from an identity resolver.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq)]
+pub enum Identity {
+    /// A DID document.
+    DidDocument(did::Document),
+}
+
+/// [`IdentityResolver`] is used to proxy the resolution of an identity. 
 ///
-/// Implementers need only return the DID document specified by the url. This
+/// Implementers need only return the identity specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
-/// fetching from a remote DID resolver, or using a ledger or log that contains
-/// DID document versions.
+/// fetching from a remote resolver, or using a ledger or log that contains
+/// identity material.
 ///
-/// For example, a DID resolver for `did:web` would fetch the DID document from
-/// the specified URL. A DID resolver for `did:dht`should forward the request to
-/// a remote DID resolver for the DHT network.
-pub trait DidResolver: Send + Sync + Clone {
-    /// Resolve the DID URL to a DID Document.
+/// For example, a DID resolver for `did:webvh` would fetch the DID log from the
+/// the specified URL and use any query parameters (if any) to derefence the
+/// specific DID document and return that.
+pub trait IdentityResolver: Send + Sync + Clone {
+    /// Resolve the URL to identity information such as a DID Document or
+    /// certificate.
+    /// 
+    /// The default implementation is a no-op since for some methods, such as
+    /// `did:key`, the URL contains sufficient information to verify the
+    /// signature of an identity.
     ///
     /// # Errors
     ///
-    /// Returns an error if the DID URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Document>> + Send;
-}
-
-/// The purpose key material will be used for.
-#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize, Eq)]
-pub enum KeyPurpose {
-    /// The document's `verification_method` field.
-    VerificationMethod,
-
-    /// The document's `authentication` field.
-    Authentication,
-
-    /// The document's `assertion_method` field.
-    AssertionMethod,
-
-    /// The document's `key_agreement` field.
-    KeyAgreement,
-
-    /// The document's `capability_invocation` field.
-    CapabilityInvocation,
-
-    /// The document's `capability_delegation` field.
-    CapabilityDelegation,
-}
-
-impl Display for KeyPurpose {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::VerificationMethod => write!(f, "verificationMethod"),
-            Self::Authentication => write!(f, "authentication"),
-            Self::AssertionMethod => write!(f, "assertionMethod"),
-            Self::KeyAgreement => write!(f, "keyAgreement"),
-            Self::CapabilityInvocation => write!(f, "capabilityInvocation"),
-            Self::CapabilityDelegation => write!(f, "capabilityDelegation"),
-        }
-    }
-}
-
-impl FromStr for KeyPurpose {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "verificationMethod" => Ok(Self::VerificationMethod),
-            "authentication" => Ok(Self::Authentication),
-            "assertionMethod" => Ok(Self::AssertionMethod),
-            "keyAgreement" => Ok(Self::KeyAgreement),
-            "capabilityInvocation" => Ok(Self::CapabilityInvocation),
-            "capabilityDelegation" => Ok(Self::CapabilityDelegation),
-            _ => Err(anyhow!("Invalid key purpose").into()),
-        }
-    }
+    /// Returns an error if the URL cannot be resolved.
+    fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Identity>> + Send;
 }

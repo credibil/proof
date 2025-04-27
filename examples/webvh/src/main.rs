@@ -106,9 +106,3 @@ impl From<anyhow::Error> for AppError {
         Self::Other(error)
     }
 }
-
-impl From<credibil_did::Error> for AppError {
-    fn from(error: credibil_did::Error) -> Self {
-        Self::Other(error.into())
-    }
-}

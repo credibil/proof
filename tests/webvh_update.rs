@@ -1,16 +1,13 @@
 //! Tests for the update of an existing `did:webvh` document and associated log
 //! entry.
 
-use credibil_did::{
-    KeyPurpose, PublicKeyFormat, SignerExt,
-    core::Kind,
-    document::{
-        DocumentBuilder, MethodType, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
-        VmKeyId,
-    },
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
     webvh::{CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did},
 };
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use kms::Keyring;
 
 // Test the happy path of creating then updating a `did:webvh` document and log

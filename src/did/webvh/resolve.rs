@@ -6,19 +6,17 @@
 
 use std::vec;
 
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use multibase::Base;
 use sha2::Digest;
 
 use super::{
-    DidLogEntry, WitnessEntry,
+    DidLogEntry, SCID_PLACEHOLDER, WitnessEntry,
     verify::{verify_proofs, verify_witness},
 };
-use crate::{
-    DidResolver, Document, DocumentMetadataBuilder, Error, QueryParams, Url,
-    webvh::SCID_PLACEHOLDER,
-};
+use crate::did::{Document, DocumentMetadataBuilder, QueryParams, Url};
+use crate::{Identity, IdentityResolver};
 
 impl Url {
     /// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
@@ -79,18 +77,18 @@ impl Url {
 /// # Errors
 ///
 /// Will fail if the DID URL is invalid or the provider returns an error.
-pub async fn resolve(url: &Url, resolver: &impl DidResolver) -> crate::Result<Document> {
+pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> anyhow::Result<Document> {
     // Generate the URL to fetch the DID list (log) document.
-    let http_url = url.to_webvh_http().map_err(|e| Error::InvalidDid(e.to_string()))?;
+    let http_url = url.to_webvh_http()?;
 
     // Perform an HTTP GET request to the URL for the DID log document.
     //
     // The client can use helper methods to unpack the `JSONL` file and extract
     // the DID document.
-    resolver
-        .resolve(&http_url)
-        .await
-        .map_err(|e| Error::InvalidDid(format!("issue resolving did:web: {e}")))
+    let identity = resolver.resolve(&http_url).await?;
+    match identity {
+        Identity::DidDocument(doc) => Ok(doc),
+    }
 }
 
 /// Verification of the contents of the `did.jsonl` file and resolution into a
@@ -108,9 +106,9 @@ pub async fn resolve(url: &Url, resolver: &impl DidResolver) -> crate::Result<Do
 #[allow(clippy::too_many_lines)]
 pub async fn resolve_log(
     log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
-) -> crate::Result<Document> {
+) -> anyhow::Result<Document> {
     if log.is_empty() {
-        return Err(Error::Other(anyhow!("log entries are empty")));
+        bail!("log entries are empty");
     }
 
     let mut prev_index = 0;
@@ -124,50 +122,44 @@ pub async fn resolve_log(
         // processed.
 
         // 2. Verify controller proofs.
-        if let Err(error) = verify_proofs(&log[i]).await {
-            return Err(Error::Other(error));
-        }
+        verify_proofs(&log[i]).await?;
 
         // 3.1. Verify the version number is incremented by one for each entry.
         // 3.2. Verify the version number and entry hash is separated by `-`.
         let version_parts = log[i].version_id.split('-').collect::<Vec<&str>>();
         if version_parts.len() != 2 {
-            return Err(Error::Other(anyhow!("log entry version id has an unexpected format")));
+            bail!("log entry version id has an unexpected format");
         }
-        let index = version_parts[0].parse::<u64>().map_err(|e| Error::Other(e.into()))?;
+        let index = version_parts[0].parse::<u64>()?;
         if index != prev_index + 1 {
-            return Err(Error::Other(anyhow!("log entries are not sequential")));
+            bail!("log entries are not sequential");
         }
 
         // 3.3. Verify the entry hash.
-        log[i].verify_hash(&prev_version).map_err(Error::Other)?;
+        log[i].verify_hash(&prev_version)?;
 
         // 4. The version time must be in the past and monotonically increasing.
         if log[i].version_time > Utc::now() {
-            return Err(Error::Other(anyhow!("log entry time is in the future")));
+            bail!("log entry time is in the future");
         }
         if log[i].version_time <= prev_time {
-            return Err(Error::Other(anyhow!(
+            bail!(
                 "log entry times are not monotonically increasing: {} -> {}",
                 log[i].version_time,
                 prev_time
-            )));
+            );
         }
 
         // 5. If the entry is the first one, verify the SCID.
         if i == 0 {
-            let initial_string =
-                serde_json::to_string(&log[i]).map_err(|e| Error::Other(e.into()))?;
+            let initial_string = serde_json::to_string(&log[i])?;
             let replaced = initial_string.replace(&log[i].parameters.scid, SCID_PLACEHOLDER);
-            let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)
-                .map_err(|e| Error::Other(e.into()))?;
+            let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)?;
             initial_log_entry.version_id = SCID_PLACEHOLDER.to_string();
             initial_log_entry.proof = vec![];
-            let hash = initial_log_entry.hash().map_err(Error::Other)?;
+            let hash = initial_log_entry.hash()?;
             if hash != log[i].parameters.scid {
-                return Err(Error::Other(anyhow!(
-                    "first log entry SCID does not match calculated hash"
-                )));
+                bail!("first log entry SCID does not match calculated hash");
             }
         }
 
@@ -197,9 +189,7 @@ pub async fn resolve_log(
                 let key_digest = sha2::Sha256::digest(key.as_bytes());
                 let key_hash = multibase::encode(Base::Base58Btc, key_digest.as_slice());
                 if !next_key_hashes.contains(&key_hash) {
-                    return Err(Error::Other(anyhow!(
-                        "update key not found in pre-rotation hashes"
-                    )));
+                    bail!("update key not found in pre-rotation hashes");
                 }
             }
         }
@@ -213,9 +203,7 @@ pub async fn resolve_log(
         // 9. Check witness proofs if provided.
         if witness_proofs.is_some() && log[i].parameters.witness.is_some() {
             if let Some(witness_entries) = witness_proofs {
-                if let Err(error) = verify_witness(&log[i], witness_entries).await {
-                    return Err(Error::Other(error));
-                }
+                verify_witness(&log[i], witness_entries).await?;
             }
         }
 
@@ -228,8 +216,7 @@ pub async fn resolve_log(
                 }
             }
             if let Some(version_time) = &params.version_time {
-                let version_time =
-                    version_time.parse::<DateTime<Utc>>().map_err(|e| Error::Other(e.into()))?;
+                let version_time = version_time.parse::<DateTime<Utc>>()?;
                 if version_time >= log[i].version_time {
                     if i < log.len() - 1 {
                         if version_time <= log[i + 1].version_time {

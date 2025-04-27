@@ -3,15 +3,11 @@
 use axum::extract::State;
 use axum::{Json, http::StatusCode};
 use axum_extra::{TypedHeader, headers::Host};
-use credibil_did::core::Kind;
-use credibil_did::webvh::UpdateBuilder;
-use credibil_did::{
-    DocumentBuilder, MethodType, PublicKeyFormat, VerificationMethod, VerificationMethodBuilder,
-    VmKeyId,
-};
-use credibil_did::{
-    KeyPurpose,
-    webvh::{UpdateResult, resolve_log},
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
+    webvh::{UpdateBuilder, UpdateResult, resolve_log},
 };
 use serde::{Deserialize, Serialize};
 

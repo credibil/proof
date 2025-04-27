@@ -1,5 +1,5 @@
 [package]
-name = "credibil-did"
+name = "credibil-identity"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -54,7 +54,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Credibil"]
 description = """
-Decentralized Identifier (DID) utilities for Rust. See features for implemented DID methods and key
+Decentralized Identifier (DID) and X509 utilities for Rust. See features for implemented DID methods and key
 management or use core functionality to implement your own.
 """
 edition = "2024"
@@ -63,7 +63,7 @@ homepage = "https://credibil.io"
 keywords = ["decentralized", "identity","did"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/credibil/did"
+repository = "https://github.com/credibil/identity"
 rust-version = "1.86"
 version = "0.1.2"
 
@@ -79,7 +79,7 @@ nursery = "warn"
 [workspace.dependencies]
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
-credibil-did = { path = "." } 
+credibil-identity = { path = "." } 
 credibil-infosec = "0.1.2"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 kms = { path = "crates/kms" }

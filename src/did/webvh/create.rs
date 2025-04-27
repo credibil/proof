@@ -6,12 +6,14 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::{Document, SignerExt, core::Kind};
+use crate::SignerExt;
+use crate::core::Kind;
+use crate::did::{BASE_CONTEXT, Document};
 
 use super::{
-    BASE_CONTEXT, DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness,
-    verify::validate_witness,
+    DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness, 
 };
+use super::verify::validate_witness;
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///

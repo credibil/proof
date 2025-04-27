@@ -7,12 +7,13 @@
 
 use std::str::FromStr;
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::document::{Document, Service, VerificationMethod};
-use crate::error::Error;
-use crate::{DidResolver, Method, Url, key, web, webvh};
+use super::document::{Document, Service, VerificationMethod};
+use super::{key, Method, web, webvh};
+use super::url::Url;
+use crate::IdentityResolver;
 
 /// Dereference a DID URL into a resource.
 ///
@@ -26,9 +27,9 @@ use crate::{DidResolver, Method, Url, key, web, webvh};
 /// Note that only URLs implying DID methods supported by this crate will
 /// survive parsing.
 pub async fn dereference(
-    did_url: &str, resolver: &impl DidResolver,
-) -> crate::Result<Resource> {
-    let url = crate::url::Url::from_str(did_url)?;
+    did_url: &str, resolver: &impl IdentityResolver,
+) -> anyhow::Result<Resource> {
+    let url = Url::from_str(did_url)?;
     deref_url(&url, resolver).await
 }
 
@@ -54,7 +55,7 @@ pub async fn dereference(
 /// Will also return an error if the resource is not found in the document. This
 /// includes cases that don't make sense, like asking a `did:key` for a service
 /// endpoint.
-pub async fn deref_url(url: &Url, resolver: &impl DidResolver) -> crate::Result<Resource> {
+pub async fn deref_url(url: &Url, resolver: &impl IdentityResolver) -> anyhow::Result<Resource> {
     match url.method {
         Method::Key => key::resolve(url),
         Method::Web => {
@@ -74,13 +75,13 @@ pub async fn deref_url(url: &Url, resolver: &impl DidResolver) -> crate::Result<
 ///
 /// # Errors
 /// Will return an error if the resource is not found in the document.
-pub fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
+pub fn document_resource(url: &Url, doc: &Document) -> anyhow::Result<Resource> {
     if let Some(query) = &url.query {
         if let Some(service_id) = &query.service {
             if let Some(service) = doc.get_service(service_id) {
                 return Ok(Resource::Service(service.clone()));
             }
-            return Err(Error::NotFound(format!("service {service_id} not found in document")));
+            bail!("service {service_id} not found in document");
         }
     }
     if url.fragment.is_none() {
@@ -89,7 +90,7 @@ pub fn document_resource(url: &Url, doc: &Document) -> crate::Result<Resource> {
     if let Some(vm) = doc.get_verification_method(&url.to_string()) {
         return Ok(Resource::VerificationMethod(vm.clone()));
     }
-    Err(Error::NotFound(format!("verification method {url} not found in document")))
+    bail!("verification method {url} not found in document")
 }
 
 /// Resource represents the DID document resource returned as a result of DID
@@ -111,44 +112,4 @@ impl Default for Resource {
     fn default() -> Self {
         Self::VerificationMethod(VerificationMethod::default())
     }
-}
-
-/// DID document metadata.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Metadata {
-    /// The Media Type of the returned resource.
-    pub content_type: ContentType,
-
-    /// The error code from the dereferencing process, if applicable.
-    /// Values of this field SHOULD be registered in the DID Specification
-    /// Registries. Common values are `invalid_did_url` and `not_found`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-
-    /// A human-readable explanation of the error.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_message: Option<String>,
-
-    /// Additional information about the resolution or dereferencing process.
-    #[serde(flatten)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional: Option<Value>,
-}
-
-/// The Media Type of the returned resource.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub enum ContentType {
-    /// JSON-LD representation of a DID document.
-    #[default]
-    #[serde(rename = "application/did+ld+json")]
-    DidLdJson,
-    
-    /// The JSON-LD Media Type.
-    #[serde(rename = "application/ld+json")]
-    LdJson,
-
-    /// JSON list document.
-    #[serde(rename = "text/jsonl")]
-    JsonL,
 }

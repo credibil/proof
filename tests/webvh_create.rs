@@ -1,18 +1,14 @@
 //! Tests for the creation of a new `did:webvh` document and associated log
 //! entry.
 
-use credibil_did::{
-    KeyPurpose, PublicKeyFormat, SignerExt, ServiceBuilder,
-    core::Kind,
-    document::{
-        DocumentBuilder, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
-    },
-    webvh::{CreateBuilder, Witness, WitnessWeight, default_did},
+use credibil_identity::{Key, SignerExt};
+use credibil_identity::core::Kind;
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    VerificationMethodBuilder, VmKeyId,
+    webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did},
 };
-use credibil_infosec::jose::jws::Key;
 use kms::Keyring;
-
-use credibil_did::webvh::SCID_PLACEHOLDER;
 
 // Test the happy path of creating a new `did:webvh` document and associated log
 // entry. Should just work without errors.
