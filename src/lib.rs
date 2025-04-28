@@ -41,13 +41,13 @@ impl Default for Key {
     }
 }
 
-impl TryInto<credibil_jose::Key> for Key {
+impl TryInto<credibil_jose::KeyBinding> for Key {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<credibil_jose::Key, Self::Error> {
+    fn try_into(self) -> Result<credibil_jose::KeyBinding, Self::Error> {
         match self {
-            Self::KeyId(kid) => Ok(credibil_jose::Key::KeyId(kid)),
-            Self::Jwk(jwk) => Ok(credibil_jose::Key::Jwk(jwk)),
+            Self::KeyId(kid) => Ok(credibil_jose::KeyBinding::Kid(kid)),
+            Self::Jwk(jwk) => Ok(credibil_jose::KeyBinding::Jwk(jwk)),
         }
     }
 }

@@ -80,7 +80,7 @@ nursery = "warn"
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
 credibil-identity = { path = "." } 
-credibil-jose = { git = "https://github.com/credibil/jose.git" }
+credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "key-binding" }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 kms = { path = "crates/kms" }
 multibase = "0.9.1"
