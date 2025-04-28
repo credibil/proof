@@ -4,7 +4,7 @@
 use super::{DidLogEntry, Witness, WitnessEntry};
 
 use anyhow::bail;
-use credibil_infosec::PublicKeyJwk;
+use credibil_jose::PublicKeyJwk;
 use sha2::Digest;
 
 use crate::proof::w3c::Proof;

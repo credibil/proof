@@ -14,7 +14,7 @@ pub mod proof;
 
 use std::future::Future;
 
-use credibil_infosec::{PublicKeyJwk, Signer};
+use credibil_jose::{PublicKeyJwk, Signer};
 use serde::{Deserialize, Serialize};
 
 /// Types of public key material supported by this crate.
@@ -41,13 +41,13 @@ impl Default for Key {
     }
 }
 
-impl TryInto<credibil_infosec::jose::jws::Key> for Key {
+impl TryInto<credibil_jose::Key> for Key {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<credibil_infosec::jose::jws::Key, Self::Error> {
+    fn try_into(self) -> Result<credibil_jose::Key, Self::Error> {
         match self {
-            Self::KeyId(kid) => Ok(credibil_infosec::jose::jws::Key::KeyId(kid)),
-            Self::Jwk(jwk) => Ok(credibil_infosec::jose::jws::Key::Jwk(jwk)),
+            Self::KeyId(kid) => Ok(credibil_jose::Key::KeyId(kid)),
+            Self::Jwk(jwk) => Ok(credibil_jose::Key::Jwk(jwk)),
         }
     }
 }

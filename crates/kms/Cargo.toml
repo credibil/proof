@@ -16,7 +16,7 @@ version.workspace = true
 anyhow.workspace = true
 base64ct.workspace = true
 credibil-identity = { path = "../.." }
-credibil-infosec.workspace = true
+credibil-jose.workspace = true
 ed25519-dalek.workspace = true
 multibase.workspace = true
 rand.workspace = true

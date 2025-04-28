@@ -10,7 +10,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use credibil_infosec::jose::jwk::{PublicKeyJwk, X25519_CODEC};
+use credibil_jose::{PublicKeyJwk, X25519_CODEC};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
