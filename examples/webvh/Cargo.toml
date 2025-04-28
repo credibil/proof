@@ -12,7 +12,7 @@ axum = { version = "0.8.3", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header", "json-lines"] }
 base64ct.workspace = true
 credibil-identity.workspace = true
-credibil-infosec.workspace = true
+credibil-jose.workspace = true
 ed25519-dalek.workspace = true
 futures-util = { version = "0.3.31", features = ["alloc"] }
 kms.workspace = true

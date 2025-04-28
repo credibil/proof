@@ -11,7 +11,7 @@
 
 mod resolve;
 
-use credibil_infosec::PublicKeyJwk;
+use credibil_jose::PublicKeyJwk;
 pub use resolve::*;
 
 /// Construct a `did:key` from a public key.

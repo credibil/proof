@@ -14,7 +14,7 @@ mod url;
 mod verify;
 
 use chrono::{DateTime, Utc};
-use credibil_infosec::Algorithm;
+use credibil_jose::Algorithm;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
