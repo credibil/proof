@@ -22,6 +22,7 @@ anyhow.workspace = true
 base64ct.workspace = true
 chrono = { version = "0.4.40", features = ["serde"] }
 credibil-jose.workspace = true
+credibil-ose.workspace = true
 curve25519-dalek = "4.1.3"
 ed25519-dalek.workspace = true
 multibase.workspace = true
@@ -80,7 +81,8 @@ nursery = "warn"
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
 credibil-identity = { path = "." } 
-credibil-jose = { git = "https://github.com/credibil/jose.git" }
+credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "ose" }
+credibil-ose = { git = "https://github.com/credibil/ose.git" }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 kms = { path = "crates/kms" }
 multibase = "0.9.1"

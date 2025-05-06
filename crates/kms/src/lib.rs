@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{did, Key, SignerExt};
-use credibil_jose::{Algorithm, PublicKeyJwk, Signer};
+use credibil_jose::PublicKeyJwk;
+use credibil_ose::{Algorithm, Signer};
 use ed25519_dalek::{Signer as _, SigningKey};
 use rand::rngs::OsRng;
 
