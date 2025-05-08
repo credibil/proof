@@ -20,12 +20,13 @@ use kms::Keyring;
 async fn create_then_deactivate() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = Keyring::new();
-    let update_multi = signer.multibase("signing").expect("should get multibase key");
+    let mut signer =
+        Keyring::new("webvh_create_then_deactivate").await.expect("should create keyring");
+    let update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_multi = signer.multibase("id").expect("should get key");
+    let id_multi = signer.multibase("id").await.expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
@@ -50,15 +51,17 @@ async fn create_then_deactivate() {
         .add_service(&service)
         .build();
 
-    let next_multi = signer.next_multibase("signing").expect("should get next key");
+    let next_multi = signer.next_multibase("signing").await.expect("should get next key");
 
-    let witness_keyring1 = Keyring::new();
+    let witness_keyring1 =
+        Keyring::new("webvh_create_then_deactivate_witness1").await.expect("should create keyring");
     let Key::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
-    let witness_keyring2 = Keyring::new();
+    let witness_keyring2 =
+        Keyring::new("webvh_create_then_deactivate_witness2").await.expect("should create keyring");
     let Key::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
@@ -115,12 +118,13 @@ async fn update_then_deactivate() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = Keyring::new();
-    let update_multi = signer.multibase("signing").expect("should get multibase key");
+    let mut signer =
+        Keyring::new("webvh_update_then_deactivate").await.expect("should create keyring");
+    let update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_multi = signer.multibase("id").expect("should get key");
+    let id_multi = signer.multibase("id").await.expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
@@ -145,15 +149,17 @@ async fn update_then_deactivate() {
         .add_service(&service)
         .build();
 
-    let next_multi = signer.next_multibase("signing").expect("should get next key");
+    let next_multi = signer.next_multibase("signing").await.expect("should get next key");
 
-    let witness_keyring1 = Keyring::new();
+    let witness_keyring1 =
+        Keyring::new("webvh_update_then_deactivate_witness1").await.expect("should create keyring");
     let Key::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
-    let witness_keyring2 = Keyring::new();
+    let witness_keyring2 =
+        Keyring::new("webvh_update_then_deactivate_witness2").await.expect("should create keyring");
     let Key::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
@@ -193,15 +199,15 @@ async fn update_then_deactivate() {
     let doc = create_result.document.clone();
 
     // Rotate the signing key.
-    signer.rotate().expect("should rotate keys on signer");
-    let new_update_multi = signer.multibase("signing").expect("should get multibase key");
+    signer.rotate().await.expect("should rotate keys on signer");
+    let new_update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
 
-    let new_next_multi = signer.next_multibase("signing").expect("should get next key");
+    let new_next_multi = signer.next_multibase("signing").await.expect("should get next key");
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
-    let id_multi = signer.multibase("id").expect("should get key");
+    let id_multi = signer.multibase("id").await.expect("should get key");
 
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
         public_key_multibase: new_update_multi,
@@ -241,13 +247,13 @@ async fn update_then_deactivate() {
 
     // --- Deactivate ----------------------------------------------------------
 
-    signer.rotate().expect("should rotate keys on signer");
+    signer.rotate().await.expect("should rotate keys on signer");
 
-    let new_update_multi = signer.multibase("signing").expect("should get multibase key");
+    let new_update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
 
-    let new_next_multi = signer.next_multibase("signing").expect("should get next key");
+    let new_next_multi = signer.next_multibase("signing").await.expect("should get next key");
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
 

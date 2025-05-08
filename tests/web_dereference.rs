@@ -14,8 +14,8 @@ async fn create_then_deref() {
     let did = web::default_did(domain_and_path).expect("should get default DID");
     assert_eq!(did, "did:web:credibil.io:issuers:example");
 
-    let mut signer = Keyring::new();
-    let vk = signer.jwk("signing").expect("should get signing key");
+    let mut signer = Keyring::new("web_create_then_deref").await.expect("should create keyring");
+    let vk = signer.jwk("signing").await.expect("should get signing key");
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk { public_key_jwk: vk.clone() })
         .key_id(&did, VmKeyId::Index("key".to_string(), 0))
         .expect("should apply key ID")

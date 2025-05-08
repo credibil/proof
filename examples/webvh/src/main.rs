@@ -29,6 +29,7 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
+    let app_state = AppState::new().await;
 
     let router = Router::new()
         .route("/create", post(create::create))
@@ -37,7 +38,7 @@ async fn main() {
         .route("/update", post(update::update))
         .route("/deactivate", post(deactivate::deactivate))
         .layer(cors)
-        .with_state(AppState::new());
+        .with_state(app_state);
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
     tracing::info!("listening on {}", listener.local_addr().expect("should have addr"));

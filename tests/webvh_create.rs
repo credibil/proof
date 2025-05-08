@@ -1,13 +1,13 @@
 //! Tests for the creation of a new `did:webvh` document and associated log
 //! entry.
 
-use credibil_identity::{Key, SignerExt};
 use credibil_identity::core::Kind;
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
     webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did},
 };
+use credibil_identity::{Key, SignerExt};
 use kms::Keyring;
 
 // Test the happy path of creating a new `did:webvh` document and associated log
@@ -16,12 +16,12 @@ use kms::Keyring;
 async fn create_success() {
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = Keyring::new();
-    let update_multi = signer.multibase("signing").expect("should get multibase key");
+    let mut signer = Keyring::new("webvh_create_success").await.expect("should create keyring");
+    let update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_multi = signer.multibase("id").expect("should get key");
+    let id_multi = signer.multibase("id").await.expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
@@ -46,15 +46,17 @@ async fn create_success() {
         .add_service(&service)
         .build();
 
-    let next_multi = signer.next_multibase("signing").expect("should get next key");
+    let next_multi = signer.next_multibase("signing").await.expect("should get next key");
 
-    let witness_keyring1 = Keyring::new();
+    let witness_keyring1 =
+        Keyring::new("webvh_create_success_witness1").await.expect("should create keyring");
     let Key::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
-    let witness_keyring2 = Keyring::new();
+    let witness_keyring2 =
+        Keyring::new("webvh_create_success_witness2").await.expect("should create keyring");
     let Key::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
