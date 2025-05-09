@@ -22,7 +22,7 @@ anyhow.workspace = true
 base64ct.workspace = true
 chrono = { version = "0.4.40", features = ["serde"] }
 credibil-jose.workspace = true
-credibil-ose.workspace = true
+credibil-se.workspace = true
 multibase.workspace = true
 nom = "8.0.0"
 serde.workspace = true
@@ -76,13 +76,13 @@ anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
 credibil-identity = { path = "." } 
 credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "ose" }
-credibil-ose = { git = "https://github.com/credibil/ose.git" }
+credibil-se = { git = "https://github.com/credibil/jose.git", branch = "ose" }
 kms = { path = "crates/kms" }
 multibase = "0.9.1"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = { version = "1.0.139", features = ["alloc"] }
 sha2 = "0.10.8"
-test-kms = { git = "https://github.com/credibil/ose.git" }
+test-kms = { git = "https://github.com/credibil/jose.git", branch = "ose" }
 
 [patch.crates-io]
 # credibil-jose = { path = "../jose" }

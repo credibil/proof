@@ -2,7 +2,7 @@
 
 use credibil_identity::{Key, SignerExt, did};
 use credibil_jose::PublicKeyJwk;
-use credibil_ose::{Algorithm, Curve, Signer};
+use credibil_se::{Algorithm, Curve, Signer};
 use test_kms::Keyring as BaseKeyring;
 
 #[derive(Clone)]

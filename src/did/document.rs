@@ -11,7 +11,7 @@ use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
 use credibil_jose::PublicKeyJwk;
-use credibil_ose::{derive_x25519, X25519_CODEC};
+use credibil_se::{derive_x25519, X25519_CODEC};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

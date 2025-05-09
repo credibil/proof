@@ -16,5 +16,5 @@ version.workspace = true
 anyhow.workspace = true
 credibil-identity = { path = "../.." }
 credibil-jose.workspace = true
-credibil-ose.workspace = true
+credibil-se.workspace = true
 test-kms.workspace = true
