@@ -77,6 +77,7 @@ base64ct = { version = "1.6.0", features = ["std"] }
 credibil-identity = { path = "." } 
 credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "ose" }
 credibil-se = { git = "https://github.com/credibil/jose.git", branch = "ose" }
+
 kms = { path = "crates/kms" }
 multibase = "0.9.1"
 serde = { version = "1.0.218", features = ["derive"] }
