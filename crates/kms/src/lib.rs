@@ -1,98 +1,58 @@
 //! Key management
 
-use std::collections::HashMap;
+use credibil_identity::{Key, SignerExt, did};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::{Algorithm, Curve, Signer};
+use test_kms::Keyring as BaseKeyring;
 
-use anyhow::anyhow;
-use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_identity::{did, Key, SignerExt};
-use credibil_jose::{Algorithm, PublicKeyJwk, Signer};
-use ed25519_dalek::{Signer as _, SigningKey};
-use rand::rngs::OsRng;
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Keyring {
-    keys: HashMap<String, String>,
-    next_keys: HashMap<String, String>,
+    // Stored keys
+    keys: BaseKeyring,
 }
 
 impl Keyring {
     // Create a new keyring and add a signing key.
     #[must_use]
-    pub fn new() -> Self {
-        let mut kr = Self {
-            keys: HashMap::new(),
-            next_keys: HashMap::new(),
-        };
-        kr.add_key("signing").expect("should add signing key");
-        kr
+    pub async fn new(owner: impl ToString) -> anyhow::Result<Self> {
+        let mut keys = BaseKeyring::new(owner).await?;
+        keys.add(&Curve::Ed25519, "signing").await?;
+        Ok(Self { keys })
     }
 
     // Add a newly generated key to the keyring and corresponding next key.
-    pub fn add_key(&mut self, id: impl ToString) -> anyhow::Result<()> {
-        let signing_key = SigningKey::generate(&mut OsRng);
-        let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
-        self.keys.insert(id.to_string(), key);
-
-        let next_signing_key = SigningKey::generate(&mut OsRng);
-        let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
-        self.next_keys.insert(id.to_string(), next_key);
-
-        Ok(())
+    pub async fn add_key(&mut self, id: impl ToString) -> anyhow::Result<()> {
+        self.keys.add(&Curve::Ed25519, id).await
     }
 
     // Replace a key in the keyring with a new one.
-    pub fn replace(&mut self, id: impl ToString) -> anyhow::Result<PublicKeyJwk> {
-        let signing_key = SigningKey::generate(&mut OsRng);
-        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-        let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
-        self.keys.insert(id.to_string(), key);
-
-        let next_signing_key = SigningKey::generate(&mut OsRng);
-        let next_key = Base64UrlUnpadded::encode_string(next_signing_key.as_bytes());
-        self.next_keys.insert(id.to_string(), next_key);
-
-        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
+    pub async fn replace(&mut self, id: impl ToString) -> anyhow::Result<()> {
+        self.keys.replace(id).await
     }
 
     // Rotate keys
-    pub fn rotate(&mut self) -> anyhow::Result<()> {
-        for (id, next_key) in self.next_keys.iter() {
-            *self.keys.entry(id.clone()).or_insert(next_key.clone()) = next_key.clone();
-        }
-        self.next_keys.clear();
-        for id in self.keys.keys() {
-            let signing_key = SigningKey::generate(&mut OsRng);
-            let key = Base64UrlUnpadded::encode_string(signing_key.as_bytes());
-            self.next_keys.insert(id.clone(), key);
-        }
-        Ok(())
+    pub async fn rotate(&mut self) -> anyhow::Result<()> {
+        self.keys.rotate_all().await
     }
 
-    // Get a public JWK for a key in the keyring.
+    // Get a public JWK for a verifying key in the keyring.
     //
     // This will always return a result if it can. If the key is not found, one
     // will be generated with the specified ID.
-    pub fn jwk(&mut self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
-        let secret = match self.keys.get(&id.to_string()) {
-            Some(secret) => secret,
-            None => {
-                self.add_key(id.clone())?;
-                self.keys
-                    .get(&id.to_string())
-                    .ok_or_else(|| anyhow!("key not found after generating new key"))?
+    pub async fn jwk(&mut self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
+        let vk = match self.keys.verifying_key(&id.to_string()).await {
+            Ok(vk) => vk,
+            Err(_) => {
+                self.add_key(id.clone()).await?;
+                self.keys.verifying_key(&id.to_string()).await?
             }
         };
-        let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-        let secret_key: ed25519_dalek::SecretKey =
-            key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-        let signing_key = SigningKey::from_bytes(&secret_key);
-        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-        Ok(PublicKeyJwk::from_bytes(&verifying_key)?)
+        Ok(PublicKeyJwk::from_bytes(&vk)?)
     }
 
     // Get a public multibase key for a key in the keyring.
-    pub fn multibase(&mut self, id: impl ToString + Clone) -> anyhow::Result<String> {
-        let key = self.jwk(id)?;
+    pub async fn multibase(&mut self, id: impl ToString + Clone) -> anyhow::Result<String> {
+        let key = self.jwk(id).await?;
         Ok(key.to_multibase()?)
     }
 
@@ -100,68 +60,39 @@ impl Keyring {
     //
     // This will fail with an error if the key is not found or any encoding
     // errors occur.
-    pub fn next_jwk(&self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
-        if let Some(secret) = self.next_keys.get(&id.to_string()).cloned() {
-            let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-            let secret_key: ed25519_dalek::SecretKey =
-                key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-            let signing_key = SigningKey::from_bytes(&secret_key);
-            let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-            return Ok(PublicKeyJwk::from_bytes(&verifying_key)?);
-        }
-        Err(anyhow!("key not found"))
+    pub async fn next_jwk(&self, id: impl ToString + Clone) -> anyhow::Result<PublicKeyJwk> {
+        let vk = self.keys.next_verifying_key(id).await?;
+        Ok(PublicKeyJwk::from_bytes(&vk)?)
     }
 
     // Get a public multibase key for a next key in the keyring.
     //
     // Will fail with an error if the key is not found or any encoding errors
     // occur.
-    pub fn next_multibase(&self, id: impl ToString + Clone) -> anyhow::Result<String> {
-        let key = self.next_jwk(id)?;
+    pub async fn next_multibase(&self, id: impl ToString + Clone) -> anyhow::Result<String> {
+        let key = self.next_jwk(id).await?;
         Ok(key.to_multibase()?)
     }
 }
 
 impl Signer for Keyring {
     async fn try_sign(&self, msg: &[u8]) -> anyhow::Result<Vec<u8>> {
-        if let Some(secret) = self.keys.get("signing").cloned() {
-            let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-            let secret_key: ed25519_dalek::SecretKey =
-                key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-            let signing_key = SigningKey::from_bytes(&secret_key);
-            return Ok(signing_key.sign(msg).to_bytes().to_vec());
-        }
-        Err(anyhow!("key not found"))
+        self.keys.sign("signing", msg).await
     }
 
     async fn verifying_key(&self) -> anyhow::Result<Vec<u8>> {
-        if let Some(secret) = self.keys.get("signing").cloned() {
-            let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-            let secret_key: ed25519_dalek::SecretKey =
-                key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-            let signing_key = SigningKey::from_bytes(&secret_key);
-            let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-            return Ok(verifying_key);
-        }
-        Err(anyhow!("key not found"))
+        self.keys.verifying_key("signing").await
     }
 
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::EdDSA
+    async fn algorithm(&self) -> anyhow::Result<Algorithm> {
+        Ok(Algorithm::EdDSA)
     }
 }
 
 impl SignerExt for Keyring {
     async fn verification_method(&self) -> anyhow::Result<Key> {
-        let Some(secret) = self.keys.get("signing") else {
-            return Err(anyhow!("signing key for verification method not found"));
-        };
-        let key_bytes = Base64UrlUnpadded::decode_vec(&secret)?;
-        let secret_key: ed25519_dalek::SecretKey =
-            key_bytes.try_into().map_err(|_| anyhow::anyhow!("invalid secret key"))?;
-        let signing_key = SigningKey::from_bytes(&secret_key);
-        let verifying_key = signing_key.verifying_key().as_bytes().to_vec();
-        let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+        let vk = self.keys.verifying_key("signing").await?;
+        let jwk = PublicKeyJwk::from_bytes(&vk)?;
         let vm = did::key::did_from_jwk(&jwk)?;
         Ok(Key::KeyId(vm))
     }

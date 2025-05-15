@@ -14,7 +14,7 @@ mod url;
 mod verify;
 
 use chrono::{DateTime, Utc};
-use credibil_jose::Algorithm;
+use credibil_se::Algorithm;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -131,7 +131,8 @@ impl DidLogEntry {
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
     pub async fn proof(&self, signer: &impl SignerExt) -> anyhow::Result<Proof> {
-        if signer.algorithm() != Algorithm::EdDSA {
+        let alg = signer.algorithm().await?;
+        if alg != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vm = signer.verification_method().await?;

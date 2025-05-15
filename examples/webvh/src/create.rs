@@ -29,12 +29,12 @@ pub async fn create(
 
     let mut keyring = state.keyring.lock().await;
 
-    let update_multi = keyring.multibase("signing")?;
+    let update_multi = keyring.multibase("signing").await?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let id_multi = keyring.multibase("id")?;
+    let id_multi = keyring.multibase("id").await?;
     let did = default_did(&domain_and_path)?;
-    let next_key = keyring.next_multibase("signing")?;
+    let next_key = keyring.next_multibase("signing").await?;
 
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
         public_key_multibase: update_multi,

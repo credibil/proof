@@ -14,7 +14,8 @@ pub mod proof;
 
 use std::future::Future;
 
-use credibil_jose::{PublicKeyJwk, Signer};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::Signer;
 use serde::{Deserialize, Serialize};
 
 /// Types of public key material supported by this crate.

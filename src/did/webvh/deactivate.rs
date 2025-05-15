@@ -3,7 +3,7 @@
 
 use anyhow::bail;
 use chrono::Utc;
-use credibil_jose::Signer;
+use credibil_se::Signer;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;

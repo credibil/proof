@@ -18,11 +18,11 @@ pub async fn deactivate(
     let mut keyring = state.keyring.lock().await;
 
     // Rotate keys
-    keyring.rotate()?;
-    let update_multi = keyring.multibase("signing")?;
+    keyring.rotate().await?;
+    let update_multi = keyring.multibase("signing").await?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let next_multi = keyring.next_multibase("signing")?;
+    let next_multi = keyring.next_multibase("signing").await?;
     let next_keys = vec![next_multi.clone()];
     let next_keys: Vec<&str> = next_keys.iter().map(|s| s.as_str()).collect();
 

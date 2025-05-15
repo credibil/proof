@@ -10,8 +10,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use credibil_jose::{PublicKeyJwk, X25519_CODEC};
-use ed25519_dalek::{PUBLIC_KEY_LENGTH, VerifyingKey};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::{derive_x25519_public, PublicKey, X25519_CODEC};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -753,16 +753,13 @@ impl VerificationMethod {
             }
         };
         let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
-
-        let verifier_bytes: [u8; PUBLIC_KEY_LENGTH] =
-            key_bytes.try_into().map_err(|_| anyhow!("unable to coerce vec to slice"))?;
-        let verifier = VerifyingKey::from_bytes(&verifier_bytes)?;
-        let x25519_bytes = verifier.to_montgomery().to_bytes();
+        let pub_key = PublicKey::from_slice(&key_bytes)?;
+        let x25519_key = derive_x25519_public(&pub_key)?;
 
         // base58B encode the raw key
         let mut multi_bytes = vec![];
         multi_bytes.extend_from_slice(&X25519_CODEC);
-        multi_bytes.extend_from_slice(&x25519_bytes);
+        multi_bytes.extend_from_slice(&x25519_key.to_bytes());
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
         let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
