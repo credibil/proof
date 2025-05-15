@@ -75,17 +75,16 @@ nursery = "warn"
 anyhow = "1.0.96"
 base64ct = { version = "1.6.0", features = ["std"] }
 credibil-identity = { path = "." } 
-credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "ose" }
-credibil-se = { git = "https://github.com/credibil/jose.git", branch = "ose" }
+credibil-jose = { git = "https://github.com/credibil/jose.git" }
+credibil-se = { git = "https://github.com/credibil/jose.git" }
 
 kms = { path = "crates/kms" }
 multibase = "0.9.1"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = { version = "1.0.139", features = ["alloc"] }
 sha2 = "0.10.8"
-test-kms = { git = "https://github.com/credibil/jose.git", branch = "ose" }
+test-kms = { git = "https://github.com/credibil/jose.git" }
 
 [patch.crates-io]
 # credibil-jose = { path = "../jose" }
-# credibil-jose = { git = "https://github.com/credibil/jose.git" }
 
