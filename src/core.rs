@@ -86,7 +86,7 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
     }
 
     /// Returns the length of the `OneMany`.
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         match self {
             Self::One(_) => 1,
             Self::Many(many) => many.len(),
@@ -94,7 +94,7 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
     }
 
     /// Returns `true` if the `OneMany` is an empty `Many`.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         match self {
             Self::One(_) => false,
             Self::Many(many) => many.is_empty(),
