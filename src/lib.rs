@@ -15,18 +15,18 @@ pub mod proof;
 use std::future::Future;
 
 use credibil_jose::PublicKeyJwk;
-use credibil_se::Signer;
+pub use credibil_se::{Algorithm, Signer};
 use serde::{Deserialize, Serialize};
 
 /// Types of public key material supported by this crate.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Key {
     /// Contains a key ID that a verifier can use to dereference a key.
-    /// 
+    ///
     /// For example, if the identity is bound to a DID, the key ID refers
     /// to a DID URL which identifies a particular key in the DID Document
     /// that describes the identity.
-    /// 
+    ///
     /// Alternatively, the ID may refer to a key inside a JWKS.
     #[serde(rename = "kid")]
     KeyId(String),
@@ -55,7 +55,7 @@ impl TryInto<credibil_jose::KeyBinding> for Key {
 
 /// [`SignerExt`] is used to provide public key material that can be used for
 /// signature verification.
-/// 
+///
 /// Extends the `credibil_infosec::Signer` trait.
 pub trait SignerExt: Signer + Send + Sync {
     /// The verification method the verifier should use to verify the signer's
@@ -73,7 +73,7 @@ pub enum Identity {
     DidDocument(did::Document),
 }
 
-/// [`IdentityResolver`] is used to proxy the resolution of an identity. 
+/// [`IdentityResolver`] is used to proxy the resolution of an identity.
 ///
 /// Implementers need only return the identity specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
@@ -86,7 +86,7 @@ pub enum Identity {
 pub trait IdentityResolver: Send + Sync + Clone {
     /// Resolve the URL to identity information such as a DID Document or
     /// certificate.
-    /// 
+    ///
     /// The default implementation is a no-op since for some methods, such as
     /// `did:key`, the URL contains sufficient information to verify the
     /// signature of an identity.
