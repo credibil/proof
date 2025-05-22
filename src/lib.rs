@@ -14,8 +14,8 @@ pub mod proof;
 
 use std::future::Future;
 
-use credibil_jose::PublicKeyJwk;
-pub use credibil_se::{Algorithm, Signer};
+pub use credibil_jose as jose;
+pub use credibil_se as se;
 use serde::{Deserialize, Serialize};
 
 /// Types of public key material supported by this crate.
@@ -33,7 +33,7 @@ pub enum Key {
 
     /// Contains the key material the new Credential shall be bound to.
     #[serde(rename = "jwk")]
-    Jwk(PublicKeyJwk),
+    Jwk(jose::PublicKeyJwk),
 }
 
 impl Default for Key {
@@ -57,7 +57,7 @@ impl TryInto<credibil_jose::KeyBinding> for Key {
 /// signature verification.
 ///
 /// Extends the `credibil_infosec::Signer` trait.
-pub trait SignerExt: Signer + Send + Sync {
+pub trait SignerExt: se::Signer + Send + Sync {
     /// The verification method the verifier should use to verify the signer's
     /// signature. This is typically a DID URL + # + verification key ID.
     ///
