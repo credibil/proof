@@ -1,12 +1,14 @@
 //! Tests to verify log entries.
 
 use credibil_identity::core::Kind;
+use credibil_identity::did::webvh::{
+    CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs,
+};
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
-    webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs},
 };
-use credibil_identity::{Key, Signature};
+use credibil_identity::{Signature, VerifyBy};
 use kms::Keyring;
 
 // Create a minimal document and then verify the proof. Should verify without
@@ -79,8 +81,8 @@ async fn complex_proof() {
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
-        .service_type(&"LinkedVerifiablePresentation")
-        .endpoint_str(&"https://example.com/.well-known/whois")
+        .service_type("LinkedVerifiablePresentation")
+        .endpoint_str("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)
@@ -93,14 +95,14 @@ async fn complex_proof() {
 
     let witness_keyring1 =
         Keyring::new("webvh_complex_proof_witness1").await.expect("should create keyring");
-    let Key::KeyId(key_id1) =
+    let VerifyBy::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
     let witness_keyring2 =
         Keyring::new("webvh_complex_proof_witness2").await.expect("should create keyring");
-    let Key::KeyId(key_id2) =
+    let VerifyBy::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
         panic!("should get key id");

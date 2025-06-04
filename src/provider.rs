@@ -1,8 +1,8 @@
 //! # Provider Traits
 
 use anyhow::Result;
+use credibil_ecc::Signer;
 use credibil_jose::{KeyBinding, PublicKeyJwk};
-use credibil_se::Signer;
 use serde::{Deserialize, Serialize};
 
 use crate::did::Document;
@@ -17,10 +17,10 @@ pub trait Signature: Signer + Send + Sync {
     ///
     /// Async and fallible because the implementer may need to access key
     /// information to construct the method reference.
-    fn verification_method(&self) -> impl Future<Output = Result<Key>> + Send;
+    fn verification_method(&self) -> impl Future<Output = Result<VerifyBy>> + Send;
 }
 
-/// [`IdentityResolver`] is used to proxy the resolution of an identity.
+/// [`JwkResolver`] is used to proxy the resolution of an identity.
 ///
 /// Implementers need only return the identity specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
@@ -51,31 +51,32 @@ pub enum Identity {
     DidDocument(Document),
 }
 
-/// Types of public key material supported by this crate.
+/// Sources of public key material supported.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum Key {
-    /// Contains a key ID that a verifier can use to dereference a key.
+pub enum VerifyBy {
+    /// The ID of the public key used for verifying the associated signature.
     ///
-    /// For example, if the identity is bound to a DID, the key ID refers
-    /// to a DID URL which identifies a particular key in the DID Document
-    /// that describes the identity.
+    /// If the identity is bound to a DID, the key ID refers to a DID URL
+    /// which identifies a particular key in the DID Document describing
+    /// the identity.
     ///
     /// Alternatively, the ID may refer to a key inside a JWKS.
     #[serde(rename = "kid")]
     KeyId(String),
 
-    /// Contains the key material the new Credential shall be bound to.
+    /// Contains the public key material required to verify the associated
+    /// signature.
     #[serde(rename = "jwk")]
     Jwk(PublicKeyJwk),
 }
 
-impl Default for Key {
+impl Default for VerifyBy {
     fn default() -> Self {
         Self::KeyId(String::new())
     }
 }
 
-impl TryInto<KeyBinding> for Key {
+impl TryInto<KeyBinding> for VerifyBy {
     type Error = anyhow::Error;
 
     fn try_into(self) -> Result<KeyBinding, Self::Error> {

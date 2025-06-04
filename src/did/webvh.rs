@@ -15,7 +15,7 @@ mod verify;
 
 use chrono::{DateTime, Utc};
 pub use create::{CreateBuilder, CreateResult};
-use credibil_se::Algorithm;
+use credibil_ecc::Algorithm;
 pub use deactivate::{DeactivateBuilder, DeactivateResult};
 use multibase::Base;
 pub use resolve::*;
@@ -29,7 +29,7 @@ pub use verify::*;
 
 use crate::did::Document;
 use crate::proof::w3c::Proof;
-use crate::{Key, Signature};
+use crate::{Signature, VerifyBy};
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 ///
@@ -135,7 +135,7 @@ impl DidLogEntry {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vm = signer.verification_method().await?;
-        let Key::KeyId(key_id) = &vm else {
+        let VerifyBy::KeyId(key_id) = &vm else {
             return Err(anyhow::anyhow!("verification method must be a key id"));
         };
 
@@ -165,7 +165,6 @@ impl DidLogEntry {
 }
 
 /// Parameters for a DID log entry.
-///
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {

@@ -14,7 +14,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-credibil-identity = { path = "../.." }
+credibil-identity.workspace=true
 credibil-jose.workspace = true
-credibil-se.workspace = true
+credibil-ecc.workspace = true
 test-kms.workspace = true

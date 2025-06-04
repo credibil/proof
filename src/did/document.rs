@@ -10,8 +10,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
+use credibil_ecc::{PublicKey, X25519_CODEC, derive_x25519_public};
 use credibil_jose::PublicKeyJwk;
-use credibil_se::{derive_x25519_public, PublicKey, X25519_CODEC};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -609,9 +609,9 @@ pub struct WithEndpoint(Vec<Kind<Value>>);
 impl ServiceBuilder<WithoutType, WithoutEndpoint> {
     /// Creates a new `ServiceBuilder` with the given service ID.
     #[must_use]
-    pub fn new(id: &impl ToString) -> Self {
+    pub fn new(id: impl Into<String>) -> Self {
         Self {
-            id: id.to_string(),
+            id: id.into(),
             service_type: WithoutType,
             endpoint: WithoutEndpoint,
         }
@@ -620,11 +620,11 @@ impl ServiceBuilder<WithoutType, WithoutEndpoint> {
     /// Specify the service type.
     #[must_use]
     pub fn service_type(
-        &self, service_type: &impl ToString,
+        &self, service_type: impl Into<String>,
     ) -> ServiceBuilder<WithType, WithoutEndpoint> {
         ServiceBuilder {
             id: self.id.clone(),
-            service_type: WithType(service_type.to_string()),
+            service_type: WithType(service_type.into()),
             endpoint: WithoutEndpoint,
         }
     }
@@ -633,8 +633,10 @@ impl ServiceBuilder<WithoutType, WithoutEndpoint> {
 impl ServiceBuilder<WithType, WithoutEndpoint> {
     /// Specify a string-based service endpoint.
     #[must_use]
-    pub fn endpoint_str(&self, endpoint: &impl ToString) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = Kind::String(endpoint.to_string());
+    pub fn endpoint_str(
+        &self, endpoint: impl Into<String>,
+    ) -> ServiceBuilder<WithType, WithEndpoint> {
+        let ep = Kind::String(endpoint.into());
         ServiceBuilder {
             id: self.id.clone(),
             service_type: self.service_type.clone(),
@@ -657,8 +659,8 @@ impl ServiceBuilder<WithType, WithoutEndpoint> {
 impl ServiceBuilder<WithType, WithEndpoint> {
     /// Add a string-based service endpoint.
     #[must_use]
-    pub fn add_endpoint_str(mut self, endpoint: &impl ToString) -> Self {
-        let ep = Kind::String(endpoint.to_string());
+    pub fn add_endpoint_str(mut self, endpoint: impl Into<String>) -> Self {
+        let ep = Kind::String(endpoint.into());
         self.endpoint.0.push(ep);
         self
     }

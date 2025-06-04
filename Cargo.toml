@@ -20,9 +20,9 @@ workspace = true
 [dependencies]
 anyhow.workspace = true
 base64ct.workspace = true
-chrono = { version = "0.4.40", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+credibil-ecc.workspace = true
 credibil-jose.workspace = true
-credibil-se.workspace = true
 multibase.workspace = true
 nom = "8.0.0"
 serde.workspace = true
@@ -30,14 +30,14 @@ serde_json.workspace = true
 serde_json_canonicalizer = "0.3.0"
 sha2.workspace = true
 url = "2.5.4"
-uuid = { version = "1.15.1", features = ["v4"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 
 [dev-dependencies]
-axum = "0.8.1"
+axum = "0.8.4"
 kms.workspace = true
-tokio = { version = "1.44.1", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["fs"] }
 serde-jsonlines = "0.7.0"
+tokio = { version = "1.45.1", features = ["full"] }
+tower-http = { version = "0.6.6", features = ["fs"] }
 
 [workspace]
 members = [
@@ -55,7 +55,7 @@ management or use core functionality to implement your own.
 edition = "2024"
 exclude = [".*", "/docs", "snapshots/"]
 homepage = "https://credibil.io"
-keywords = ["decentralized", "identity","did"]
+keywords = ["decentralized", "identity", "did"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/credibil/identity"
@@ -72,19 +72,19 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-anyhow = "1.0.96"
-base64ct = { version = "1.6.0", features = ["std"] }
-credibil-identity = { path = "." } 
+anyhow = "1.0.98"
+base64ct = { version = "1.8.0", features = ["std"] }
+credibil-ecc = { git = "https://github.com/credibil/se.git" }
+credibil-identity = { path = "." }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
-credibil-se = { git = "https://github.com/credibil/se.git" }
-
 kms = { path = "crates/kms" }
 multibase = "0.9.1"
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", features = ["alloc"] }
-sha2 = "0.10.8"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140", features = ["alloc"] }
+sha2 = "0.10.9"
 test-kms = { git = "https://github.com/credibil/se.git" }
 
-[patch.crates-io]
-# credibil-jose = { path = "../se" }
-
+[patch."https://github.com/credibil/se"]
+credibil-ecc = { path = "../se/ecc" }
+credibil-jose = { path = "../se/jose" }
+test-kms = { path = "../se/crates/test-kms" }

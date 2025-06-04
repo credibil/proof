@@ -1,15 +1,15 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_identity::core::Kind;
+use credibil_identity::did::webvh::{
+    CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
+    WitnessWeight, default_did, resolve_log,
+};
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
-    webvh::{
-        CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
-        WitnessWeight, default_did, resolve_log,
-    },
 };
-use credibil_identity::{Key, Signature};
+use credibil_identity::{Signature, VerifyBy};
 use kms::Keyring;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.
@@ -37,8 +37,8 @@ async fn resolve_single() {
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
-        .service_type(&"LinkedVerifiablePresentation")
-        .endpoint_str(&"https://example.com/.well-known/whois")
+        .service_type("LinkedVerifiablePresentation")
+        .endpoint_str("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)
@@ -51,14 +51,14 @@ async fn resolve_single() {
 
     let witness_keyring1 =
         Keyring::new("webvh_resolve_single_witness1").await.expect("should create keyring");
-    let Key::KeyId(key_id1) =
+    let VerifyBy::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
     let witness_keyring2 =
         Keyring::new("webvh_resolve_single_witness2").await.expect("should create keyring");
-    let Key::KeyId(key_id2) =
+    let VerifyBy::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
         panic!("should get key id");
@@ -141,8 +141,8 @@ async fn resolve_multiple() {
     .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
-        .service_type(&"LinkedVerifiablePresentation")
-        .endpoint_str(&"https://example.com/.well-known/whois")
+        .service_type("LinkedVerifiablePresentation")
+        .endpoint_str("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
@@ -154,14 +154,14 @@ async fn resolve_multiple() {
 
     let witness_keyring1 =
         Keyring::new("webvh_resolve_multiple_witness1").await.expect("should create keyring");
-    let Key::KeyId(key_id1) =
+    let VerifyBy::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
     let witness_keyring2 =
         Keyring::new("webvh_resolve_multiple_witness2").await.expect("should create keyring");
-    let Key::KeyId(key_id2) =
+    let VerifyBy::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
         panic!("should get key id");
@@ -305,8 +305,8 @@ async fn resolve_deactivated() {
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
-        .service_type(&"LinkedVerifiablePresentation")
-        .endpoint_str(&"https://example.com/.well-known/whois")
+        .service_type("LinkedVerifiablePresentation")
+        .endpoint_str("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)
@@ -319,14 +319,14 @@ async fn resolve_deactivated() {
 
     let witness_keyring1 =
         Keyring::new("webvh_resolve_deactivated_witness1").await.expect("should create keyring");
-    let Key::KeyId(key_id1) =
+    let VerifyBy::KeyId(key_id1) =
         witness_keyring1.verification_method().await.expect("should get key id for witness1")
     else {
         panic!("should get key id");
     };
     let witness_keyring2 =
         Keyring::new("webvh_resolve_deactivated_witness2").await.expect("should create keyring");
-    let Key::KeyId(key_id2) =
+    let VerifyBy::KeyId(key_id2) =
         witness_keyring2.verification_method().await.expect("should get key id for witness2")
     else {
         panic!("should get key id");

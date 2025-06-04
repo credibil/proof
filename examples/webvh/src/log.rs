@@ -16,12 +16,12 @@ impl Log {
         }
     }
 
-    pub fn add_log(&mut self, id: impl ToString, entry: DidLog) -> anyhow::Result<()> {
-        self.entries.insert(id.to_string(), entry);
+    pub fn add_log(&mut self, id: impl Into<String>, entry: DidLog) -> anyhow::Result<()> {
+        self.entries.insert(id.into(), entry);
         Ok(())
     }
 
-    pub fn get_log(&self, id: impl ToString) -> Option<DidLog> {
-        self.entries.get(&id.to_string()).cloned()
+    pub fn get_log(&self, id: impl Into<String>) -> Option<DidLog> {
+        self.entries.get(&id.into()).cloned()
     }
 }

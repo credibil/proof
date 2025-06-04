@@ -2,17 +2,16 @@
 
 use anyhow::bail;
 use chrono::Utc;
-use credibil_se::Signer;
+use credibil_ecc::Signer;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
+use super::resolve::resolve_log;
+use super::verify::validate_witness;
+use super::{DidLog, DidLogEntry, Witness, WitnessEntry};
 use crate::Signature;
 use crate::did::Document;
-
-use super::{
-    DidLog, DidLogEntry, Witness, WitnessEntry, resolve::resolve_log, verify::validate_witness,
-};
 
 /// Builder to update a DID document and associated log entry.
 ///
@@ -158,7 +157,7 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
             }
         }
 
-        self.update_keys = new_update_keys.iter().map(std::string::ToString::to_string).collect();
+        self.update_keys = new_update_keys.iter().map(ToString::to_string).collect();
         if new_next_keys.is_empty() {
             self.next_key_hashes = None;
         } else {

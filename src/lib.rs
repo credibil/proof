@@ -13,6 +13,24 @@ pub mod did;
 pub mod proof;
 mod provider;
 
-pub use credibil_jose as jose;
-pub use credibil_se as se;
+use anyhow::{Result, anyhow};
+use credibil_jose::PublicKeyJwk;
 pub use provider::*;
+pub use {credibil_ecc as ecc, credibil_jose as jose};
+
+use crate::did::Resource;
+
+/// Retrieve the JWK specified by the provided DID URL.
+///
+/// # Errors
+///
+/// TODO: Document errors
+pub async fn did_jwk(did_url: &str, resolver: &impl IdentityResolver) -> Result<PublicKeyJwk> {
+    let deref = did::dereference(did_url, resolver)
+        .await
+        .map_err(|e| anyhow!("issue dereferencing DID URL {did_url}: {e}"))?;
+    let Resource::VerificationMethod(vm) = deref else {
+        return Err(anyhow!("Identity method not found"));
+    };
+    vm.key.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
+}

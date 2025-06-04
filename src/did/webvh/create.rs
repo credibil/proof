@@ -6,14 +6,11 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
+use super::verify::validate_witness;
+use super::{DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness};
 use crate::Signature;
 use crate::core::Kind;
 use crate::did::{BASE_CONTEXT, Document};
-
-use super::{
-    DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness, 
-};
-use super::verify::validate_witness;
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -149,9 +146,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
             witness: self.witness.clone(),
             ttl: self.ttl,
 
-            update_keys: WithUpdateKeys(
-                update_keys.iter().map(std::string::ToString::to_string).collect(),
-            ),
+            update_keys: WithUpdateKeys(update_keys.iter().map(ToString::to_string).collect()),
             signer: NoSigner,
             doc: self.doc.clone(),
         })

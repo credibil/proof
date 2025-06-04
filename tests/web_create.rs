@@ -26,8 +26,8 @@ async fn create_success() {
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("{did}#whois"))
-        .service_type(&"LinkedVerifiablePresentation")
-        .endpoint_str(&"https://example.com/.well-known/whois")
+        .service_type("LinkedVerifiablePresentation")
+        .endpoint_str("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)

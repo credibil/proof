@@ -4,19 +4,16 @@
 //!
 //! `did:<method>:<method-specific-id>[/<path>][?<query>][#<fragment>]`.
 
-use std::{
-    fmt::{Display, Write as _},
-    str::FromStr,
-};
+use std::fmt::{Display, Write as _};
+use std::str::FromStr;
+use std::string::ToString;
 
 use anyhow::bail;
-use nom::{
-    Err as NomErr, IResult, Parser,
-    bytes::complete::{is_not, tag, take, take_until},
-    combinator::{opt, rest},
-    error::{Error as NomError, ErrorKind},
-    sequence::{preceded, terminated},
-};
+use nom::bytes::complete::{is_not, tag, take, take_until};
+use nom::combinator::{opt, rest};
+use nom::error::{Error as NomError, ErrorKind};
+use nom::sequence::{preceded, terminated};
+use nom::{Err as NomErr, IResult, Parser};
 use serde::{Deserialize, Serialize};
 
 use super::Method;
@@ -149,7 +146,7 @@ impl Url {
     }
 
     /// Parse a string into a DID URL if possible.
-    /// 
+    ///
     /// # Errors
     /// If any internal parsing fails, an error is returned.
     pub fn parse(s: &str) -> anyhow::Result<Self> {
@@ -222,7 +219,7 @@ fn port(input: &str) -> IResult<&str, u16> {
 
 fn path(input: &str) -> IResult<&str, Vec<String>> {
     let (next, p) = preceded(tag("/"), is_not("?#")).parse(input)?;
-    Ok((next, p.split('/').map(std::string::ToString::to_string).collect()))
+    Ok((next, p.split('/').map(ToString::to_string).collect()))
 }
 
 fn query(input: &str) -> IResult<&str, QueryParams> {
@@ -397,10 +394,7 @@ mod tests {
         let s = "web:credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0";
         let (next, m) = method(s).expect("should parse method");
         assert_eq!(m, Method::Web);
-        assert_eq!(
-            next,
-            "credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0"
-        );
+        assert_eq!(next, "credibil.io:dVYzXm5MMzNAMiQodTFKRlpaXjRCKTBOeW5jTExWNzk#key0");
         let s = "webvh:QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
         let (next, m) = method(s).expect("should parse method");
         assert_eq!(m, Method::WebVh);
@@ -426,10 +420,7 @@ mod tests {
         assert_eq!(next, "?service=example#key-1");
         let s = "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
         let (next, i) = id(s).expect("should parse id");
-        assert_eq!(
-            i,
-            "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io"
-        );
+        assert_eq!(i, "QmaJp6pmb6RUk4oaDyWQcjeqYbvxsc3kvmHWPpz7B5JwDU:credibil.io");
         assert_eq!(
             next,
             "%3A8080/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
@@ -455,10 +446,7 @@ mod tests {
         assert!(path(s).is_err());
         let s = "/path/to/resource?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv";
         let (next, p) = path(s).expect("should parse path");
-        assert_eq!(
-            p,
-            vec!["path".to_string(), "to".to_string(), "resource".to_string()]
-        );
+        assert_eq!(p, vec!["path".to_string(), "to".to_string(), "resource".to_string()]);
         assert_eq!(
             next,
             "?service=example&hl=hashlink#z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6MLv"
@@ -496,5 +484,4 @@ mod tests {
         assert_eq!(f, "z6MkijyunEqPi7hzgJirb4tQLjztCPbJeeZvXEySuzbY6M-Lv");
         assert_eq!(next, "");
     }
-
 }
