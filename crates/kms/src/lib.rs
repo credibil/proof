@@ -1,6 +1,6 @@
 //! Key management
 
-use credibil_identity::{Key, SignerExt, did};
+use credibil_identity::{Key, Signature, did};
 use credibil_jose::PublicKeyJwk;
 use credibil_se::{Algorithm, Curve, Signer};
 use test_kms::Keyring as BaseKeyring;
@@ -89,7 +89,7 @@ impl Signer for Keyring {
     }
 }
 
-impl SignerExt for Keyring {
+impl Signature for Keyring {
     async fn verification_method(&self) -> anyhow::Result<Key> {
         let vk = self.keys.verifying_key("signing").await?;
         let jwk = PublicKeyJwk::from_bytes(&vk)?;

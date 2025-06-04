@@ -1,5 +1,4 @@
 //! Deactivate (revoke) operation for the `did:webvh` method.
-//!
 
 use anyhow::bail;
 use chrono::Utc;
@@ -8,11 +7,10 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::SignerExt;
-use crate::did::Document;
-
-use super::{DidLogEntry, Witness};
 use super::verify::validate_witness;
+use super::{DidLogEntry, Witness};
+use crate::Signature;
+use crate::did::Document;
 
 /// Builder for deactivating a DID document and associated log entry (or 2
 /// entries if there is key rotation).
@@ -156,7 +154,7 @@ impl DeactivateBuilder<WithoutSigner> {
     }
 }
 
-impl<S: SignerExt> DeactivateBuilder<WithSigner<'_, S>> {
+impl<S: Signature> DeactivateBuilder<WithSigner<'_, S>> {
     /// Build the new log entry/entries.
     ///
     /// If the last log entry has a non-empty `next_key_hashes`, two log entries

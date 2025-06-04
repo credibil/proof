@@ -11,7 +11,7 @@ use credibil_identity::did::{
         default_did,
     },
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use kms::Keyring;
 
 // Test the happy path of creating then deactivating a `did:webvh` document and

@@ -9,7 +9,7 @@ use credibil_identity::did::{
         WitnessWeight, default_did, resolve_log,
     },
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use kms::Keyring;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.

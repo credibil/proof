@@ -7,7 +7,7 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
     webvh::{CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did},
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use kms::Keyring;
 
 // Test the happy path of creating then updating a `did:webvh` document and log

@@ -6,7 +6,7 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
     webvh::{CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs},
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use kms::Keyring;
 
 // Create a minimal document and then verify the proof. Should verify without

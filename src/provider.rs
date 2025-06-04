@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::did::Document;
 
-/// [`SignerExt`] is used to provide public key material that can be used for
+/// [`Signature`] is used to provide public key material that can be used for
 /// signature verification.
 ///
 /// Extends the `credibil_infosec::Signer` trait.
-pub trait SignerExt: Signer + Send + Sync {
+pub trait Signature: Signer + Send + Sync {
     /// The verification method the verifier should use to verify the signer's
     /// signature. This is typically a DID URL + # + verification key ID.
     ///
@@ -41,12 +41,12 @@ pub trait IdentityResolver: Send + Sync + Clone {
     /// # Errors
     ///
     /// Returns an error if the URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = Result<Verification>> + Send;
+    fn resolve(&self, url: &str) -> impl Future<Output = Result<Identity>> + Send;
 }
 
 /// Return value from an identity resolver.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq)]
-pub enum Verification {
+pub enum Identity {
     /// A decentralized identifier.
     DidDocument(Document),
 }

@@ -14,23 +14,22 @@ mod url;
 mod verify;
 
 use chrono::{DateTime, Utc};
+pub use create::{CreateBuilder, CreateResult};
 use credibil_se::Algorithm;
+pub use deactivate::{DeactivateBuilder, DeactivateResult};
 use multibase::Base;
+pub use resolve::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
-use uuid::Uuid;
-
-use crate::{Key, SignerExt};
-use crate::did::Document;
-use crate::proof::w3c::Proof;
-
-pub use create::{CreateBuilder, CreateResult};
-pub use deactivate::{DeactivateBuilder, DeactivateResult};
-pub use resolve::*;
 pub use update::{UpdateBuilder, UpdateResult};
 pub use url::*;
+use uuid::Uuid;
 pub use verify::*;
+
+use crate::did::Document;
+use crate::proof::w3c::Proof;
+use crate::{Key, Signature};
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 ///
@@ -113,7 +112,7 @@ impl DidLogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn sign(&mut self, signer: &impl SignerExt) -> anyhow::Result<()> {
+    pub async fn sign(&mut self, signer: &impl Signature) -> anyhow::Result<()> {
         let proof = self.proof(signer).await?;
         self.proof.push(proof);
         Ok(())
@@ -130,7 +129,7 @@ impl DidLogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn proof(&self, signer: &impl SignerExt) -> anyhow::Result<Proof> {
+    pub async fn proof(&self, signer: &impl Signature) -> anyhow::Result<Proof> {
         let alg = signer.algorithm().await?;
         if alg != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
@@ -166,7 +165,6 @@ impl DidLogEntry {
 }
 
 /// Parameters for a DID log entry.
-///
 ///
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
