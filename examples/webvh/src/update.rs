@@ -6,10 +6,9 @@ use axum::http::StatusCode;
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{UpdateBuilder, UpdateResult, resolve_log};
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, VerificationMethod, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyPurpose, MethodType, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
@@ -71,19 +70,24 @@ pub async fn update(
         .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))?
         .method_type(&MethodType::Ed25519VerificationKey2020)?
         .build();
-    db = db.add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)?;
+    db = db.verification_method(vm.clone());
 
     // Add a reference-based verification method if requested.
     if let Some(purpose) = req.add {
         match purpose {
-            KeyPurpose::VerificationMethod => {
-                // Do nothing. We have already added a general verification
-                // method.
+            KeyPurpose::AssertionMethod => {
+                db = db.assertion_method(vm.id.clone());
             }
-            _ => {
-                let ref_vm = Kind::<VerificationMethod>::String(vm.id.clone());
-                db = db.add_verification_method(ref_vm, &purpose)?;
+            KeyPurpose::Authentication => {
+                db = db.authentication(vm.id.clone());
             }
+            KeyPurpose::CapabilityInvocation => {
+                db = db.capability_invocation(vm.id.clone());
+            }
+            KeyPurpose::CapabilityDelegation => {
+                db = db.capability_delegation(vm.id.clone());
+            }
+            KeyPurpose::VerificationMethod | KeyPurpose::KeyAgreement => {}
         }
     }
 

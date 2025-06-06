@@ -3,9 +3,8 @@
 use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, Resource, ServiceBuilder, Url,
+    DocumentBuilder, KeyFormat, MethodType, Resource, ServiceBuilder, Url,
     VerificationMethodBuilder, VmKeyId, document_resource, web,
 };
 use credibil_jose::PublicKeyJwk;
@@ -34,11 +33,8 @@ async fn create_then_deref() {
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
-        .add_service(service)
-        .build();
+    let doc =
+        DocumentBuilder::new(did).verification_method(vm.clone()).add_service(service).build();
     let url = Url::from_str(&vm.id).expect("should parse DID");
 
     let deref_vm = document_resource(&url, &doc).expect("should dereference VM");

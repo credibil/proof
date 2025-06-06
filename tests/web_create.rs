@@ -1,9 +1,8 @@
 //! Tests for the creation of a new `did:web` document.
 
 use credibil_ecc::{Curve, Keyring, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
     web,
 };
 use credibil_jose::PublicKeyJwk;
@@ -32,11 +31,7 @@ async fn create_success() {
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
-        .add_service(service)
-        .build();
+    let doc = DocumentBuilder::new(did).verification_method(vm).add_service(service).build();
 
     let json_doc = serde_json::to_string_pretty(&doc).expect("should serialize document");
     print!("{json_doc}");

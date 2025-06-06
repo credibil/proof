@@ -1,13 +1,12 @@
 //! Tests for resolving a `did:webvh` log into a DID document.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{
     CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
     WitnessWeight, default_did, resolve_log,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -46,11 +45,7 @@ async fn resolve_single() {
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
 
-    let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
-        .add_service(service)
-        .build();
+    let doc = DocumentBuilder::new(did).verification_method(vm).add_service(service).build();
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -86,7 +81,7 @@ async fn resolve_single() {
     };
 
     let result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")
@@ -153,11 +148,8 @@ async fn resolve_multiple() {
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc = DocumentBuilder::new(&did)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
-        .add_service(service)
-        .build();
+    let doc =
+        DocumentBuilder::new(&did).verification_method(vm.clone()).add_service(service).build();
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -193,7 +185,7 @@ async fn resolve_multiple() {
     };
 
     let create_result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")
@@ -240,10 +232,8 @@ async fn resolve_multiple() {
 
     // Construct a new document from the existing one.
     let doc = DocumentBuilder::from(doc)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should add verification method")
-        .add_verification_method(Kind::String(auth_vm.id.clone()), &KeyPurpose::Authentication)
-        .expect("should add verification method")
+        .verification_method(vm.clone())
+        .authentication(auth_vm.id.clone())
         .build();
 
     // Create an update log entry and skip witness verification of existing log.
@@ -320,8 +310,7 @@ async fn resolve_deactivated() {
         .build();
 
     let doc = DocumentBuilder::new(&did)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
+        .verification_method(vm.clone())
         .add_service(service)
         .build();
 
@@ -359,7 +348,7 @@ async fn resolve_deactivated() {
     };
 
     let create_result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")
@@ -406,10 +395,8 @@ async fn resolve_deactivated() {
 
     // Construct a new document from the existing one.
     let doc = DocumentBuilder::from(doc)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
-        .add_verification_method(Kind::String(auth_vm.id.clone()), &KeyPurpose::Authentication)
-        .expect("should add verification method")
+        .verification_method(vm.clone())
+        .authentication(auth_vm.id.clone())
         .build();
 
     // Create an update log entry and skip witness verification of existing log.

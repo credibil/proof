@@ -1,12 +1,11 @@
 //! Tests to verify log entries.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -40,12 +39,11 @@ async fn simple_proof() {
         .build();
 
     let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
+        .verification_method(vm.clone())
         .build();
 
     let result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")
@@ -90,8 +88,7 @@ async fn complex_proof() {
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
     let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
+        .verification_method(vm.clone())
         .add_service(service)
         .build();
 
@@ -129,7 +126,7 @@ async fn complex_proof() {
     };
 
     let result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")

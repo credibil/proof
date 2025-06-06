@@ -200,6 +200,13 @@ pub struct DocumentBuilder {
 
     // Operation to perform
     op: DocumentBuilderOperation,
+
+    authentication: Option<Vec<Kind<VerificationMethod>>>,
+    assertion_method: Option<Vec<Kind<VerificationMethod>>>,
+    key_agreement: Option<Vec<Kind<VerificationMethod>>>,
+    capability_invocation: Option<Vec<Kind<VerificationMethod>>>,
+    capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
+    verification_method: Option<Vec<VerificationMethod>>,
 }
 
 impl DocumentBuilder {
@@ -213,22 +220,24 @@ impl DocumentBuilder {
         Self {
             doc,
             op: DocumentBuilderOperation::Create,
+            ..Default::default()
         }
     }
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub const fn from(doc: Document) -> Self {
+    pub fn from(doc: Document) -> Self {
         Self {
             doc,
             op: DocumentBuilderOperation::Update,
+            ..Default::default()
         }
     }
 
     /// Add an also-known-as identifier.
     #[must_use]
-    pub fn also_known_as(mut self, aka: &str) -> Self {
-        self.doc.also_known_as.get_or_insert(vec![]).push(aka.to_string());
+    pub fn also_known_as(mut self, aka: impl Into<String>) -> Self {
+        self.doc.also_known_as.get_or_insert(vec![]).push(aka.into());
         self
     }
 
@@ -236,19 +245,19 @@ impl DocumentBuilder {
     ///
     /// Chain to add multiple controllers.
     #[must_use]
-    pub fn add_controller(mut self, controller: &str) -> Self {
+    pub fn add_controller(mut self, controller: impl Into<String>) -> Self {
         match self.doc.controller {
             Some(c) => match c {
                 OneMany::One(cont) => {
-                    self.doc.controller = Some(OneMany::Many(vec![cont, controller.to_string()]));
+                    self.doc.controller = Some(OneMany::Many(vec![cont, controller.into()]));
                 }
                 OneMany::Many(mut cont) => {
-                    cont.push(controller.to_string());
+                    cont.push(controller.into());
                     self.doc.controller = Some(OneMany::Many(cont));
                 }
             },
             None => {
-                self.doc.controller = Some(OneMany::One(controller.to_string()));
+                self.doc.controller = Some(OneMany::One(controller.into()));
             }
         }
         self
@@ -314,8 +323,8 @@ impl DocumentBuilder {
     ///
     /// Chain to add multiple contexts.
     #[must_use]
-    pub fn add_context(mut self, context: &Kind<Value>) -> Self {
-        self.doc.context.push(context.clone());
+    pub fn add_context(mut self, context: Kind<Value>) -> Self {
+        self.doc.context.push(context);
         self
     }
 
@@ -332,56 +341,52 @@ impl DocumentBuilder {
         Ok(self)
     }
 
-    /// Add a verification method.
-    ///
-    /// Pass the ID of the verification method to associate with the
-    /// relationship or a complete `VerificationMethod` instance if a standalone
-    /// method is required.
-    ///
-    /// Chain to add multiple relationships.
-    ///
-    /// # Errors
-    ///
-    /// If this method is used for key agreement, an error will occur if a
-    /// standalone verification method is not used.
-    pub fn add_verification_method(
-        mut self, vm_kind: Kind<VerificationMethod>, purpose: &KeyPurpose,
-    ) -> Result<Self> {
-        // let vm_kind = Kind::Object(vm);
+    /// Add a verification method to the `assertion_method` relationship.
+    #[must_use]
+    pub fn assertion_method(
+        mut self, assertion_method: impl Into<Kind<VerificationMethod>>,
+    ) -> Self {
+        self.assertion_method.get_or_insert(vec![]).push(assertion_method.into());
+        self
+    }
 
-        match purpose {
-            KeyPurpose::Authentication => {
-                self.doc.authentication.get_or_insert(vec![]).push(vm_kind.clone());
-            }
-            KeyPurpose::AssertionMethod => {
-                self.doc.assertion_method.get_or_insert(vec![]).push(vm_kind.clone());
-            }
-            KeyPurpose::KeyAgreement => match vm_kind {
-                Kind::Object(_) => {
-                    self.doc.key_agreement.get_or_insert(vec![]).push(vm_kind.clone());
-                }
-                Kind::String(_) => {
-                    bail!(
-                        "key agreement must be handled by the encryption method creation algorithm"
-                    );
-                }
-            },
-            KeyPurpose::CapabilityInvocation => {
-                self.doc.capability_invocation.get_or_insert(vec![]).push(vm_kind.clone());
-            }
-            KeyPurpose::CapabilityDelegation => {
-                self.doc.capability_delegation.get_or_insert(vec![]).push(vm_kind.clone());
-            }
-            KeyPurpose::VerificationMethod => match vm_kind {
-                Kind::Object(vm) => {
-                    self.doc.verification_method.get_or_insert(vec![]).push(vm);
-                }
-                Kind::String(_) => {
-                    bail!("verification method must be a standalone verification method");
-                }
-            },
-        }
-        Ok(self)
+    /// Add a verification method to the `authentication` relationship.
+    #[must_use]
+    pub fn authentication(mut self, authentication: impl Into<Kind<VerificationMethod>>) -> Self {
+        self.authentication.get_or_insert(vec![]).push(authentication.into());
+        self
+    }
+
+    /// Add a verification method to the `key_agreement` relationship.
+    #[must_use]
+    pub fn key_agreement(mut self, key_agreement: VerificationMethod) -> Self {
+        self.key_agreement.get_or_insert(vec![]).push(Kind::Object(key_agreement));
+        self
+    }
+
+    /// Add a verification method to the `capability_invocation` relationship.
+    #[must_use]
+    pub fn capability_invocation(
+        mut self, capability_invocation: impl Into<Kind<VerificationMethod>>,
+    ) -> Self {
+        self.capability_invocation.get_or_insert(vec![]).push(capability_invocation.into());
+        self
+    }
+
+    /// Add a verification method to the `capability_delegation` relationship.
+    #[must_use]
+    pub fn capability_delegation(
+        mut self, capability_delegation: impl Into<Kind<VerificationMethod>>,
+    ) -> Self {
+        self.capability_delegation.get_or_insert(vec![]).push(capability_delegation.into());
+        self
+    }
+
+    /// Add a verification method to the `key_agreement` relationship.
+    #[must_use]
+    pub fn verification_method(mut self, verification_method: VerificationMethod) -> Self {
+        self.verification_method.get_or_insert(vec![]).push(verification_method);
+        self
     }
 
     /// Add a verification method that is a verifying key and optionally create
@@ -539,6 +544,14 @@ impl DocumentBuilder {
             DocumentBuilderOperation::Create => md.created = chrono::Utc::now(),
             DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
         }
+
+        self.doc.assertion_method = self.assertion_method;
+        self.doc.authentication = self.authentication;
+        self.doc.key_agreement = self.key_agreement;
+        self.doc.capability_invocation = self.capability_invocation;
+        self.doc.capability_delegation = self.capability_delegation;
+        self.doc.verification_method = self.verification_method;
+        
         self.doc.did_document_metadata = Some(md);
         for ctx in &BASE_CONTEXT {
             let c = Kind::String((*ctx).to_string());

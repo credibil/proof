@@ -83,7 +83,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     /// Will fail if the document ID does not resemble a
     /// `did:webvh:{SCID}:<host_and_path>` string.
     pub fn document(
-        &self, document: &Document,
+        &self, document: Document,
     ) -> anyhow::Result<CreateBuilder<NoUpdateKeys, NoSigner, WithDocument>> {
         // The document ID must resemble a `did:webvh:{SCID}:<host_and_path>`
         // string.
@@ -91,13 +91,13 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
             bail!("document ID must start with 'did:{METHOD}:{SCID_PLACEHOLDER}'");
         }
 
-        let mut doc = document.clone();
+        let mut document = document;
 
         // Ensure we have the base context on the document for this DID method.
         for ctx in &BASE_CONTEXT {
             let c = Kind::String((*ctx).to_string());
             if !document.context.contains(&c) {
-                doc.context.push(c);
+                document.context.push(c);
             }
         }
 
@@ -111,7 +111,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
 
             update_keys: NoUpdateKeys,
             signer: NoSigner,
-            doc: WithDocument(doc),
+            doc: WithDocument(document),
         })
     }
 }

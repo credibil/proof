@@ -2,12 +2,11 @@
 //! signer.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -46,8 +45,7 @@ async fn create_success() {
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
     let doc = DocumentBuilder::new(did)
-        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
-        .expect("should apply verification method")
+        .verification_method(vm)
         .add_service(service)
         .build();
 
@@ -85,7 +83,7 @@ async fn create_success() {
     };
 
     let result = CreateBuilder::new()
-        .document(&doc)
+        .document(doc)
         .expect("should apply document")
         .update_keys(vec![update_multi])
         .expect("should apply update keys")
