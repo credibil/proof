@@ -181,26 +181,11 @@ impl Document {
     }
 }
 
-/// Types of operation a `DocumentBuilder` can perform.
-#[derive(Clone, Debug, Default)]
-pub enum DocumentBuilderOperation {
-    /// Create a new DID Document.
-    #[default]
-    Create,
-
-    /// Update an existing DID Document.
-    Update,
-}
-
 /// A builder for creating a DID Document.
 #[derive(Clone, Debug, Default)]
 pub struct DocumentBuilder {
-    // Document under construction
-    doc: Document,
-
-    // Operation to perform
-    op: DocumentBuilderOperation,
-
+    id: Option<String>,
+    doc: Option<Document>,
     authentication: Option<Vec<Kind<VerificationMethod>>>,
     assertion_method: Option<Vec<Kind<VerificationMethod>>>,
     key_agreement: Option<Vec<Kind<VerificationMethod>>>,
@@ -208,19 +193,19 @@ pub struct DocumentBuilder {
     capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
     verification_method: Option<Vec<VerificationMethod>>,
     derive_key_agreement: Option<String>,
+    also_known_as: Option<Vec<String>>,
+    controller: Option<OneMany<String>>,
+    service: Option<Vec<Service>>,
+    context: Vec<Kind<Value>>,
+    did_document_metadata: Option<DocumentMetadata>,
 }
 
 impl DocumentBuilder {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
     pub fn new(did: impl Into<String>) -> Self {
-        let doc = Document {
-            id: did.into(),
-            ..Document::default()
-        };
         Self {
-            doc,
-            op: DocumentBuilderOperation::Create,
+            id: Some(did.into()),
             ..Default::default()
         }
     }
@@ -229,8 +214,8 @@ impl DocumentBuilder {
     #[must_use]
     pub fn from(doc: Document) -> Self {
         Self {
-            doc,
-            op: DocumentBuilderOperation::Update,
+            doc: Some(doc),
+            // op: DocumentBuilderOperation::Update,
             ..Default::default()
         }
     }
@@ -238,7 +223,7 @@ impl DocumentBuilder {
     /// Add an also-known-as identifier.
     #[must_use]
     pub fn also_known_as(mut self, aka: impl Into<String>) -> Self {
-        self.doc.also_known_as.get_or_insert(vec![]).push(aka.into());
+        self.also_known_as.get_or_insert(vec![]).push(aka.into());
         self
     }
 
@@ -247,100 +232,100 @@ impl DocumentBuilder {
     /// Chain to add multiple controllers.
     #[must_use]
     pub fn add_controller(mut self, controller: impl Into<String>) -> Self {
-        match self.doc.controller {
+        match self.controller {
             Some(c) => match c {
                 OneMany::One(cont) => {
-                    self.doc.controller = Some(OneMany::Many(vec![cont, controller.into()]));
+                    self.controller = Some(OneMany::Many(vec![cont, controller.into()]));
                 }
                 OneMany::Many(mut cont) => {
                     cont.push(controller.into());
-                    self.doc.controller = Some(OneMany::Many(cont));
+                    self.controller = Some(OneMany::Many(cont));
                 }
             },
             None => {
-                self.doc.controller = Some(OneMany::One(controller.into()));
+                self.controller = Some(OneMany::One(controller.into()));
             }
         }
         self
     }
 
-    /// Remove a controller.
-    ///
-    /// # Errors
-    /// Will fail if the controller is not found.
-    pub fn remove_controller(mut self, controller: &str) -> Result<Self> {
-        match self.doc.controller {
-            Some(c) => match c {
-                OneMany::One(cont) => {
-                    if cont == controller {
-                        self.doc.controller = None;
-                    } else {
-                        bail!("controller not found");
-                    }
-                }
-                OneMany::Many(mut cont) => {
-                    if let Some(pos) = cont.iter().position(|c| c == controller) {
-                        cont.remove(pos);
-                        self.doc.controller = Some(OneMany::Many(cont));
-                    } else {
-                        bail!("controller not found");
-                    }
-                }
-            },
-            None => {
-                bail!("controller not found");
-            }
-        }
-        Ok(self)
-    }
+    // /// Remove a controller.
+    // ///
+    // /// # Errors
+    // /// Will fail if the controller is not found.
+    // pub fn remove_controller(mut self, controller: &str) -> Result<Self> {
+    //     match self.doc.controller {
+    //         Some(c) => match c {
+    //             OneMany::One(cont) => {
+    //                 if cont == controller {
+    //                     self.doc.controller = None;
+    //                 } else {
+    //                     bail!("controller not found");
+    //                 }
+    //             }
+    //             OneMany::Many(mut cont) => {
+    //                 if let Some(pos) = cont.iter().position(|c| c == controller) {
+    //                     cont.remove(pos);
+    //                     self.doc.controller = Some(OneMany::Many(cont));
+    //                 } else {
+    //                     bail!("controller not found");
+    //                 }
+    //             }
+    //         },
+    //         None => {
+    //             bail!("controller not found");
+    //         }
+    //     }
+    //     Ok(self)
+    // }
 
     /// Add a service endpoint.
     ///
     /// Chain to add multiple service endpoints.
     #[must_use]
     pub fn add_service(mut self, service: Service) -> Self {
-        self.doc.service.get_or_insert(vec![]).push(service);
+        self.service.get_or_insert(vec![]).push(service);
         self
     }
 
-    /// Remove a service endpoint.
-    ///
-    /// # Errors
-    /// Will fail if no service with the supplied ID is found.
-    pub fn remove_service(mut self, service_id: &str) -> Result<Self> {
-        if let Some(services) = &mut self.doc.service {
-            if let Some(pos) = services.iter().position(|s| s.id == service_id) {
-                services.remove(pos);
-            } else {
-                bail!("service not found");
-            }
-        } else {
-            bail!("service not found");
-        }
-        Ok(self)
-    }
+    // /// Remove a service endpoint.
+    // ///
+    // /// # Errors
+    // /// Will fail if no service with the supplied ID is found.
+    // pub fn remove_service(mut self, service_id: &str) -> Result<Self> {
+    //     if let Some(services) = &mut self.doc.service {
+    //         if let Some(pos) = services.iter().position(|s| s.id == service_id) {
+    //             services.remove(pos);
+    //         } else {
+    //             bail!("service not found");
+    //         }
+    //     } else {
+    //         bail!("service not found");
+    //     }
+    //     Ok(self)
+    // }
 
     /// Add a context.
     ///
     /// Chain to add multiple contexts.
     #[must_use]
     pub fn add_context(mut self, context: Kind<Value>) -> Self {
-        self.doc.context.push(context);
+        self.context.push(context);
         self
     }
 
-    /// Remove a context.
-    ///
-    /// # Errors
-    /// Will fail if the context is not found.
-    pub fn remove_context(mut self, context: &Kind<Value>) -> Result<Self> {
-        if let Some(pos) = self.doc.context.iter().position(|c| c == context) {
-            self.doc.context.remove(pos);
-        } else {
-            bail!("context not found");
-        }
-        Ok(self)
-    }
+    // /// Remove a context.
+    // ///
+    // /// # Errors
+    // /// Will fail if the context is not found.
+    // pub fn remove_context(mut self, context: &Kind<Value>) -> Result<Self> {
+    //     if let Some(pos) = self.doc.context.iter().position(|c| c == context) {
+    //         self.doc.context.remove(pos);
+    //     } else {
+    //         bail!("context not found");
+    //     }
+    //     Ok(self)
+    // }
 
     /// Add a verification method to the `assertion_method` relationship.
     #[must_use]
@@ -390,101 +375,44 @@ impl DocumentBuilder {
         self
     }
 
-    /// Add a verification method that is a verifying key and optionally create
-    /// a derived key agreement.
-    ///
-    /// This is a shortcut for adding a verification method that constructs the
-    /// verification method from a `PublicKeyJwk` and adds it to the document,
-    /// then optionally derives an `X25519` key agreement from it.
-    ///
-    /// # Note
-    ///
-    /// 1. The verification key format will be multibase encoded, derived from
-    ///    the JWK passed in. This is hard-coded for this function.
-    ///
-    /// 2. The key identifier will be `{did}#key-0`.
-    ///
-    /// If you have other needs, use `add_verification_method` instead.
-    ///
-    /// # Errors
-    /// Will fail if the JWK cannot be converted to a multibase string or if the
-    /// conversion from `Ed25519` to `X25519` fails.
-    pub fn add_verifying_key(mut self, jwk: &PublicKeyJwk, key_agreement: bool) -> Result<Self> {
-        let vk = jwk.to_multibase()?;
-        let vm = VerificationMethodBuilder::new(vk)
-            .key_id(self.did(), VmKeyId::Index("key".to_string(), 0))?
-            .method_type(&MethodType::Ed25519VerificationKey2020)?
-            .build();
-        self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
-        if key_agreement {
-            let ka = vm.derive_key_agreement()?;
-            self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
-        }
-        Ok(self)
-    }
+    // /// Add a verification method that is a verifying key and optionally create
+    // /// a derived key agreement.
+    // ///
+    // /// This is a shortcut for adding a verification method that constructs the
+    // /// verification method from a `PublicKeyJwk` and adds it to the document,
+    // /// then optionally derives an `X25519` key agreement from it.
+    // ///
+    // /// # Note
+    // ///
+    // /// 1. The verification key format will be multibase encoded, derived from
+    // ///    the JWK passed in. This is hard-coded for this function.
+    // ///
+    // /// 2. The key identifier will be `{did}#key-0`.
+    // ///
+    // /// If you have other needs, use `add_verification_method` instead.
+    // ///
+    // /// # Errors
+    // /// Will fail if the JWK cannot be converted to a multibase string or if the
+    // /// conversion from `Ed25519` to `X25519` fails.
+    // pub fn add_verifying_key(mut self, jwk: &PublicKeyJwk, key_agreement: bool) -> Result<Self> {
+    //     let vk = jwk.to_multibase()?;
+    //     let vm = VerificationMethodBuilder::new(vk)
+    //         .key_id(self.did(), VmKeyId::Index("key".to_string(), 0))?
+    //         .method_type(&MethodType::Ed25519VerificationKey2020)?
+    //         .build();
+    //     self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
+    //     if key_agreement {
+    //         let ka = vm.derive_key_agreement()?;
+    //         self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
+    //     }
+    //     Ok(self)
+    // }
 
-    /// Remove a verification method.
-    ///
-    /// # Errors
-    /// Will fail if no verification method with the supplied ID is found.
-    pub fn remove_verification_method(mut self, vm_id: &str) -> Result<Self> {
-        let mut found = false;
-        if let Some(auths) = &mut self.doc.authentication {
-            if let Some(pos) = auths.iter().position(|vm| match vm {
-                Kind::Object(vm) => vm.id == vm_id,
-                Kind::String(id) => id == vm_id,
-            }) {
-                auths.remove(pos);
-                found = true;
-            }
-        }
-        if let Some(asserts) = &mut self.doc.assertion_method {
-            if let Some(pos) = asserts.iter().position(|vm| match vm {
-                Kind::Object(vm) => vm.id == vm_id,
-                Kind::String(id) => id == vm_id,
-            }) {
-                asserts.remove(pos);
-                found = true;
-            }
-        }
-        if let Some(kas) = &mut self.doc.key_agreement {
-            if let Some(pos) = kas.iter().position(|vm| match vm {
-                Kind::Object(vm) => vm.id == vm_id,
-                Kind::String(id) => id == vm_id,
-            }) {
-                kas.remove(pos);
-                found = true;
-            }
-        }
-        if let Some(caps) = &mut self.doc.capability_invocation {
-            if let Some(pos) = caps.iter().position(|vm| match vm {
-                Kind::Object(vm) => vm.id == vm_id,
-                Kind::String(id) => id == vm_id,
-            }) {
-                caps.remove(pos);
-                found = true;
-            }
-        }
-        if let Some(caps) = &mut self.doc.capability_delegation {
-            if let Some(pos) = caps.iter().position(|vm| match vm {
-                Kind::Object(vm) => vm.id == vm_id,
-                Kind::String(id) => id == vm_id,
-            }) {
-                caps.remove(pos);
-                found = true;
-            }
-        }
-        if let Some(vms) = &mut self.doc.verification_method {
-            if let Some(pos) = vms.iter().position(|vm| vm.id == vm_id) {
-                vms.remove(pos);
-                found = true;
-            }
-        }
-        if !found {
-            bail!("verification method not found");
-        }
-        Ok(self)
-    }
+    // /// Remove the specified verification method.
+    // pub fn remove_verification_method(mut self, vm_id: impl Into<String>) -> Self {
+    //     self.remove_verification_method.push(vm_id.into());
+    //     self
+    // }
 
     /// Create a new `X25519` key agreement verification method from the
     /// `Ed25519` signing key.
@@ -499,34 +427,28 @@ impl DocumentBuilder {
     /// choice, such as `did:key`.
     ///
     /// TODO: Consider returning an error if not `did:key`.
-    ///
-    /// # Errors
-    /// If the conversion from `Ed25519` to `X25519` fails, an error will be
-    /// returned, including testing the assumption that the signing key is
-    /// `Ed25519` in the first place. An error is also returned if there is no
-    /// existing verification method with the given ID.
     #[must_use]
     pub fn derive_key_agreement(mut self, vm_id: impl Into<String>) -> Self {
         self.derive_key_agreement = Some(vm_id.into());
         self
     }
 
-    /// Retrieve the current `DID` from the builder.
-    ///
-    /// Note that although the `DID` (document identifier) is called for in the
-    /// constructor of this builder, some DID methods may use temporary values
-    /// and replace the DID in the final document. Users of this function should
-    /// be aware of the DID method context in which it is used to determine the
-    /// reliability of the value.
-    #[must_use]
-    pub fn did(&self) -> String {
-        self.doc.id.clone()
-    }
+    // /// Retrieve the current `DID` from the builder.
+    // ///
+    // /// Note that although the `DID` (document identifier) is called for in the
+    // /// constructor of this builder, some DID methods may use temporary values
+    // /// and replace the DID in the final document. Users of this function should
+    // /// be aware of the DID method context in which it is used to determine the
+    // /// reliability of the value.
+    // #[must_use]
+    // pub fn did(&self) -> String {
+    //     self.doc.id.clone()
+    // }
 
     /// Set metadata for the document.
     #[must_use]
     pub fn metadata(mut self, md: DocumentMetadata) -> Self {
-        self.doc.did_document_metadata = Some(md);
+        self.did_document_metadata = Some(md);
         self
     }
 
@@ -538,13 +460,18 @@ impl DocumentBuilder {
     /// Will fail if the document is missing required fields or if
     /// verification methods are not properly set up.
     pub fn build(self) -> Result<Document> {
-        let mut doc = self.doc;
+        let mut md = self.did_document_metadata.unwrap_or_default();
 
-        let mut md = doc.did_document_metadata.clone().unwrap_or_default();
-        match self.op {
-            DocumentBuilderOperation::Create => md.created = chrono::Utc::now(),
-            DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
-        }
+        let mut doc = if let Some(doc) = self.doc {
+            md.updated = Some(chrono::Utc::now());
+            doc
+        } else {
+            md.created = chrono::Utc::now();
+            Document {
+                id: self.id.ok_or_else(|| anyhow!("DID is required"))?,
+                ..Document::default()
+            }
+        };
 
         doc.assertion_method = self.assertion_method;
         doc.authentication = self.authentication;
@@ -552,6 +479,11 @@ impl DocumentBuilder {
         doc.capability_invocation = self.capability_invocation;
         doc.capability_delegation = self.capability_delegation;
         doc.verification_method = self.verification_method;
+        doc.also_known_as = self.also_known_as;
+        doc.controller = self.controller;
+        doc.service = self.service;
+
+        doc.did_document_metadata = Some(md);
 
         if let Some(vm_id) = &self.derive_key_agreement {
             let vm = doc
@@ -561,16 +493,73 @@ impl DocumentBuilder {
             doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
         }
 
-        doc.did_document_metadata = Some(md);
-        for ctx in &BASE_CONTEXT {
-            let c = Kind::String((*ctx).to_string());
+        doc.context = self.context;
+        for ctx in BASE_CONTEXT {
+            let c = Kind::String((ctx).to_string());
             if !doc.context.contains(&c) {
                 doc.context.push(c);
             }
         }
+
         Ok(doc)
     }
 }
+
+// let mut found = false;
+// if let Some(auths) = &mut self.doc.authentication {
+//     if let Some(pos) = auths.iter().position(|vm| match vm {
+//         Kind::Object(vm) => vm.id == vm_id,
+//         Kind::String(id) => id == vm_id,
+//     }) {
+//         auths.remove(pos);
+//         found = true;
+//     }
+// }
+// if let Some(asserts) = &mut self.doc.assertion_method {
+//     if let Some(pos) = asserts.iter().position(|vm| match vm {
+//         Kind::Object(vm) => vm.id == vm_id,
+//         Kind::String(id) => id == vm_id,
+//     }) {
+//         asserts.remove(pos);
+//         found = true;
+//     }
+// }
+// if let Some(kas) = &mut self.doc.key_agreement {
+//     if let Some(pos) = kas.iter().position(|vm| match vm {
+//         Kind::Object(vm) => vm.id == vm_id,
+//         Kind::String(id) => id == vm_id,
+//     }) {
+//         kas.remove(pos);
+//         found = true;
+//     }
+// }
+// if let Some(caps) = &mut self.doc.capability_invocation {
+//     if let Some(pos) = caps.iter().position(|vm| match vm {
+//         Kind::Object(vm) => vm.id == vm_id,
+//         Kind::String(id) => id == vm_id,
+//     }) {
+//         caps.remove(pos);
+//         found = true;
+//     }
+// }
+// if let Some(caps) = &mut self.doc.capability_delegation {
+//     if let Some(pos) = caps.iter().position(|vm| match vm {
+//         Kind::Object(vm) => vm.id == vm_id,
+//         Kind::String(id) => id == vm_id,
+//     }) {
+//         caps.remove(pos);
+//         found = true;
+//     }
+// }
+// if let Some(vms) = &mut self.doc.verification_method {
+//     if let Some(pos) = vms.iter().position(|vm| vm.id == vm_id) {
+//         vms.remove(pos);
+//         found = true;
+//     }
+// }
+// if !found {
+//     bail!("verification method not found");
+// }
 
 /// Services are used to express ways of communicating with the DID subject or
 /// associated entities.
