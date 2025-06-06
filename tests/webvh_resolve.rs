@@ -7,7 +7,7 @@ use credibil_identity::did::webvh::{
     WitnessWeight, default_did, resolve_log,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, KeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
@@ -38,7 +38,7 @@ async fn resolve_single() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
@@ -152,7 +152,7 @@ async fn resolve_multiple() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
@@ -245,7 +245,7 @@ async fn resolve_multiple() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: new_update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
@@ -332,7 +332,7 @@ async fn resolve_deactivated() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
@@ -427,7 +427,7 @@ async fn resolve_deactivated() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: new_update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))

@@ -6,7 +6,7 @@ use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, KeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
@@ -36,7 +36,7 @@ async fn simple_proof() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
@@ -89,7 +89,7 @@ async fn complex_proof() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, Resource, ServiceBuilder, Url,
+    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, Resource, ServiceBuilder, Url,
     VerificationMethod, VerificationMethodBuilder, VmKeyId, document_resource, web,
 };
 use credibil_jose::PublicKeyJwk;
@@ -23,27 +23,23 @@ async fn create_then_deref() {
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk {
-        public_key_jwk: jwk.clone(),
-    })
-    .key_id(&did, VmKeyId::Index("key".to_string(), 0))
-    .expect("should apply key ID")
-    .method_type(&MethodType::JsonWebKey2020)
-    .expect("should apply method type")
-    .build();
+    let vm = VerificationMethodBuilder::new(&jwk.clone().into())
+        .key_id(&did, VmKeyId::Index("key".to_string(), 0))
+        .expect("should apply key ID")
+        .method_type(&MethodType::JsonWebKey2020)
+        .expect("should apply method type")
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
         .endpoint_str("https://example.com/.well-known/whois")
         .build();
-
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
         .build();
-
     let url = Url::from_str(&vm.id).expect("should parse DID");
 
     let deref_vm = document_resource(&url, &doc).expect("should dereference VM");
@@ -51,7 +47,7 @@ async fn create_then_deref() {
         panic!("should be a verification method");
     };
 
-    let PublicKeyFormat::PublicKeyJwk { public_key_jwk } = deref_vm.key else {
+    let KeyFormat::Jwk { public_key_jwk } = deref_vm.key else {
         panic!("should be a JWK");
     };
     assert_eq!(public_key_jwk.x, jwk.x);

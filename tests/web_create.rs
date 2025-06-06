@@ -3,7 +3,7 @@
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId, web,
 };
 use credibil_jose::PublicKeyJwk;
@@ -22,7 +22,7 @@ async fn create_success() {
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk { public_key_jwk: jwk })
+    let vm = VerificationMethodBuilder::new(&jwk.into())
         .key_id(&did, VmKeyId::Index("key".to_string(), 0))
         .expect("should apply key ID")
         .method_type(&MethodType::JsonWebKey2020)

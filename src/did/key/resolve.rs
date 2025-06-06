@@ -2,7 +2,7 @@
 
 use anyhow::bail;
 
-use crate::did::{Method, MethodType, PublicKeyFormat, Resource, Url, VerificationMethod};
+use crate::did::{Method, MethodType, KeyFormat, Resource, Url, VerificationMethod};
 
 /// Convert a `did:key` URL into a [`VerificationMethod`] object.
 ///
@@ -22,7 +22,7 @@ pub fn resolve(url: &Url) -> anyhow::Result<Resource> {
         id: url.resource_id(),
         type_: MethodType::Multikey,
         controller: url.did(),
-        key: PublicKeyFormat::PublicKeyMultibase {
+        key: KeyFormat::Multibase {
             public_key_multibase: fragment.to_string(),
         },
     };

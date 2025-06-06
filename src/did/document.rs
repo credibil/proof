@@ -405,7 +405,7 @@ impl DocumentBuilder {
         mut self, jwk: &PublicKeyJwk, key_agreement: bool,
     ) -> anyhow::Result<Self> {
         let vk = jwk.to_multibase()?;
-        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
             public_key_multibase: vk,
         })
         .key_id(&self.did(), VmKeyId::Index("key".to_string(), 0))?
@@ -726,7 +726,7 @@ pub struct VerificationMethod {
 
     /// The format of the public key material.
     #[serde(flatten)]
-    pub key: PublicKeyFormat,
+    pub key: KeyFormat,
 }
 
 impl VerificationMethod {
@@ -749,8 +749,8 @@ impl VerificationMethod {
         }
 
         let jwk = match &self.key {
-            PublicKeyFormat::PublicKeyJwk { public_key_jwk } => public_key_jwk.clone(),
-            PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
+            KeyFormat::Jwk { public_key_jwk } => public_key_jwk.clone(),
+            KeyFormat::Multibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)?
             }
         };
@@ -764,7 +764,7 @@ impl VerificationMethod {
         multi_bytes.extend_from_slice(&x25519_key.to_bytes());
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-        let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+        let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
             public_key_multibase: multikey,
         })
         .key_id(&self.did(), VmKeyId::Did)?
@@ -778,7 +778,7 @@ impl VerificationMethod {
 /// A builder for creating a verification method.
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
-    vm_key: PublicKeyFormat,
+    vm_key: KeyFormat,
     did: String,
     kid: String,
     method: MethodType,
@@ -787,7 +787,7 @@ pub struct VerificationMethodBuilder {
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(verifying_key: &PublicKeyFormat) -> Self {
+    pub fn new(verifying_key: &KeyFormat) -> Self {
         Self {
             vm_key: verifying_key.clone(),
             ..Default::default()
@@ -811,12 +811,8 @@ impl VerificationMethodBuilder {
             }
             VmKeyId::Verification => {
                 let mb = match &self.vm_key {
-                    PublicKeyFormat::PublicKeyJwk { public_key_jwk } => {
-                        public_key_jwk.to_multibase()?
-                    }
-                    PublicKeyFormat::PublicKeyMultibase { public_key_multibase } => {
-                        public_key_multibase.clone()
-                    }
+                    KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
+                    KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
                 };
                 self.kid = format!("{did}#{mb}");
             }
@@ -836,7 +832,7 @@ impl VerificationMethodBuilder {
     /// Will fail if required format does not match the provided key format.
     pub fn method_type(mut self, mtype: &MethodType) -> anyhow::Result<Self> {
         match &self.vm_key {
-            PublicKeyFormat::PublicKeyJwk { .. } => {
+            KeyFormat::Jwk { .. } => {
                 if !matches!(
                     mtype,
                     MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019
@@ -846,7 +842,7 @@ impl VerificationMethodBuilder {
                     );
                 }
             }
-            PublicKeyFormat::PublicKeyMultibase { .. } => {
+            KeyFormat::Multibase { .. } => {
                 if !matches!(
                     mtype,
                     MethodType::Multikey
@@ -904,29 +900,29 @@ pub enum VmKeyId {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all_fields = "camelCase")]
 #[serde(untagged)]
-pub enum PublicKeyFormat {
+pub enum KeyFormat {
     /// The key is encoded as a Multibase string.
-    PublicKeyMultibase {
+    Multibase {
         /// The public key encoded as a Multibase.
         public_key_multibase: String,
     },
 
     /// The key is encoded as a JWK.
-    PublicKeyJwk {
+    Jwk {
         /// The public key encoded as a JWK.
         public_key_jwk: PublicKeyJwk,
     },
 }
 
-impl Default for PublicKeyFormat {
+impl Default for KeyFormat {
     fn default() -> Self {
-        Self::PublicKeyMultibase {
+        Self::Multibase {
             public_key_multibase: String::new(),
         }
     }
 }
 
-impl PublicKeyFormat {
+impl KeyFormat {
     /// Return the key as a JWK
     ///
     /// # Errors
@@ -934,8 +930,8 @@ impl PublicKeyFormat {
     /// decoded.
     pub fn jwk(&self) -> anyhow::Result<PublicKeyJwk> {
         match self {
-            Self::PublicKeyJwk { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::PublicKeyMultibase { public_key_multibase } => {
+            Self::Jwk { public_key_jwk } => Ok(public_key_jwk.clone()),
+            Self::Multibase { public_key_multibase } => {
                 PublicKeyJwk::from_multibase(public_key_multibase)
             }
         }
@@ -948,8 +944,22 @@ impl PublicKeyFormat {
     /// multibase string.
     pub fn multibase(&self) -> anyhow::Result<String> {
         match self {
-            Self::PublicKeyJwk { public_key_jwk } => public_key_jwk.to_multibase(),
-            Self::PublicKeyMultibase { public_key_multibase } => Ok(public_key_multibase.clone()),
+            Self::Jwk { public_key_jwk } => public_key_jwk.to_multibase(),
+            Self::Multibase { public_key_multibase } => Ok(public_key_multibase.clone()),
+        }
+    }
+}
+
+impl From<PublicKeyJwk> for KeyFormat {
+    fn from(jwk: PublicKeyJwk) -> Self {
+        Self::Jwk { public_key_jwk: jwk }
+    }
+}
+
+impl From<String> for KeyFormat {
+    fn from(multibase: String) -> Self {
+        Self::Multibase {
+            public_key_multibase: multibase,
         }
     }
 }

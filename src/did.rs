@@ -22,7 +22,7 @@ pub mod webvh;
 
 pub use document::{
     Document, DocumentBuilder, DocumentMetadata, DocumentMetadataBuilder, KeyPurpose, MethodType,
-    PublicKeyFormat, Service, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
+    KeyFormat, Service, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
     VmKeyId,
 };
 pub use resolve::{Resource, deref_url, dereference, document_resource};

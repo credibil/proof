@@ -9,7 +9,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{UpdateBuilder, UpdateResult, resolve_log};
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, KeyFormat, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_jose::PublicKeyJwk;
@@ -74,7 +74,7 @@ pub async fn update(
     let mut db = DocumentBuilder::from(&current_doc);
 
     // Create a new verification method.
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
+    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
         public_key_multibase: update_multi,
     })
     .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))?
