@@ -47,7 +47,8 @@ async fn create_success() {
     let doc = DocumentBuilder::new(did)
         .verification_method(vm)
         .add_service(service)
-        .build();
+        .build()
+        .expect("should build document");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");

@@ -6,9 +6,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
-use credibil_identity::did::{
-    DocumentBuilder, MethodType, VerificationMethodBuilder, VmKeyId,
-};
+use credibil_identity::did::{DocumentBuilder, MethodType, VerificationMethodBuilder, VmKeyId};
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +52,7 @@ pub async fn create(
 
     // Could add other verification methods and service endpoints to the
     // `CreateRequest` and build them here.
-    let doc = DocumentBuilder::new(did).verification_method(vm).build();
+    let doc = DocumentBuilder::new(did).verification_method(vm).build()?;
 
     let result = CreateBuilder::new()
         .document(doc)?

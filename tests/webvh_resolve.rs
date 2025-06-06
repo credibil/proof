@@ -45,7 +45,11 @@ async fn resolve_single() {
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
 
-    let doc = DocumentBuilder::new(did).verification_method(vm).add_service(service).build();
+    let doc = DocumentBuilder::new(did)
+        .verification_method(vm)
+        .add_service(service)
+        .build()
+        .expect("should build document");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -148,8 +152,11 @@ async fn resolve_multiple() {
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc =
-        DocumentBuilder::new(&did).verification_method(vm.clone()).add_service(service).build();
+    let doc = DocumentBuilder::new(&did)
+        .verification_method(vm.clone())
+        .add_service(service)
+        .build()
+        .expect("should build document");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -234,7 +241,8 @@ async fn resolve_multiple() {
     let doc = DocumentBuilder::from(doc)
         .verification_method(vm.clone())
         .authentication(auth_vm.id.clone())
-        .build();
+        .build()
+        .expect("should build document");
 
     // Create an update log entry and skip witness verification of existing log.
     let result = UpdateBuilder::from(create_result.log.as_slice(), None)
@@ -312,7 +320,8 @@ async fn resolve_deactivated() {
     let doc = DocumentBuilder::new(&did)
         .verification_method(vm.clone())
         .add_service(service)
-        .build();
+        .build()
+        .expect("should build document");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -397,7 +406,8 @@ async fn resolve_deactivated() {
     let doc = DocumentBuilder::from(doc)
         .verification_method(vm.clone())
         .authentication(auth_vm.id.clone())
-        .build();
+        .build()
+        .expect("should build document");
 
     // Create an update log entry and skip witness verification of existing log.
     let update_result = UpdateBuilder::from(create_result.log.as_slice(), None)

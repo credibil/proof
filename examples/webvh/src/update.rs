@@ -92,7 +92,7 @@ pub async fn update(
     }
 
     // Create an update log entry.
-    let doc = db.build();
+    let doc = db.build()?;
     let result = UpdateBuilder::from(&did_log, None)
         .await?
         .document(&doc)?

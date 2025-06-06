@@ -207,6 +207,7 @@ pub struct DocumentBuilder {
     capability_invocation: Option<Vec<Kind<VerificationMethod>>>,
     capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
     verification_method: Option<Vec<VerificationMethod>>,
+    derive_key_agreement: Option<String>,
 }
 
 impl DocumentBuilder {
@@ -504,16 +505,10 @@ impl DocumentBuilder {
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place. An error is also returned if there is no
     /// existing verification method with the given ID.
-    pub fn derive_key_agreement(mut self, vm_id: &str) -> Result<Self> {
-        let vm = self
-            .doc
-            .get_verification_method(vm_id)
-            .ok_or_else(|| anyhow::anyhow!("verification method not found"))?;
-        let ka = vm.derive_key_agreement()?;
-
-        self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
-
-        Ok(self)
+    #[must_use]
+    pub fn derive_key_agreement(mut self, vm_id: impl Into<String>) -> Self {
+        self.derive_key_agreement = Some(vm_id.into());
+        self
     }
 
     /// Retrieve the current `DID` from the builder.
@@ -537,29 +532,43 @@ impl DocumentBuilder {
 
     /// Update metadata with created or updated timestamp and build the DID
     /// Document.
-    #[must_use]
-    pub fn build(mut self) -> Document {
-        let mut md = self.doc.did_document_metadata.clone().unwrap_or_default();
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the document is missing required fields or if
+    /// verification methods are not properly set up.
+    pub fn build(self) -> Result<Document> {
+        let mut doc = self.doc;
+
+        let mut md = doc.did_document_metadata.clone().unwrap_or_default();
         match self.op {
             DocumentBuilderOperation::Create => md.created = chrono::Utc::now(),
             DocumentBuilderOperation::Update => md.updated = Some(chrono::Utc::now()),
         }
 
-        self.doc.assertion_method = self.assertion_method;
-        self.doc.authentication = self.authentication;
-        self.doc.key_agreement = self.key_agreement;
-        self.doc.capability_invocation = self.capability_invocation;
-        self.doc.capability_delegation = self.capability_delegation;
-        self.doc.verification_method = self.verification_method;
-        
-        self.doc.did_document_metadata = Some(md);
+        doc.assertion_method = self.assertion_method;
+        doc.authentication = self.authentication;
+        doc.key_agreement = self.key_agreement;
+        doc.capability_invocation = self.capability_invocation;
+        doc.capability_delegation = self.capability_delegation;
+        doc.verification_method = self.verification_method;
+
+        if let Some(vm_id) = &self.derive_key_agreement {
+            let vm = doc
+                .get_verification_method(vm_id)
+                .ok_or_else(|| anyhow!("verification method not found"))?;
+            let ka = vm.derive_key_agreement()?;
+            doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
+        }
+
+        doc.did_document_metadata = Some(md);
         for ctx in &BASE_CONTEXT {
             let c = Kind::String((*ctx).to_string());
-            if !self.doc.context.contains(&c) {
-                self.doc.context.push(c);
+            if !doc.context.contains(&c) {
+                doc.context.push(c);
             }
         }
-        self.doc
+        Ok(doc)
     }
 }
 

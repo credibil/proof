@@ -40,7 +40,8 @@ async fn simple_proof() {
 
     let doc = DocumentBuilder::new(did)
         .verification_method(vm.clone())
-        .build();
+        .build()
+        .expect("should build document");
 
     let result = CreateBuilder::new()
         .document(doc)
@@ -90,7 +91,8 @@ async fn complex_proof() {
     let doc = DocumentBuilder::new(did)
         .verification_method(vm.clone())
         .add_service(service)
-        .build();
+        .build()
+        .expect("should build document");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");

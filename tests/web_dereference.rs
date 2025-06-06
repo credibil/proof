@@ -33,8 +33,11 @@ async fn create_then_deref() {
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc =
-        DocumentBuilder::new(did).verification_method(vm.clone()).add_service(service).build();
+    let doc = DocumentBuilder::new(did)
+        .verification_method(vm.clone())
+        .add_service(service)
+        .build()
+        .expect("should build document");
     let url = Url::from_str(&vm.id).expect("should parse DID");
 
     let deref_vm = document_resource(&url, &doc).expect("should dereference VM");
