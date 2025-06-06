@@ -14,6 +14,7 @@ pub mod proof;
 mod provider;
 
 use anyhow::{Result, anyhow};
+use credibil_ecc::{Entry, Signer};
 use credibil_jose::PublicKeyJwk;
 pub use provider::*;
 pub use {credibil_ecc as ecc, credibil_jose as jose};
@@ -33,4 +34,13 @@ pub async fn did_jwk(did_url: &str, resolver: &impl IdentityResolver) -> Result<
         return Err(anyhow!("Identity method not found"));
     };
     vm.key.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
+}
+
+impl Signature for Entry {
+    async fn verification_method(&self) -> Result<VerifyBy> {
+        let vk = self.verifying_key().await?;
+        let jwk = PublicKeyJwk::from_bytes(&vk)?;
+        let vm = did::key::did_from_jwk(&jwk)?;
+        Ok(VerifyBy::KeyId(vm))
+    }
 }

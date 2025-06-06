@@ -2,12 +2,14 @@
 
 use std::str::FromStr;
 
+use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, Resource, ServiceBuilder, Url,
     VerificationMethod, VerificationMethodBuilder, VmKeyId, document_resource, web,
 };
-use kms::KeyringExt as Keyring;
+use credibil_jose::PublicKeyJwk;
+use test_utils::Vault;
 
 // Create a new `did:web` document and dereference a resource from it.
 #[tokio::test]
@@ -16,10 +18,13 @@ async fn create_then_deref() {
     let did = web::default_did(domain_and_path).expect("should get default DID");
     assert_eq!(did, "did:web:credibil.io:issuers:example");
 
-    let mut signer = Keyring::new("web_create_then_deref").await.expect("should create keyring");
-    let vk = signer.jwk("signing").await.expect("should get signing key");
+    let signer =
+        Keyring::generate(&Vault, "wd", "signing", Curve::Ed25519).await.expect("should generate");
+    let verifying_key = signer.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk {
-        public_key_jwk: vk.clone(),
+        public_key_jwk: jwk.clone(),
     })
     .key_id(&did, VmKeyId::Index("key".to_string(), 0))
     .expect("should apply key ID")
@@ -49,5 +54,5 @@ async fn create_then_deref() {
     let PublicKeyFormat::PublicKeyJwk { public_key_jwk } = deref_vm.key else {
         panic!("should be a JWK");
     };
-    assert_eq!(public_key_jwk.x, vk.x);
+    assert_eq!(public_key_jwk.x, jwk.x);
 }

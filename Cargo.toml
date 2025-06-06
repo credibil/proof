@@ -34,14 +34,14 @@ uuid = { version = "1.17.0", features = ["v4"] }
 
 [dev-dependencies]
 axum = "0.8.4"
-kms.workspace = true
 serde-jsonlines = "0.7.0"
+test-utils.workspace = true
 tokio = { version = "1.45.1", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["fs"] }
 
 [workspace]
 members = [
-    "crates/kms",
+    "crates/*",
     "examples/webvh",
 ]
 resolver = "2"
@@ -77,12 +77,12 @@ base64ct = { version = "1.8.0", features = ["std"] }
 credibil-ecc = { git = "https://github.com/credibil/se.git" }
 credibil-identity = { path = "." }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
-kms = { path = "crates/kms" }
 multibase = "0.9.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 sha2 = "0.10.9"
+test-utils = { path = "crates/test-utils" }
 
 [patch."https://github.com/credibil/se"]
 credibil-ecc = { path = "../se/ecc" }
-credibil-jose = { path = "../se/jose" }
+# credibil-jose = { path = "../se/jose" }

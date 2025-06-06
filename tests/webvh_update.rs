@@ -1,6 +1,7 @@
 //! Tests for the update of an existing `did:webvh` document and associated log
 //! entry.
 
+use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did,
@@ -10,7 +11,8 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
-use kms::KeyringExt as Keyring;
+use credibil_jose::PublicKeyJwk;
+use test_utils::Vault;
 
 // Test the happy path of creating then updating a `did:webvh` document and log
 // entries. Should just work without errors.
@@ -20,12 +22,20 @@ async fn update_success() {
 
     let domain_and_path = "https://credibil.io/issuers/example";
 
-    let mut signer = Keyring::new("webvh_update_success").await.expect("should create keyring");
-    let update_multi = signer.multibase("signing").await.expect("should get multibase key");
+    let signer =
+        Keyring::generate(&Vault, "wu", "signing", Curve::Ed25519).await.expect("should generate");
+    let verifying_key = signer.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let update_multi = jwk.to_multibase().expect("should get multibase");
+
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
-    let id_multi = signer.multibase("id").await.expect("should get key");
+    let id_entry =
+        Keyring::generate(&Vault, "wu", "id", Curve::Ed25519).await.expect("should generate");
+    let verifying_key = id_entry.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let id_multi = jwk.to_multibase().expect("should get key");
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
@@ -50,22 +60,25 @@ async fn update_success() {
         .add_service(&service)
         .build();
 
-    let next_multi = signer.next_multibase("signing").await.expect("should get next key");
+    let next_key = signer.next_key().await.expect("should get next key");
+    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let next_multi = jwk.to_multibase().expect("should get multibase");
 
-    let witness_keyring1 =
-        Keyring::new("webvh_update_success_witness1").await.expect("should create keyring");
+    let witness_1 =
+        Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
     let VerifyBy::KeyId(key_id1) =
-        witness_keyring1.verification_method().await.expect("should get key id for witness1")
+        witness_1.verification_method().await.expect("should get key id")
     else {
         panic!("should get key id");
     };
-    let witness_keyring2 =
-        Keyring::new("webvh_update_success_witness2").await.expect("should create keyring");
+    let witness_2 =
+        Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
     let VerifyBy::KeyId(key_id2) =
-        witness_keyring2.verification_method().await.expect("should get key id for witness2")
+        witness_2.verification_method().await.expect("should get key id for witness2")
     else {
         panic!("should get key id");
     };
+
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
@@ -100,15 +113,26 @@ async fn update_success() {
     let doc = create_result.document.clone();
 
     // Rotate the signing key.
-    signer.rotate().await.expect("should rotate keys on signer");
-    let new_update_multi = signer.multibase("signing").await.expect("should get multibase key");
+    let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
+    let verifying_key = signer.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let new_update_multi = jwk.to_multibase().expect("should get multibase");
+
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
 
-    let new_next_multi = signer.next_multibase("signing").await.expect("should get next key");
+    let next_key = signer.next_key().await.expect("should get next key");
+    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let new_next_multi = jwk.to_multibase().expect("should get multibase");
+
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
-    let id_multi = signer.multibase("id").await.expect("should get key");
+
+    let id_entry =
+        Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
+    let verifying_key = id_entry.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
         public_key_multibase: new_update_multi,

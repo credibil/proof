@@ -4,19 +4,21 @@ use axum::Json;
 use axum::extract::State;
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
+use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
+use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
 use super::{AppError, AppJson};
 use crate::state::AppState;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CreateRequest {}
+pub struct CreateRequest;
 
 // Handler to create a new DID log document
 #[axum::debug_handler]
@@ -28,14 +30,25 @@ pub async fn create(
 
     tracing::debug!("creating DID log document for {domain_and_path}");
 
-    let mut keyring = state.keyring.lock().await;
+    let vault = state.vault;
+    let signer = Keyring::generate(&vault, "wvhd", "signing", Curve::Ed25519).await?;
+    let verifying_key = signer.verifying_key().await?;
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+    let update_multi = jwk.to_multibase()?;
 
-    let update_multi = keyring.multibase("signing").await?;
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let id_multi = keyring.multibase("id").await?;
+
+    let id_entry = Keyring::generate(&vault, "wvhd", "id", Curve::Ed25519).await?;
+    let verifying_key = id_entry.verifying_key().await?;
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+    let id_multi = jwk.to_multibase()?;
+
     let did = default_did(&domain_and_path)?;
-    let next_key = keyring.next_multibase("signing").await?;
+
+    let next_key = signer.next_key().await?;
+    let jwk = PublicKeyJwk::from_bytes(&next_key)?;
+    let next_multi = jwk.to_multibase()?;
 
     let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyMultibase {
         public_key_multibase: update_multi,
@@ -57,8 +70,8 @@ pub async fn create(
     let result = CreateBuilder::new()
         .document(&doc)?
         .update_keys(&update_keys)?
-        .next_key(&next_key)
-        .signer(&*keyring)
+        .next_key(&next_multi)
+        .signer(&signer)
         .build()
         .await?;
 

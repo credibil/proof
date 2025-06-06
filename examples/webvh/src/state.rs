@@ -1,23 +1,22 @@
 //! Application state
 use std::sync::Arc;
 
-use kms::KeyringExt as Keyring;
+use test_utils::Vault;
 use tokio::sync::Mutex;
 
 use crate::log::Log;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub keyring: Arc<Mutex<Keyring>>,
+    pub vault: Vault,
     pub log: Arc<Mutex<Log>>,
 }
 
 impl AppState {
     #[must_use]
     pub async fn new() -> Self {
-        let keyring = Keyring::new("issuer").await.expect("keyring creation");
         Self {
-            keyring: Arc::new(Mutex::new(keyring)),
+            vault: Vault,
             log: Arc::new(Mutex::new(Log::new())),
         }
     }

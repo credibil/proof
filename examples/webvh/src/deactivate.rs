@@ -4,7 +4,9 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
+use credibil_ecc::{Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{DeactivateBuilder, DeactivateResult};
+use credibil_jose::PublicKeyJwk;
 
 use crate::state::AppState;
 use crate::{AppError, AppJson};
@@ -18,14 +20,22 @@ pub async fn deactivate(
 
     tracing::debug!("deactivating DID log document for {domain_and_path}");
 
-    let mut keyring = state.keyring.lock().await;
+    let vault = state.vault;
+    let signer = Keyring::entry(&vault, "issuer", "signer").await?;
 
     // Rotate keys
-    keyring.rotate().await?;
-    let update_multi = keyring.multibase("signing").await?;
+    let signer = Keyring::rotate(&vault, signer).await?;
+    let verifying_key = signer.verifying_key().await?;
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+    let update_multi = jwk.to_multibase()?;
+
     let update_keys = vec![update_multi.clone()];
     let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-    let next_multi = keyring.next_multibase("signing").await?;
+
+    let next_key = signer.next_key().await?;
+    let jwk = PublicKeyJwk::from_bytes(&next_key)?;
+    let next_multi = jwk.to_multibase()?;
+
     let next_keys = vec![next_multi.clone()];
     let next_keys: Vec<&str> = next_keys.iter().map(|s| s.as_str()).collect();
 
@@ -41,7 +51,7 @@ pub async fn deactivate(
 
     let result = DeactivateBuilder::from(&did_log)?
         .rotate_keys(&update_keys, &next_keys)?
-        .signer(&*keyring)
+        .signer(&signer)
         .build()
         .await?;
 
