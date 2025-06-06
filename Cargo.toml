@@ -40,11 +40,8 @@ tokio = { version = "1.45.1", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["fs"] }
 
 [workspace]
-members = [
-    "crates/*",
-    "examples/webvh",
-]
-resolver = "2"
+members = ["crates/*", "examples/webvh"]
+resolver = "3"
 
 [workspace.package]
 authors = ["Credibil"]
@@ -83,6 +80,6 @@ serde_json = { version = "1.0.140", features = ["alloc"] }
 sha2 = "0.10.9"
 test-utils = { path = "crates/test-utils" }
 
-[patch."https://github.com/credibil/se"]
-credibil-ecc = { path = "../se/ecc" }
+# [patch."https://github.com/credibil/se"]
+# credibil-ecc = { path = "../se/ecc" }
 # credibil-jose = { path = "../se/jose" }
