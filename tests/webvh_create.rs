@@ -7,7 +7,7 @@ use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, KeyFormat, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
@@ -27,9 +27,6 @@ async fn create_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let update_multi = jwk.to_multibase().expect("should get multibase");
 
-    let update_keys = vec![update_multi.clone()];
-    let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-
     let id_entry =
         Keyring::generate(&Vault, "wvhc", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
@@ -39,7 +36,7 @@ async fn create_success() {
     let did = default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: update_multi,
+        public_key_multibase: update_multi.clone(),
     })
     .key_id(&did, VmKeyId::Authorization(id_multi))
     .expect("should apply key ID")
@@ -94,7 +91,7 @@ async fn create_success() {
     let result = CreateBuilder::new()
         .document(&doc)
         .expect("should apply document")
-        .update_keys(&update_keys)
+        .update_keys(vec![update_multi])
         .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)

@@ -131,7 +131,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
     /// # Errors
     /// Will fail if the update keys are empty.
     pub fn update_keys(
-        &self, update_keys: &[&str],
+        &self, update_keys: Vec<String>,
     ) -> anyhow::Result<CreateBuilder<WithUpdateKeys, NoSigner, WithDocument>> {
         // The update keys cannot be empty.
         if update_keys.is_empty() {
@@ -146,7 +146,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
             witness: self.witness.clone(),
             ttl: self.ttl,
 
-            update_keys: WithUpdateKeys(update_keys.iter().map(ToString::to_string).collect()),
+            update_keys: WithUpdateKeys(update_keys),
             signer: NoSigner,
             doc: self.doc.clone(),
         })
