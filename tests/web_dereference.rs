@@ -23,7 +23,7 @@ async fn create_then_deref() {
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
-    let vm = VerificationMethodBuilder::new(&jwk.clone().into())
+    let vm = VerificationMethodBuilder::new(jwk.clone())
         .key_id(&did, VmKeyId::Index("key".to_string(), 0))
         .expect("should apply key ID")
         .method_type(&MethodType::JsonWebKey2020)

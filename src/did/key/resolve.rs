@@ -2,7 +2,7 @@
 
 use anyhow::bail;
 
-use crate::did::{Method, MethodType, KeyFormat, Resource, Url, VerificationMethod};
+use crate::did::{KeyFormat, Method, MethodType, Resource, Url, VerificationMethod};
 
 /// Convert a `did:key` URL into a [`VerificationMethod`] object.
 ///

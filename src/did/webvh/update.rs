@@ -144,11 +144,11 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
     /// an error is returned (unless there are no next key hashes on the
     /// current log entry - pre-rotation not required).
     pub fn rotate_keys(
-        mut self, new_update_keys: &[&str], new_next_keys: &[&str],
+        mut self, new_update_keys: Vec<String>, new_next_keys: &[String],
     ) -> anyhow::Result<Self> {
         // Check the new update keys hash to the current next key hashes.
         if let Some(next_key_hashes) = &self.next_key_hashes {
-            for new_key in new_update_keys {
+            for new_key in &new_update_keys {
                 let digest = sha2::Sha256::digest(new_key.as_bytes());
                 let hash = multibase::encode(Base::Base58Btc, digest.as_slice());
                 if !next_key_hashes.contains(&hash) {
@@ -157,7 +157,7 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
             }
         }
 
-        self.update_keys = new_update_keys.iter().map(ToString::to_string).collect();
+        self.update_keys = new_update_keys;
         if new_next_keys.is_empty() {
             self.next_key_hashes = None;
         } else {

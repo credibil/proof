@@ -8,7 +8,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, KeyFormat, VerificationMethod,
+    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_jose::PublicKeyJwk;
@@ -36,9 +36,6 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
     let update_multi = jwk.to_multibase()?;
 
-    let update_keys = vec![update_multi.clone()];
-    let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
-
     let id_entry = Keyring::generate(&vault, "wvhd", "id", Curve::Ed25519).await?;
     let verifying_key = id_entry.verifying_key().await?;
     let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
@@ -50,12 +47,10 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&next_key)?;
     let next_multi = jwk.to_multibase()?;
 
-    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: update_multi,
-    })
-    .key_id(&did, VmKeyId::Authorization(id_multi))?
-    .method_type(&MethodType::Ed25519VerificationKey2020)?
-    .build();
+    let vm = VerificationMethodBuilder::new(update_multi.clone())
+        .key_id(&did, VmKeyId::Authorization(id_multi))?
+        .method_type(&MethodType::Ed25519VerificationKey2020)?
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     tracing::debug!("keys established");
@@ -69,7 +64,7 @@ pub async fn create(
 
     let result = CreateBuilder::new()
         .document(&doc)?
-        .update_keys(&update_keys)?
+        .update_keys(vec![update_multi])?
         .next_key(&next_multi)
         .signer(&signer)
         .build()

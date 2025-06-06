@@ -405,12 +405,10 @@ impl DocumentBuilder {
         mut self, jwk: &PublicKeyJwk, key_agreement: bool,
     ) -> anyhow::Result<Self> {
         let vk = jwk.to_multibase()?;
-        let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-            public_key_multibase: vk,
-        })
-        .key_id(&self.did(), VmKeyId::Index("key".to_string(), 0))?
-        .method_type(&MethodType::Ed25519VerificationKey2020)?
-        .build();
+        let vm = VerificationMethodBuilder::new(vk)
+            .key_id(&self.did(), VmKeyId::Index("key".to_string(), 0))?
+            .method_type(&MethodType::Ed25519VerificationKey2020)?
+            .build();
         self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
         if key_agreement {
             let ka = vm.derive_key_agreement()?;
@@ -764,12 +762,10 @@ impl VerificationMethod {
         multi_bytes.extend_from_slice(&x25519_key.to_bytes());
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-        let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-            public_key_multibase: multikey,
-        })
-        .key_id(&self.did(), VmKeyId::Did)?
-        .method_type(&MethodType::X25519KeyAgreementKey2020)?
-        .build();
+        let vm = VerificationMethodBuilder::new(multikey)
+            .key_id(&self.did(), VmKeyId::Did)?
+            .method_type(&MethodType::X25519KeyAgreementKey2020)?
+            .build();
 
         Ok(vm)
     }
@@ -787,9 +783,9 @@ pub struct VerificationMethodBuilder {
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(verifying_key: &KeyFormat) -> Self {
+    pub fn new(verifying_key: impl Into<KeyFormat>) -> Self {
         Self {
-            vm_key: verifying_key.clone(),
+            vm_key: verifying_key.into(),
             ..Default::default()
         }
     }

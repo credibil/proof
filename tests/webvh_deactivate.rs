@@ -8,7 +8,7 @@ use credibil_identity::did::webvh::{
     default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
@@ -36,14 +36,12 @@ async fn create_then_deactivate() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: update_multi.clone(),
-    })
-    .key_id(&did, VmKeyId::Authorization(id_multi))
-    .expect("should apply key ID")
-    .method_type(&MethodType::Ed25519VerificationKey2020)
-    .expect("should apply method type")
-    .build();
+    let vm = VerificationMethodBuilder::new(update_multi.clone())
+        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .expect("should apply key ID")
+        .method_type(&MethodType::Ed25519VerificationKey2020)
+        .expect("should apply method type")
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
@@ -141,14 +139,12 @@ async fn update_then_deactivate() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: update_multi.clone(),
-    })
-    .key_id(&did, VmKeyId::Authorization(id_multi))
-    .expect("should apply key ID")
-    .method_type(&MethodType::Ed25519VerificationKey2020)
-    .expect("should apply method type")
-    .build();
+    let vm = VerificationMethodBuilder::new(update_multi.clone())
+        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .expect("should apply key ID")
+        .method_type(&MethodType::Ed25519VerificationKey2020)
+        .expect("should apply method type")
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
@@ -220,15 +216,9 @@ async fn update_then_deactivate() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let new_update_multi = jwk.to_multibase().expect("should get multibase");
 
-    let new_update_keys = vec![new_update_multi.clone()];
-    let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
-
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
     let new_next_multi = jwk.to_multibase().expect("should get multibase");
-
-    let new_next_keys = vec![new_next_multi.clone()];
-    let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
 
     let id_entry =
         Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
@@ -236,14 +226,12 @@ async fn update_then_deactivate() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: new_update_multi,
-    })
-    .key_id(&did, VmKeyId::Authorization(id_multi))
-    .expect("should apply key ID")
-    .method_type(&MethodType::Ed25519VerificationKey2020)
-    .expect("should apply method type")
-    .build();
+    let vm = VerificationMethodBuilder::new(new_update_multi.clone())
+        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .expect("should apply key ID")
+        .method_type(&MethodType::Ed25519VerificationKey2020)
+        .expect("should apply method type")
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     // Add another reference-based verification method as a for-instance.
@@ -265,7 +253,7 @@ async fn update_then_deactivate() {
         .expect("should create builder")
         .document(&doc)
         .expect("should apply document")
-        .rotate_keys(&new_update_keys, &new_next_keys)
+        .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
         .expect("should rotate keys on builder")
         .signer(&signer)
         .build()

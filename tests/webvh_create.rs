@@ -7,7 +7,7 @@ use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
@@ -35,14 +35,12 @@ async fn create_success() {
 
     let did = default_did(domain_and_path).expect("should get default DID");
 
-    let vm = VerificationMethodBuilder::new(&KeyFormat::Multibase {
-        public_key_multibase: update_multi.clone(),
-    })
-    .key_id(&did, VmKeyId::Authorization(id_multi))
-    .expect("should apply key ID")
-    .method_type(&MethodType::Ed25519VerificationKey2020)
-    .expect("should apply method type")
-    .build();
+    let vm = VerificationMethodBuilder::new(update_multi.clone())
+        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .expect("should apply key ID")
+        .method_type(&MethodType::Ed25519VerificationKey2020)
+        .expect("should apply method type")
+        .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
