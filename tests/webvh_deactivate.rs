@@ -11,7 +11,7 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 
 // Test the happy path of creating then deactivating a `did:webvh` document and
 // log entries. Should just work without errors.

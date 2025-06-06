@@ -1,12 +1,11 @@
 //! Verification and validation functions for `did:webvh` log entries and
 //! information referenced in the log parameters.
 
-use super::{DidLogEntry, Witness, WitnessEntry};
-
 use anyhow::bail;
 use credibil_jose::PublicKeyJwk;
 use sha2::Digest;
 
+use super::{DidLogEntry, Witness, WitnessEntry};
 use crate::proof::w3c::Proof;
 
 /// Verify the controller's proofs in a log entry.

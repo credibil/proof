@@ -10,7 +10,7 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 
 // Construct a log with a single entry and make sure it resolves to a DID document.
 #[tokio::test]

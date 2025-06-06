@@ -11,10 +11,8 @@ use chrono::{DateTime, Utc};
 use multibase::Base;
 use sha2::Digest;
 
-use super::{
-    DidLogEntry, SCID_PLACEHOLDER, WitnessEntry,
-    verify::{verify_proofs, verify_witness},
-};
+use super::verify::{verify_proofs, verify_witness};
+use super::{DidLogEntry, SCID_PLACEHOLDER, WitnessEntry};
 use crate::did::{Document, DocumentMetadataBuilder, QueryParams, Url};
 use crate::{Identity, IdentityResolver};
 
@@ -28,7 +26,6 @@ impl Url {
     /// Will fail if the DID URL is invalid.
     ///
     /// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
-    ///
     pub fn to_webvh_http(&self) -> anyhow::Result<String> {
         // 1. Remove the literal `did:webvh:` prefix from the DID URL.
         let scid_and_fqdn = self.id.clone();

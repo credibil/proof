@@ -8,10 +8,8 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-use std::{
-    fmt::{Display, Formatter},
-    str::FromStr,
-};
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 use anyhow::anyhow;
 
@@ -27,7 +25,7 @@ pub use document::{
     PublicKeyFormat, Service, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
     VmKeyId,
 };
-pub use resolve::{dereference, deref_url, document_resource, Resource};
+pub use resolve::{Resource, deref_url, dereference, document_resource};
 pub use url::{QueryParams, Url};
 
 // TODO: set context based on key format:

@@ -1,13 +1,15 @@
 //! Update operation
 
+use axum::Json;
 use axum::extract::State;
-use axum::{Json, http::StatusCode};
-use axum_extra::{TypedHeader, headers::Host};
+use axum::http::StatusCode;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Host;
 use credibil_identity::core::Kind;
+use credibil_identity::did::webvh::{UpdateBuilder, UpdateResult, resolve_log};
 use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, VerificationMethod,
     VerificationMethodBuilder, VmKeyId,
-    webvh::{UpdateBuilder, UpdateResult, resolve_log},
 };
 use serde::{Deserialize, Serialize};
 

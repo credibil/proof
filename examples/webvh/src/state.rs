@@ -1,7 +1,7 @@
 //! Application state
 use std::sync::Arc;
 
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 use tokio::sync::Mutex;
 
 use crate::log::Log;

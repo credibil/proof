@@ -1,5 +1,5 @@
 //! # W3C Data Integrity Proof
-//! 
+//!
 //! [W3C Data Integrity 1.0 Report](https://www.w3.org/community/reports/credentials/CG-FINAL-data-integrity-20220722)
 
 use std::convert::Infallible;
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Enveloping proofs are implemented using JOSE and COSE, while embedded proofs
 /// are implemented using the `Proof` object described here.
-/// 
+///
 /// The `proof_value` field is required and its value is computed using a
 /// cryptosuite algorithm as specified in
 /// [Data Integrity EdDSA Cryptosuites v1.0](https://www.w3.org/TR/vc-di-eddsa).
@@ -80,7 +80,7 @@ pub struct Proof {
     /// Contains the data needed to verify the proof using the
     /// verificationMethod specified. MUST be a MULTIBASE-encoded binary
     /// value.
-    /// 
+    ///
     /// This field is required for on a proof object and should be omitted on
     /// a proof configuration object.
     #[serde(skip_serializing_if = "Option::is_none")]

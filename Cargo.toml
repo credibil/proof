@@ -82,9 +82,7 @@ multibase = "0.9.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 sha2 = "0.10.9"
-test-kms = { git = "https://github.com/credibil/se.git" }
 
 [patch."https://github.com/credibil/se"]
 credibil-ecc = { path = "../se/ecc" }
 credibil-jose = { path = "../se/jose" }
-test-kms = { path = "../se/crates/test-kms" }

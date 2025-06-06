@@ -11,8 +11,8 @@ use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 use super::document::{Document, Service, VerificationMethod};
-use super::{key, Method, web, webvh};
 use super::url::Url;
+use super::{Method, key, web, webvh};
 use crate::IdentityResolver;
 
 /// Dereference a DID URL into a resource.

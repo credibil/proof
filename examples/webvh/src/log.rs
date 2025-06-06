@@ -1,18 +1,17 @@
-
 use std::collections::HashMap;
 
 use credibil_identity::did::webvh::DidLog;
 
 #[derive(Clone, Debug)]
 pub struct Log {
-    entries: HashMap<String, DidLog>
+    entries: HashMap<String, DidLog>,
 }
 
 impl Log {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            entries: HashMap::new()
+            entries: HashMap::new(),
         }
     }
 

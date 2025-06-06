@@ -5,7 +5,7 @@ use credibil_identity::did::{
     DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, ServiceBuilder, VerificationMethod,
     VerificationMethodBuilder, VmKeyId, web,
 };
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 
 // Test the happy path of creating a new `did:web` document. Should just work
 // without errors.

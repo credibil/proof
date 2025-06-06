@@ -1,10 +1,13 @@
 //! Deactivate operation
 
-use axum::{extract::State, http::StatusCode};
-use axum_extra::{TypedHeader, headers::Host};
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Host;
 use credibil_identity::did::webvh::{DeactivateBuilder, DeactivateResult};
 
-use crate::{AppError, AppJson, state::AppState};
+use crate::state::AppState;
+use crate::{AppError, AppJson};
 
 // Handler to deactivate a DID document
 #[axum::debug_handler]

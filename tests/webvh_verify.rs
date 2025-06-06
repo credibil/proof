@@ -9,7 +9,7 @@ use credibil_identity::did::{
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 
 // Create a minimal document and then verify the proof. Should verify without
 // errors.

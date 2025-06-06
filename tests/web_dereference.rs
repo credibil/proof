@@ -3,9 +3,11 @@
 use std::str::FromStr;
 
 use credibil_identity::core::Kind;
-use credibil_identity::did::{document_resource, web, DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, Resource, ServiceBuilder, Url, VerificationMethod, VerificationMethodBuilder, VmKeyId
+use credibil_identity::did::{
+    DocumentBuilder, KeyPurpose, MethodType, PublicKeyFormat, Resource, ServiceBuilder, Url,
+    VerificationMethod, VerificationMethodBuilder, VmKeyId, document_resource, web,
 };
-use kms::Keyring;
+use kms::KeyringExt as Keyring;
 
 // Create a new `did:web` document and dereference a resource from it.
 #[tokio::test]
@@ -16,12 +18,14 @@ async fn create_then_deref() {
 
     let mut signer = Keyring::new("web_create_then_deref").await.expect("should create keyring");
     let vk = signer.jwk("signing").await.expect("should get signing key");
-    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk { public_key_jwk: vk.clone() })
-        .key_id(&did, VmKeyId::Index("key".to_string(), 0))
-        .expect("should apply key ID")
-        .method_type(&MethodType::JsonWebKey2020)
-        .expect("should apply method type")
-        .build();
+    let vm = VerificationMethodBuilder::new(&PublicKeyFormat::PublicKeyJwk {
+        public_key_jwk: vk.clone(),
+    })
+    .key_id(&did, VmKeyId::Index("key".to_string(), 0))
+    .expect("should apply key ID")
+    .method_type(&MethodType::JsonWebKey2020)
+    .expect("should apply method type")
+    .build();
     let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("{did}#whois"))
@@ -42,7 +46,7 @@ async fn create_then_deref() {
         panic!("should be a verification method");
     };
 
-    let PublicKeyFormat::PublicKeyJwk{ public_key_jwk } = deref_vm.key else {
+    let PublicKeyFormat::PublicKeyJwk { public_key_jwk } = deref_vm.key else {
         panic!("should be a JWK");
     };
     assert_eq!(public_key_jwk.x, vk.x);

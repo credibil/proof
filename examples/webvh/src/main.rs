@@ -10,18 +10,18 @@ mod resolve;
 mod state;
 mod update;
 
+use axum::Router;
+use axum::extract::FromRequest;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
-use axum::{Router, extract::FromRequest};
 use serde::{Deserialize, Serialize};
+use state::AppState;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-
-use state::AppState;
 
 #[tokio::main]
 async fn main() {

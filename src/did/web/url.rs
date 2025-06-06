@@ -19,7 +19,6 @@ use url::Url;
 ///
 /// Will return an error if the url is not a valid URL or a host cannot be
 /// parsed.
-///
 pub fn parse_url(url: &str) -> anyhow::Result<String> {
     let url = Url::parse(url)?;
     let Some(host_str) = url.host_str() else {
@@ -43,12 +42,12 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
 ///
 /// The provided url should be a valid HTTP URL. See `parse_url` for more
 /// information.
-/// 
+///
 /// The output is a `did:web` DID with the path converted from the provided HTTP
 /// URL.
 ///
 /// # Errors
-/// 
+///
 /// Will return an error if the url is not a valid URL or a host cannot be
 /// parsed.
 pub fn default_did(url: &str) -> anyhow::Result<String> {
