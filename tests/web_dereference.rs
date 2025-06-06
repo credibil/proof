@@ -30,14 +30,14 @@ async fn create_then_deref() {
         .expect("should apply method type")
         .build();
 
-    let service = ServiceBuilder::new(&format!("{did}#whois"))
+    let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
     let url = Url::from_str(&vm.id).expect("should parse DID");
 

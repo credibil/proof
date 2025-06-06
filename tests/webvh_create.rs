@@ -41,14 +41,14 @@ async fn create_success() {
         .expect("should apply method type")
         .build();
 
-    let service = ServiceBuilder::new(&format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
+    let service = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
 
     let next_key = signer.next_key().await.expect("should get next key");

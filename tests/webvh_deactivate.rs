@@ -42,15 +42,15 @@ async fn create_then_deactivate() {
         .expect("should apply method type")
         .build();
 
-    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+    let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
 
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
 
     let next_key = signer.next_key().await.expect("should get next key");
@@ -144,15 +144,15 @@ async fn update_then_deactivate() {
         .expect("should apply method type")
         .build();
 
-    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+    let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
 
     let doc = DocumentBuilder::new(&did)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
 
     let next_key = signer.next_key().await.expect("should get next key");
@@ -224,7 +224,7 @@ async fn update_then_deactivate() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .key_id(did, VmKeyId::Authorization(id_multi))
         .expect("should apply key ID")
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
@@ -235,7 +235,7 @@ async fn update_then_deactivate() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(&doc)
+    let doc = DocumentBuilder::from(doc)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_verification_method(Kind::String(auth_vm.clone().id), &KeyPurpose::Authentication)

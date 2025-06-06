@@ -28,17 +28,16 @@ async fn create_success() {
         .method_type(&MethodType::JsonWebKey2020)
         .expect("should apply method type")
         .build();
-
-    let service = ServiceBuilder::new(&format!("{did}#whois"))
+    let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
+
     let json_doc = serde_json::to_string_pretty(&doc).expect("should serialize document");
     print!("{json_doc}");
 }

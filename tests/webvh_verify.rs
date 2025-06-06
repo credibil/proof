@@ -39,7 +39,7 @@ async fn simple_proof() {
         .expect("should apply method type")
         .build();
 
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .build();
@@ -85,16 +85,14 @@ async fn complex_proof() {
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
         .build();
-
-    let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
+    let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint_str("https://example.com/.well-known/whois")
+        .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
-
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_service(&service)
+        .add_service(service)
         .build();
 
     let next_key = signer.next_key().await.expect("should get next key");

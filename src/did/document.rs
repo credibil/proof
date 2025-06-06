@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
 use credibil_ecc::{PublicKey, X25519_CODEC, derive_x25519_public};
@@ -57,7 +57,7 @@ impl Display for KeyPurpose {
 impl FromStr for KeyPurpose {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "verificationMethod" => Ok(Self::VerificationMethod),
             "authentication" => Ok(Self::Authentication),
@@ -205,9 +205,9 @@ pub struct DocumentBuilder {
 impl DocumentBuilder {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
-    pub fn new(did: &str) -> Self {
+    pub fn new(did: impl Into<String>) -> Self {
         let doc = Document {
-            id: did.to_string(),
+            id: did.into(),
             ..Document::default()
         };
         Self {
@@ -218,9 +218,9 @@ impl DocumentBuilder {
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub fn from(doc: &Document) -> Self {
+    pub const fn from(doc: Document) -> Self {
         Self {
-            doc: doc.clone(),
+            doc,
             op: DocumentBuilderOperation::Update,
         }
     }
@@ -258,7 +258,7 @@ impl DocumentBuilder {
     ///
     /// # Errors
     /// Will fail if the controller is not found.
-    pub fn remove_controller(mut self, controller: &str) -> anyhow::Result<Self> {
+    pub fn remove_controller(mut self, controller: &str) -> Result<Self> {
         match self.doc.controller {
             Some(c) => match c {
                 OneMany::One(cont) => {
@@ -288,8 +288,8 @@ impl DocumentBuilder {
     ///
     /// Chain to add multiple service endpoints.
     #[must_use]
-    pub fn add_service(mut self, service: &Service) -> Self {
-        self.doc.service.get_or_insert(vec![]).push(service.clone());
+    pub fn add_service(mut self, service: Service) -> Self {
+        self.doc.service.get_or_insert(vec![]).push(service);
         self
     }
 
@@ -297,7 +297,7 @@ impl DocumentBuilder {
     ///
     /// # Errors
     /// Will fail if no service with the supplied ID is found.
-    pub fn remove_service(mut self, service_id: &str) -> anyhow::Result<Self> {
+    pub fn remove_service(mut self, service_id: &str) -> Result<Self> {
         if let Some(services) = &mut self.doc.service {
             if let Some(pos) = services.iter().position(|s| s.id == service_id) {
                 services.remove(pos);
@@ -323,7 +323,7 @@ impl DocumentBuilder {
     ///
     /// # Errors
     /// Will fail if the context is not found.
-    pub fn remove_context(mut self, context: &Kind<Value>) -> anyhow::Result<Self> {
+    pub fn remove_context(mut self, context: &Kind<Value>) -> Result<Self> {
         if let Some(pos) = self.doc.context.iter().position(|c| c == context) {
             self.doc.context.remove(pos);
         } else {
@@ -346,7 +346,7 @@ impl DocumentBuilder {
     /// standalone verification method is not used.
     pub fn add_verification_method(
         mut self, vm_kind: Kind<VerificationMethod>, purpose: &KeyPurpose,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self> {
         // let vm_kind = Kind::Object(vm);
 
         match purpose {
@@ -403,12 +403,10 @@ impl DocumentBuilder {
     /// # Errors
     /// Will fail if the JWK cannot be converted to a multibase string or if the
     /// conversion from `Ed25519` to `X25519` fails.
-    pub fn add_verifying_key(
-        mut self, jwk: &PublicKeyJwk, key_agreement: bool,
-    ) -> anyhow::Result<Self> {
+    pub fn add_verifying_key(mut self, jwk: &PublicKeyJwk, key_agreement: bool) -> Result<Self> {
         let vk = jwk.to_multibase()?;
         let vm = VerificationMethodBuilder::new(vk)
-            .key_id(&self.did(), VmKeyId::Index("key".to_string(), 0))?
+            .key_id(self.did(), VmKeyId::Index("key".to_string(), 0))?
             .method_type(&MethodType::Ed25519VerificationKey2020)?
             .build();
         self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
@@ -423,7 +421,7 @@ impl DocumentBuilder {
     ///
     /// # Errors
     /// Will fail if no verification method with the supplied ID is found.
-    pub fn remove_verification_method(mut self, vm_id: &str) -> anyhow::Result<Self> {
+    pub fn remove_verification_method(mut self, vm_id: &str) -> Result<Self> {
         let mut found = false;
         if let Some(auths) = &mut self.doc.authentication {
             if let Some(pos) = auths.iter().position(|vm| match vm {
@@ -501,7 +499,7 @@ impl DocumentBuilder {
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place. An error is also returned if there is no
     /// existing verification method with the given ID.
-    pub fn derive_key_agreement(mut self, vm_id: &str) -> anyhow::Result<Self> {
+    pub fn derive_key_agreement(mut self, vm_id: &str) -> Result<Self> {
         let vm = self
             .doc
             .get_verification_method(vm_id)
@@ -633,21 +631,10 @@ impl ServiceBuilder<WithoutType, WithoutEndpoint> {
 impl ServiceBuilder<WithType, WithoutEndpoint> {
     /// Specify a string-based service endpoint.
     #[must_use]
-    pub fn endpoint_str(
-        &self, endpoint: impl Into<String>,
+    pub fn endpoint(
+        &self, endpoint: impl Into<Kind<Value>>,
     ) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = Kind::String(endpoint.into());
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: self.service_type.clone(),
-            endpoint: WithEndpoint(vec![ep]),
-        }
-    }
-
-    /// Specify a JSON-based service endpoint.
-    #[must_use]
-    pub fn endpoint_json(&self, endpoint: &Value) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = Kind::Object(endpoint.clone());
+        let ep = endpoint.into();
         ServiceBuilder {
             id: self.id.clone(),
             service_type: self.service_type.clone(),
@@ -743,7 +730,7 @@ impl VerificationMethod {
     /// If the conversion from `Ed25519` to `X25519` fails, an error will be
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place.
-    pub fn derive_key_agreement(&self) -> anyhow::Result<Self> {
+    pub fn derive_key_agreement(&self) -> Result<Self> {
         if self.type_ != MethodType::Ed25519VerificationKey2020 {
             bail!("verification method is not an Ed25519 public key");
         }
@@ -765,7 +752,7 @@ impl VerificationMethod {
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
         let vm = VerificationMethodBuilder::new(multikey)
-            .key_id(&self.did(), VmKeyId::Did)?
+            .key_id(self.did(), VmKeyId::Did)?
             .method_type(&MethodType::X25519KeyAgreementKey2020)?
             .build();
 
@@ -798,26 +785,28 @@ impl VerificationMethodBuilder {
     ///
     /// Will fail if the ID type requires a multibase value but construction of
     /// that value fails.
-    pub fn key_id(mut self, did: &str, id_type: VmKeyId) -> anyhow::Result<Self> {
-        self.did = did.to_string();
+    pub fn key_id(mut self, did: impl Into<String>, id_type: VmKeyId) -> Result<Self> {
+        self.did = did.into();
+
         match id_type {
             VmKeyId::Did => {
                 self.kid.clone_from(&self.did);
             }
             VmKeyId::Authorization(auth_key) => {
-                self.kid = format!("{did}#{auth_key}");
+                self.kid = format!("{}#{auth_key}", self.did);
             }
             VmKeyId::Verification => {
                 let mb = match &self.vm_key {
                     KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
                     KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
                 };
-                self.kid = format!("{did}#{mb}");
+                self.kid = format!("{}#{mb}", self.did);
             }
             VmKeyId::Index(prefix, index) => {
-                self.kid = format!("{did}#{prefix}{index}");
+                self.kid = format!("{}#{prefix}{index}", self.did);
             }
         }
+
         Ok(self)
     }
 
@@ -828,7 +817,7 @@ impl VerificationMethodBuilder {
     ///
     /// # Errors
     /// Will fail if required format does not match the provided key format.
-    pub fn method_type(mut self, mtype: &MethodType) -> anyhow::Result<Self> {
+    pub fn method_type(mut self, mtype: &MethodType) -> Result<Self> {
         match &self.vm_key {
             KeyFormat::Jwk { .. } => {
                 if !matches!(
@@ -926,7 +915,7 @@ impl KeyFormat {
     /// # Errors
     /// Will return an error if the key is multibase encoded and cannot be
     /// decoded.
-    pub fn jwk(&self) -> anyhow::Result<PublicKeyJwk> {
+    pub fn jwk(&self) -> Result<PublicKeyJwk> {
         match self {
             Self::Jwk { public_key_jwk } => Ok(public_key_jwk.clone()),
             Self::Multibase { public_key_multibase } => {
@@ -940,7 +929,7 @@ impl KeyFormat {
     /// # Errors
     /// Will return an error if the key is a JWK and cannot be encoded as a
     /// multibase string.
-    pub fn multibase(&self) -> anyhow::Result<String> {
+    pub fn multibase(&self) -> Result<String> {
         match self {
             Self::Jwk { public_key_jwk } => public_key_jwk.to_multibase(),
             Self::Multibase { public_key_multibase } => Ok(public_key_multibase.clone()),

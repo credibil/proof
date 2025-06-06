@@ -56,7 +56,7 @@ pub async fn create(
     // Could add other verification methods and service endpoints to the
     // `CreateRequest` and build them here.
 
-    let doc = DocumentBuilder::new(&did)
+    let doc = DocumentBuilder::new(did)
         .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)?
         .build();
 

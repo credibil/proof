@@ -64,7 +64,7 @@ pub async fn update(
         ));
     };
     let current_doc = resolve_log(&did_log, None, None).await?;
-    let mut db = DocumentBuilder::from(&current_doc);
+    let mut db = DocumentBuilder::from(current_doc.clone());
 
     // Create a new verification method.
     let vm = VerificationMethodBuilder::new(update_multi.clone())
