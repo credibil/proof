@@ -345,18 +345,20 @@ impl DocumentBuilder {
     /// If this method is used for key agreement, an error will occur if a
     /// standalone verification method is not used.
     pub fn add_verification_method(
-        mut self, vm: &Kind<VerificationMethod>, purpose: &KeyPurpose,
+        mut self, vm_kind: Kind<VerificationMethod>, purpose: &KeyPurpose,
     ) -> anyhow::Result<Self> {
+        // let vm_kind = Kind::Object(vm);
+
         match purpose {
             KeyPurpose::Authentication => {
-                self.doc.authentication.get_or_insert(vec![]).push(vm.clone());
+                self.doc.authentication.get_or_insert(vec![]).push(vm_kind.clone());
             }
             KeyPurpose::AssertionMethod => {
-                self.doc.assertion_method.get_or_insert(vec![]).push(vm.clone());
+                self.doc.assertion_method.get_or_insert(vec![]).push(vm_kind.clone());
             }
-            KeyPurpose::KeyAgreement => match vm {
-                Kind::Object(vm) => {
-                    self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm.clone()));
+            KeyPurpose::KeyAgreement => match vm_kind {
+                Kind::Object(_) => {
+                    self.doc.key_agreement.get_or_insert(vec![]).push(vm_kind.clone());
                 }
                 Kind::String(_) => {
                     bail!(
@@ -365,14 +367,14 @@ impl DocumentBuilder {
                 }
             },
             KeyPurpose::CapabilityInvocation => {
-                self.doc.capability_invocation.get_or_insert(vec![]).push(vm.clone());
+                self.doc.capability_invocation.get_or_insert(vec![]).push(vm_kind.clone());
             }
             KeyPurpose::CapabilityDelegation => {
-                self.doc.capability_delegation.get_or_insert(vec![]).push(vm.clone());
+                self.doc.capability_delegation.get_or_insert(vec![]).push(vm_kind.clone());
             }
-            KeyPurpose::VerificationMethod => match vm {
+            KeyPurpose::VerificationMethod => match vm_kind {
                 Kind::Object(vm) => {
-                    self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
+                    self.doc.verification_method.get_or_insert(vec![]).push(vm);
                 }
                 Kind::String(_) => {
                     bail!("verification method must be a standalone verification method");

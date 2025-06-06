@@ -71,8 +71,7 @@ pub async fn update(
         .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))?
         .method_type(&MethodType::Ed25519VerificationKey2020)?
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
-    db = db.add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?;
+    db = db.add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)?;
 
     // Add a reference-based verification method if requested.
     if let Some(purpose) = req.add {
@@ -83,7 +82,7 @@ pub async fn update(
             }
             _ => {
                 let ref_vm = Kind::<VerificationMethod>::String(vm.id.clone());
-                db = db.add_verification_method(&ref_vm, &purpose)?;
+                db = db.add_verification_method(ref_vm, &purpose)?;
             }
         }
     }

@@ -7,8 +7,7 @@ use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight, default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
-    VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -42,7 +41,6 @@ async fn update_success() {
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -50,7 +48,7 @@ async fn update_success() {
         .build();
 
     let doc = DocumentBuilder::new(&did)
-        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
         .build();
@@ -129,18 +127,16 @@ async fn update_success() {
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     // Add a reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");
-    let vm = vm_list.first().expect("should get first verification method");
-    let auth_vm = Kind::<VerificationMethod>::String(vm.id.clone());
+    let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
     let doc = DocumentBuilder::from(&doc)
-        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(Kind::Object(vm.clone()), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
-        .add_verification_method(&auth_vm, &KeyPurpose::Authentication)
+        .add_verification_method(Kind::String(auth_vm.id.clone()), &KeyPurpose::Authentication)
         .expect("should add verification method")
         .build();
 

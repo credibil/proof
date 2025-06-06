@@ -7,8 +7,7 @@ use credibil_identity::did::webvh::{
     CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did,
 };
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
-    VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -41,14 +40,13 @@ async fn create_success() {
         .method_type(&MethodType::Ed25519VerificationKey2020)
         .expect("should apply method type")
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
         .service_type("LinkedVerifiablePresentation")
         .endpoint_str("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(&did)
-        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
         .build();

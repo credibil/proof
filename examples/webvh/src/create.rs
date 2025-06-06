@@ -8,8 +8,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyPurpose, MethodType, VerificationMethod,
-    VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyPurpose, MethodType, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
@@ -51,7 +50,6 @@ pub async fn create(
         .key_id(&did, VmKeyId::Authorization(id_multi))?
         .method_type(&MethodType::Ed25519VerificationKey2020)?
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     tracing::debug!("keys established");
 
@@ -59,7 +57,7 @@ pub async fn create(
     // `CreateRequest` and build them here.
 
     let doc = DocumentBuilder::new(&did)
-        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)?
+        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)?
         .build();
 
     let result = CreateBuilder::new()

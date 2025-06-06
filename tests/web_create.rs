@@ -3,8 +3,8 @@
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::core::Kind;
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethod,
-    VerificationMethodBuilder, VmKeyId, web,
+    DocumentBuilder, KeyPurpose, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -28,7 +28,6 @@ async fn create_success() {
         .method_type(&MethodType::JsonWebKey2020)
         .expect("should apply method type")
         .build();
-    let vm_kind = Kind::<VerificationMethod>::Object(vm.clone());
 
     let service = ServiceBuilder::new(&format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
@@ -36,7 +35,7 @@ async fn create_success() {
         .build();
 
     let doc = DocumentBuilder::new(&did)
-        .add_verification_method(&vm_kind, &KeyPurpose::VerificationMethod)
+        .add_verification_method(Kind::Object(vm), &KeyPurpose::VerificationMethod)
         .expect("should apply verification method")
         .add_service(&service)
         .build();
