@@ -22,9 +22,9 @@ pub async fn create(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
     Json(_req): Json<CreateRequest>,
 ) -> Result<AppJson<CreateResult>, AppError> {
-    const DID_URL:&str = format!("http://{host}");
+    let did_url = format!("http://{host}");
 
-    tracing::debug!("creating DID log document for {DID_URL}");
+    tracing::debug!("creating DID log document for {did_url}");
 
     let vault = state.vault;
     let signer = Keyring::generate(&vault, "wvhd", "signing", Curve::Ed25519).await?;
@@ -37,7 +37,7 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
     let id_multi = jwk.to_multibase()?;
 
-    let did = default_did(&DID_URL)?;
+    let did = default_did(&did_url)?;
 
     let next_key = signer.next_key().await?;
     let jwk = PublicKeyJwk::from_bytes(&next_key)?;
@@ -46,7 +46,7 @@ pub async fn create(
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()?;
 
     tracing::debug!("keys established");
@@ -65,7 +65,7 @@ pub async fn create(
 
     // Store the log in app state
     let mut log = state.log.lock().await;
-    log.add_log(&DID_URL, result.log.clone())?;
+    log.add_log(&did_url, result.log.clone())?;
 
     Ok(AppJson(result))
 }

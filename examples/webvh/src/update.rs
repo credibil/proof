@@ -30,9 +30,9 @@ pub async fn update(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
     Json(req): Json<UpdateRequest>,
 ) -> Result<AppJson<UpdateResult>, AppError> {
-    const DID_URL:&str = format!("http://{host}");
+    let did_url = format!("http://{host}");
 
-    tracing::debug!("updating DID log document for {DID_URL}, with request: {req:?}");
+    tracing::debug!("updating DID log document for {did_url}, with request: {req:?}");
 
     let vault = state.vault;
     let signer = Keyring::entry(&vault, "issuer", "signer").await?;
@@ -56,7 +56,7 @@ pub async fn update(
     // Resolve the latest DID document from the log and start building the
     // update.
     let mut log = state.log.lock().await;
-    let Some(did_log) = log.get_log(&DID_URL) else {
+    let Some(did_log) = log.get_log(&did_url) else {
         return Err(AppError::Status(
             StatusCode::NOT_FOUND,
             "No existing log found to update. Use create to get started.".into(),
@@ -69,7 +69,7 @@ pub async fn update(
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&current_doc.id)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()?;
     db = db.verification_method(vm.clone());
 
@@ -103,7 +103,7 @@ pub async fn update(
         .await?;
 
     // Store the log in app state
-    log.add_log(&DID_URL, result.log.clone())?;
+    log.add_log(&did_url, result.log.clone())?;
 
     Ok(AppJson(result))
 }

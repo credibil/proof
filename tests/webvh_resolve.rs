@@ -15,7 +15,7 @@ use test_utils::Vault;
 // Construct a log with a single entry and make sure it resolves to a DID document.
 #[tokio::test]
 async fn resolve_single() {
-    const DID_URL:&str = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     // let mut signer = Keyring::new("wrs").await.expect("should create keyring");
     // let update_multi = signer.multibase("signing").await.expect("should get multibase key");
@@ -36,7 +36,7 @@ async fn resolve_single() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -126,7 +126,7 @@ async fn resolve_single() {
 async fn resolve_multiple() {
     // --- Create --------------------------------------------------------------
 
-    const DID_URL:&str = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer =
         Keyring::generate(&Vault, "wrm", "signing", Curve::Ed25519).await.expect("should generate");
@@ -145,7 +145,7 @@ async fn resolve_multiple() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -230,7 +230,7 @@ async fn resolve_multiple() {
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .did(did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -291,7 +291,7 @@ async fn resolve_multiple() {
 async fn resolve_deactivated() {
     // --- Create --------------------------------------------------------------
 
-    const DID_URL:&str = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer =
         Keyring::generate(&Vault, "wrd", "signing", Curve::Ed25519).await.expect("should generate");
@@ -310,7 +310,7 @@ async fn resolve_deactivated() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -396,7 +396,7 @@ async fn resolve_deactivated() {
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .did(did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 

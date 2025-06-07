@@ -25,7 +25,7 @@ async fn create_then_deref() {
     let vm = VerificationMethodBuilder::new(jwk.clone())
         .did(&did)
         .key_id(KeyId::Index("key-0".to_string()))
-        .method_type(MethodType::JsonWebKey2020)
+        .method_type(MethodType::JsonWebKey)
         .build()
         .expect("should build");
 

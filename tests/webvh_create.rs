@@ -36,7 +36,7 @@ async fn create_success() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(auth_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
     let svc = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))

@@ -8,9 +8,8 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use anyhow::{Result, anyhow, bail};
-use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::{DateTime, Utc};
-use credibil_ecc::{PublicKey, X25519_CODEC, derive_x25519_public};
+use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC, derive_x25519_public};
 use credibil_jose::PublicKeyJwk;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
@@ -737,17 +736,20 @@ impl VerificationMethod {
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place.
     pub fn derive_key_agreement(&self) -> Result<Self> {
-        if self.type_ != MethodType::Ed25519VerificationKey2020 {
-            bail!("verification method is not an Ed25519 public key");
+        let KeyFormat::Multibase { public_key_multibase } = &self.key else {
+            return Err(anyhow!("not a multibase key"));
+        };
+        let (base, multi_bytes) = multibase::decode(public_key_multibase)
+            .map_err(|e| anyhow!("failed to decode multibase key: {e}"))?;
+
+        if base != Base::Base58Btc {
+            return Err(anyhow!("multibase base is not Base58Btc"));
+        }
+        if multi_bytes[0..ED25519_CODEC.len()] != ED25519_CODEC {
+            return Err(anyhow!("key is not an Ed25519 key"));
         }
 
-        let jwk = match &self.key {
-            KeyFormat::Jwk { public_key_jwk } => public_key_jwk.clone(),
-            KeyFormat::Multibase { public_key_multibase } => {
-                PublicKeyJwk::from_multibase(public_key_multibase)?
-            }
-        };
-        let key_bytes = Base64UrlUnpadded::decode_vec(&jwk.x)?;
+        let key_bytes = multi_bytes[ED25519_CODEC.len()..].to_vec();
         let pub_key = PublicKey::from_slice(&key_bytes)?;
         let x25519_key = derive_x25519_public(&pub_key)?;
 
@@ -759,7 +761,7 @@ impl VerificationMethod {
 
         let vm = VerificationMethodBuilder::new(multikey)
             .did(self.did())
-            .method_type(MethodType::X25519KeyAgreementKey2020)
+            .method_type(MethodType::Multikey)
             .build()?;
 
         Ok(vm)
@@ -835,20 +837,13 @@ impl VerificationMethodBuilder {
 
         match &self.key {
             KeyFormat::Jwk { .. } => {
-                if !matches!(self.method_type, MethodType::JsonWebKey2020) {
-                    bail!("JWK key format only supports JsonWebKey2020");
+                if self.method_type != MethodType::JsonWebKey {
+                    bail!("JWK key format only supports JsonWebKey");
                 }
             }
             KeyFormat::Multibase { .. } => {
-                if !matches!(
-                    self.method_type,
-                    MethodType::Multikey
-                        | MethodType::Ed25519VerificationKey2020
-                        | MethodType::X25519KeyAgreementKey2020
-                ) {
-                    bail!(
-                        "Multibase key format only supports Multikey, Ed25519VerificationKey2020 and X25519KeyAgreementKey2020"
-                    );
+                if self.method_type != MethodType::Multikey {
+                    bail!("Multibase key format only supports Multikey");
                 }
             }
         }
@@ -957,35 +952,25 @@ impl From<String> for KeyFormat {
     }
 }
 
-/// Verification method types supported by this library. SHOULD be registered in
-/// the [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
+/// Verification method types supported by this library.
+///
+/// See https://www.w3.org/TR/cid-1.0/#verification-methods.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum MethodType {
-    /// Generic Multi-key format.
+    /// The Multikey verification method encodes key types into a Multibase value.
     #[default]
     Multikey,
 
-    /// `ED25519` Verification key, version 2020.
-    Ed25519VerificationKey2020,
-
-    /// `X25519` Key Agreement Key, version 2020.
-    X25519KeyAgreementKey2020,
-
-    /// JSON Web Key (JWK), version 2020.
-    JsonWebKey2020,
-    //
-    // /// Secp256k1 Verification Key, version 2019.
-    // EcdsaSecp256k1VerificationKey2019,
+    /// The JSON Web Key verification method encodes key types into JWK format.
+    JsonWebKey,
 }
 
 impl Display for MethodType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Multikey => write!(f, "Multikey"),
-            Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
-            Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
-            Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
+            Self::JsonWebKey => write!(f, "JsonWebKey"),
         }
     }
 }

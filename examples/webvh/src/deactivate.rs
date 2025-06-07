@@ -16,9 +16,9 @@ use crate::{AppError, AppJson};
 pub async fn deactivate(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
 ) -> Result<AppJson<DeactivateResult>, AppError> {
-    const DID_URL:&str = format!("http://{host}");
+    let did_url = format!("http://{host}");
 
-    tracing::debug!("deactivating DID log document for {DID_URL}");
+    tracing::debug!("deactivating DID log document for {did_url}");
 
     let vault = state.vault;
     let signer = Keyring::entry(&vault, "issuer", "signer").await?;
@@ -42,7 +42,7 @@ pub async fn deactivate(
     // Resolve the latest DID document from the log and start building the
     // deactivation.
     let mut log = state.log.lock().await;
-    let Some(did_log) = log.get_log(&DID_URL) else {
+    let Some(did_log) = log.get_log(&did_url) else {
         return Err(AppError::Status(
             StatusCode::NOT_FOUND,
             "No existing log found to deactivate. Use create to get started.".into(),
@@ -56,7 +56,7 @@ pub async fn deactivate(
         .await?;
 
     // Store the log in app state
-    log.add_log(&DID_URL, result.log.clone())?;
+    log.add_log(&did_url, result.log.clone())?;
 
     Ok(AppJson(result))
 }

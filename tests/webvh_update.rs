@@ -37,7 +37,7 @@ async fn update_success() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -123,7 +123,7 @@ async fn update_success() {
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .did(did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Ed25519VerificationKey2020)
+        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
