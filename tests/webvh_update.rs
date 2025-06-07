@@ -18,7 +18,7 @@ use test_utils::Vault;
 async fn update_success() {
     // --- Create --------------------------------------------------------------
 
-    let domain_and_path = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer =
         Keyring::generate(&Vault, "wu", "signing", Curve::Ed25519).await.expect("should generate");
@@ -32,7 +32,7 @@ async fn update_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(DID_URL).expect("should create DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)

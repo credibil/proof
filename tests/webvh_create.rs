@@ -16,7 +16,7 @@ use test_utils::Vault;
 // entry. Should just work without errors.
 #[tokio::test]
 async fn create_success() {
-    let domain_and_path = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer = Keyring::generate(&Vault, "wvhc", "signing", Curve::Ed25519)
         .await
@@ -25,17 +25,17 @@ async fn create_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let update_multi = jwk.to_multibase().expect("should get multibase");
 
-    let id_entry =
+    let auth_entry =
         Keyring::generate(&Vault, "wvhc", "id", Curve::Ed25519).await.expect("should generate");
-    let verifying_key = id_entry.verifying_key().await.expect("should get key");
+    let verifying_key = auth_entry.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
-    let id_multi = jwk.to_multibase().expect("should get key");
+    let auth_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(DID_URL).expect("should create DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
+        .key_id(KeyId::Authorization(auth_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");

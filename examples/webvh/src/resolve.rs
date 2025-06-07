@@ -15,12 +15,12 @@ use crate::{AppError, AppJson};
 // Handler to read the DID log file (from memory in our case).
 #[axum::debug_handler]
 pub async fn read(State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>) -> Response {
-    let domain_and_path = format!("http://{host}");
+    const DID_URL:&str = format!("http://{host}");
 
-    tracing::debug!("reading DID log document for {domain_and_path}");
+    tracing::debug!("reading DID log document for {DID_URL}");
 
     let log = state.log.lock().await;
-    let Some(entries) = log.get_log(&domain_and_path) else {
+    let Some(entries) = log.get_log(&DID_URL) else {
         return AppError::Status(StatusCode::NOT_FOUND, "No log found".into()).into_response();
     };
 
@@ -41,13 +41,13 @@ pub async fn resolve(
     State(state): State<AppState>, Query(params): Query<QueryParams>,
     TypedHeader(host): TypedHeader<Host>,
 ) -> Result<AppJson<Document>, AppError> {
-    let domain_and_path = format!("http://{host}");
+    const DID_URL:&str = format!("http://{host}");
 
-    tracing::debug!("resolving DID document for {domain_and_path}");
+    tracing::debug!("resolving DID document for {DID_URL}");
 
     let log = state.log.lock().await;
     let entries = log
-        .get_log(&domain_and_path)
+        .get_log(&DID_URL)
         .ok_or_else(|| return AppError::Status(StatusCode::NOT_FOUND, "No log found".into()))?;
     let doc = resolve_log(&entries, None, Some(&params)).await?;
 

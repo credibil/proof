@@ -22,9 +22,9 @@ pub async fn create(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
     Json(_req): Json<CreateRequest>,
 ) -> Result<AppJson<CreateResult>, AppError> {
-    let domain_and_path = format!("http://{host}");
+    const DID_URL:&str = format!("http://{host}");
 
-    tracing::debug!("creating DID log document for {domain_and_path}");
+    tracing::debug!("creating DID log document for {DID_URL}");
 
     let vault = state.vault;
     let signer = Keyring::generate(&vault, "wvhd", "signing", Curve::Ed25519).await?;
@@ -37,7 +37,7 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
     let id_multi = jwk.to_multibase()?;
 
-    let did = default_did(&domain_and_path)?;
+    let did = default_did(&DID_URL)?;
 
     let next_key = signer.next_key().await?;
     let jwk = PublicKeyJwk::from_bytes(&next_key)?;
@@ -65,7 +65,7 @@ pub async fn create(
 
     // Store the log in app state
     let mut log = state.log.lock().await;
-    log.add_log(&domain_and_path, result.log.clone())?;
+    log.add_log(&DID_URL, result.log.clone())?;
 
     Ok(AppJson(result))
 }

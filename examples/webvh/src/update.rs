@@ -30,9 +30,9 @@ pub async fn update(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
     Json(req): Json<UpdateRequest>,
 ) -> Result<AppJson<UpdateResult>, AppError> {
-    let domain_and_path = format!("http://{host}");
+    const DID_URL:&str = format!("http://{host}");
 
-    tracing::debug!("updating DID log document for {domain_and_path}, with request: {req:?}");
+    tracing::debug!("updating DID log document for {DID_URL}, with request: {req:?}");
 
     let vault = state.vault;
     let signer = Keyring::entry(&vault, "issuer", "signer").await?;
@@ -56,7 +56,7 @@ pub async fn update(
     // Resolve the latest DID document from the log and start building the
     // update.
     let mut log = state.log.lock().await;
-    let Some(did_log) = log.get_log(&domain_and_path) else {
+    let Some(did_log) = log.get_log(&DID_URL) else {
         return Err(AppError::Status(
             StatusCode::NOT_FOUND,
             "No existing log found to update. Use create to get started.".into(),
@@ -103,7 +103,7 @@ pub async fn update(
         .await?;
 
     // Store the log in app state
-    log.add_log(&domain_and_path, result.log.clone())?;
+    log.add_log(&DID_URL, result.log.clone())?;
 
     Ok(AppJson(result))
 }

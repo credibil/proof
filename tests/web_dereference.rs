@@ -13,8 +13,8 @@ use test_utils::Vault;
 // Create a new `did:web` document and dereference a resource from it.
 #[tokio::test]
 async fn create_then_deref() {
-    let domain_and_path = "https://credibil.io/issuers/example";
-    let did = web::default_did(domain_and_path).expect("should get default DID");
+    const DID_URL: &str = "https://credibil.io/issuers/example";
+    let did = web::default_did(DID_URL).expect("should create DID");
     assert_eq!(did, "did:web:credibil.io:issuers:example");
 
     let signer =

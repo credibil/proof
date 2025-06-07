@@ -15,7 +15,7 @@ use test_utils::Vault;
 // errors.
 #[tokio::test]
 async fn simple_proof() {
-    let domain_and_path = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer =
         Keyring::generate(&Vault, "utd", "signing", Curve::Ed25519).await.expect("should generate");
@@ -29,7 +29,7 @@ async fn simple_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(DID_URL).expect("should create DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
@@ -61,7 +61,7 @@ async fn simple_proof() {
 // without errors.
 #[tokio::test]
 async fn complex_proof() {
-    let domain_and_path = "https://credibil.io/issuers/example";
+    const DID_URL: &str = "https://credibil.io/issuers/example";
 
     let signer = Keyring::generate(&Vault, "wvhd", "signing", Curve::Ed25519)
         .await
@@ -76,7 +76,7 @@ async fn complex_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(DID_URL).expect("should create DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
