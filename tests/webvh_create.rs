@@ -35,20 +35,21 @@ async fn create_success() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
-
-    let service = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
+    let svc = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
         .build();
     let doc = DocumentBuilder::new(did)
         .verification_method(vm)
-        .add_service(service)
+        .add_service(svc)
         .build()
         .expect("should build document");
+
+    let json_doc = serde_json::to_string_pretty(&doc).expect("should serialize");
+    print!("{json_doc}");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");

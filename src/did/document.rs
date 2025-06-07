@@ -170,13 +170,13 @@ pub struct Document {
 impl Document {
     /// Retrieve a service by its ID.
     #[must_use]
-    pub fn get_service(&self, id: &str) -> Option<&Service> {
+    pub fn service(&self, id: &str) -> Option<&Service> {
         self.service.as_ref()?.iter().find(|s| s.id == id)
     }
 
     /// Retrieve a verification method by its ID.
     #[must_use]
-    pub fn get_verification_method(&self, id: &str) -> Option<&VerificationMethod> {
+    pub fn verification_method(&self, id: &str) -> Option<&VerificationMethod> {
         self.verification_method.as_ref()?.iter().find(|vm| vm.id == id)
     }
 }
@@ -215,7 +215,6 @@ impl DocumentBuilder {
     pub fn from(doc: Document) -> Self {
         Self {
             doc: Some(doc),
-            // op: DocumentBuilderOperation::Update,
             ..Default::default()
         }
     }
@@ -233,18 +232,14 @@ impl DocumentBuilder {
     #[must_use]
     pub fn add_controller(mut self, controller: impl Into<String>) -> Self {
         match self.controller {
-            Some(c) => match c {
-                OneMany::One(cont) => {
-                    self.controller = Some(OneMany::Many(vec![cont, controller.into()]));
-                }
-                OneMany::Many(mut cont) => {
-                    cont.push(controller.into());
-                    self.controller = Some(OneMany::Many(cont));
-                }
-            },
-            None => {
-                self.controller = Some(OneMany::One(controller.into()));
+            Some(OneMany::One(c)) => {
+                self.controller = Some(OneMany::Many(vec![c, controller.into()]));
             }
+            Some(OneMany::Many(mut c)) => {
+                c.push(controller.into());
+                self.controller = Some(OneMany::Many(c));
+            }
+            None => self.controller = Some(OneMany::One(controller.into())),
         }
         self
     }
@@ -398,7 +393,7 @@ impl DocumentBuilder {
     //     let vk = jwk.to_multibase()?;
     //     let vm = VerificationMethodBuilder::new(vk)
     //         .key_id(self.did(), VmKeyId::Index("key".to_string(), 0))?
-    //         .method_type(&MethodType::Ed25519VerificationKey2020)?
+    //         .method_type(MethodType::Ed25519VerificationKey2020)?
     //         .build();
     //     self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
     //     if key_agreement {
@@ -487,8 +482,8 @@ impl DocumentBuilder {
 
         if let Some(vm_id) = &self.derive_key_agreement {
             let vm = doc
-                .get_verification_method(vm_id)
-                .ok_or_else(|| anyhow!("verification method not found"))?;
+                .verification_method(vm_id)
+                .ok_or_else(|| anyhow!("verification method missing"))?;
             let ka = vm.derive_key_agreement()?;
             doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
         }
@@ -763,9 +758,9 @@ impl VerificationMethod {
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
         let vm = VerificationMethodBuilder::new(multikey)
-            .key_id(self.did(), VmKeyId::Did)?
-            .method_type(&MethodType::X25519KeyAgreementKey2020)?
-            .build();
+            .key_id(self.did(), VmKeyId::Did)
+            .method_type(MethodType::X25519KeyAgreementKey2020)
+            .build()?;
 
         Ok(vm)
     }
@@ -774,51 +769,28 @@ impl VerificationMethod {
 /// A builder for creating a verification method.
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
-    vm_key: KeyFormat,
+    key: KeyFormat,
     did: String,
-    kid: String,
-    method: MethodType,
+    id_type: VmKeyId,
+    method_type: MethodType,
 }
 
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(verifying_key: impl Into<KeyFormat>) -> Self {
+    pub fn new(key: impl Into<KeyFormat>) -> Self {
         Self {
-            vm_key: verifying_key.into(),
+            key: key.into(),
             ..Default::default()
         }
     }
 
     /// Specify how to construct the key ID.
-    ///
-    /// # Errors
-    ///
-    /// Will fail if the ID type requires a multibase value but construction of
-    /// that value fails.
-    pub fn key_id(mut self, did: impl Into<String>, id_type: VmKeyId) -> Result<Self> {
+    #[must_use]
+    pub fn key_id(mut self, did: impl Into<String>, id_type: VmKeyId) -> Self {
         self.did = did.into();
-
-        match id_type {
-            VmKeyId::Did => {
-                self.kid.clone_from(&self.did);
-            }
-            VmKeyId::Authorization(auth_key) => {
-                self.kid = format!("{}#{auth_key}", self.did);
-            }
-            VmKeyId::Verification => {
-                let mb = match &self.vm_key {
-                    KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
-                    KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
-                };
-                self.kid = format!("{}#{mb}", self.did);
-            }
-            VmKeyId::Index(prefix, index) => {
-                self.kid = format!("{}#{prefix}{index}", self.did);
-            }
-        }
-
-        Ok(self)
+        self.id_type = id_type;
+        self
     }
 
     /// Specify the verification method type.
@@ -828,21 +800,41 @@ impl VerificationMethodBuilder {
     ///
     /// # Errors
     /// Will fail if required format does not match the provided key format.
-    pub fn method_type(mut self, mtype: &MethodType) -> Result<Self> {
-        match &self.vm_key {
+    #[must_use]
+    pub const fn method_type(mut self, method_type: MethodType) -> Self {
+        self.method_type = method_type;
+        self
+    }
+
+    /// Build the verification method.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the key format does not match the method type, or if the
+    /// key cannot be converted to a multibase string or JWK.
+    pub fn build(self) -> Result<VerificationMethod> {
+        let id = match self.id_type {
+            VmKeyId::Did => self.did.clone(),
+            VmKeyId::Authorization(auth_key) => format!("{}#{auth_key}", self.did),
+            VmKeyId::Verification => {
+                let mb = match &self.key {
+                    KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
+                    KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
+                };
+                format!("{}#{mb}", self.did)
+            }
+            VmKeyId::Index(prefix, index) => format!("{}#{prefix}{index}", self.did),
+        };
+
+        match &self.key {
             KeyFormat::Jwk { .. } => {
-                if !matches!(
-                    mtype,
-                    MethodType::JsonWebKey2020 | MethodType::EcdsaSecp256k1VerificationKey2019
-                ) {
-                    bail!(
-                        "JWK key format only supports JsonWebKey2020 and EcdsaSecp256k1VerificationKey2019"
-                    );
+                if !matches!(self.method_type, MethodType::JsonWebKey2020) {
+                    bail!("JWK key format only supports JsonWebKey2020");
                 }
             }
             KeyFormat::Multibase { .. } => {
                 if !matches!(
-                    mtype,
+                    self.method_type,
                     MethodType::Multikey
                         | MethodType::Ed25519VerificationKey2020
                         | MethodType::X25519KeyAgreementKey2020
@@ -853,27 +845,23 @@ impl VerificationMethodBuilder {
                 }
             }
         }
-        self.method = mtype.clone();
-        Ok(self)
-    }
 
-    /// Build the verification method.
-    #[must_use]
-    pub fn build(self) -> VerificationMethod {
-        VerificationMethod {
-            id: self.kid,
+        Ok(VerificationMethod {
+            id,
             controller: self.did,
-            type_: self.method,
-            key: self.vm_key,
+            type_: self.method_type,
+            key: self.key,
             ..VerificationMethod::default()
-        }
+        })
     }
 }
 
 /// Instruction to the `VerificationMethodBuilder` on how to construct the key
 /// ID.
+#[derive(Default)]
 pub enum VmKeyId {
     /// Use the DID as the identifier without any fragment.
+    #[default]
     Did,
 
     /// Use the provided multibase authorization key and append to the document
@@ -979,9 +967,8 @@ pub enum MethodType {
 
     /// JSON Web Key (JWK), version 2020.
     JsonWebKey2020,
-
-    /// Secp256k1 Verification Key, version 2019.
-    EcdsaSecp256k1VerificationKey2019,
+    // /// Secp256k1 Verification Key, version 2019.
+    // EcdsaSecp256k1VerificationKey2019,
 }
 
 impl Display for MethodType {
@@ -991,9 +978,9 @@ impl Display for MethodType {
             Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
             Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
             Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
-            Self::EcdsaSecp256k1VerificationKey2019 => {
-                write!(f, "EcdsaSecp256k1VerificationKey2019")
-            }
+            // Self::EcdsaSecp256k1VerificationKey2019 => {
+            //     write!(f, "EcdsaSecp256k1VerificationKey2019")
+            // }
         }
     }
 }

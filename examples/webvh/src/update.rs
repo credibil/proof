@@ -67,9 +67,9 @@ pub async fn update(
 
     // Create a new verification method.
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))?
-        .method_type(&MethodType::Ed25519VerificationKey2020)?
-        .build();
+        .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()?;
     db = db.verification_method(vm.clone());
 
     // Add a reference-based verification method if requested.

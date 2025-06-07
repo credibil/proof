@@ -35,10 +35,9 @@ async fn resolve_single() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -143,10 +142,9 @@ async fn resolve_multiple() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -228,10 +226,9 @@ async fn resolve_multiple() {
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .key_id(did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     // Add a reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");
@@ -307,10 +304,9 @@ async fn resolve_deactivated() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -393,10 +389,9 @@ async fn resolve_deactivated() {
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .key_id(did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     // Add a reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");

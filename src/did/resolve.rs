@@ -7,7 +7,7 @@
 
 use std::str::FromStr;
 
-use anyhow::bail;
+use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 use super::document::{Document, Service, VerificationMethod};
@@ -26,9 +26,7 @@ use crate::IdentityResolver;
 ///
 /// Note that only URLs implying DID methods supported by this crate will
 /// survive parsing.
-pub async fn dereference(
-    did_url: &str, resolver: &impl IdentityResolver,
-) -> anyhow::Result<Resource> {
+pub async fn dereference(did_url: &str, resolver: &impl IdentityResolver) -> Result<Resource> {
     let url = Url::from_str(did_url)?;
     deref_url(&url, resolver).await
 }
@@ -55,7 +53,7 @@ pub async fn dereference(
 /// Will also return an error if the resource is not found in the document. This
 /// includes cases that don't make sense, like asking a `did:key` for a service
 /// endpoint.
-pub async fn deref_url(url: &Url, resolver: &impl IdentityResolver) -> anyhow::Result<Resource> {
+pub async fn deref_url(url: &Url, resolver: &impl IdentityResolver) -> Result<Resource> {
     match url.method {
         Method::Key => key::resolve(url),
         Method::Web => {
@@ -75,10 +73,10 @@ pub async fn deref_url(url: &Url, resolver: &impl IdentityResolver) -> anyhow::R
 ///
 /// # Errors
 /// Will return an error if the resource is not found in the document.
-pub fn document_resource(url: &Url, doc: &Document) -> anyhow::Result<Resource> {
+pub fn document_resource(url: &Url, doc: &Document) -> Result<Resource> {
     if let Some(query) = &url.query {
         if let Some(service_id) = &query.service {
-            if let Some(service) = doc.get_service(service_id) {
+            if let Some(service) = doc.service(service_id) {
                 return Ok(Resource::Service(service.clone()));
             }
             bail!("service {service_id} not found in document");
@@ -87,7 +85,7 @@ pub fn document_resource(url: &Url, doc: &Document) -> anyhow::Result<Resource> 
     if url.fragment.is_none() {
         return Ok(Resource::Document(doc.clone()));
     }
-    if let Some(vm) = doc.get_verification_method(&url.to_string()) {
+    if let Some(vm) = doc.verification_method(&url.to_string()) {
         return Ok(Resource::VerificationMethod(vm.clone()));
     }
     bail!("verification method {url} not found in document")

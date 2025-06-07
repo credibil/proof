@@ -24,10 +24,9 @@ async fn create_then_deref() {
 
     let vm = VerificationMethodBuilder::new(jwk.clone())
         .key_id(&did, VmKeyId::Index("key".to_string(), 0))
-        .expect("should apply key ID")
-        .method_type(&MethodType::JsonWebKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::JsonWebKey2020)
+        .build()
+        .expect("should build");
 
     let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")

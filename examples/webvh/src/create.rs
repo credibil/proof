@@ -44,9 +44,9 @@ pub async fn create(
     let next_multi = jwk.to_multibase()?;
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))?
-        .method_type(&MethodType::Ed25519VerificationKey2020)?
-        .build();
+        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()?;
 
     tracing::debug!("keys established");
 

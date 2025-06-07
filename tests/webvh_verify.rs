@@ -33,10 +33,9 @@ async fn simple_proof() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
 
     let doc = DocumentBuilder::new(did)
         .verification_method(vm.clone())
@@ -80,10 +79,9 @@ async fn complex_proof() {
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .key_id(&did, VmKeyId::Authorization(id_multi))
-        .expect("should apply key ID")
-        .method_type(&MethodType::Ed25519VerificationKey2020)
-        .expect("should apply method type")
-        .build();
+        .method_type(MethodType::Ed25519VerificationKey2020)
+        .build()
+        .expect("should build");
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois".to_string())
