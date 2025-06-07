@@ -3,11 +3,10 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
-    default_did,
+    self, CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
 };
 use credibil_identity::did::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -32,17 +31,18 @@ async fn create_then_deactivate() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(did)
@@ -133,17 +133,18 @@ async fn update_then_deactivate() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)
@@ -221,7 +222,8 @@ async fn update_then_deactivate() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
-        .key_id(did, VmKeyId::Authorization(id_multi))
+        .did(did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");

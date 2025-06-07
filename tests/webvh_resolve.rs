@@ -2,11 +2,11 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
-    WitnessWeight, default_did, resolve_log,
+    self, CreateBuilder, DeactivateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessEntry,
+    WitnessWeight,
 };
 use credibil_identity::did::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -31,17 +31,18 @@ async fn resolve_single() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(did)
@@ -105,8 +106,9 @@ async fn resolve_single() {
         proof: vec![witness_proof1, witness_proof2],
     }];
 
-    let resolved_doc =
-        resolve_log(&result.log, Some(&witness_proofs), None).await.expect("should resolve log");
+    let resolved_doc = webvh::resolve_log(&result.log, Some(&witness_proofs), None)
+        .await
+        .expect("should resolve log");
 
     // The resolved document should *almost* match the result of the update
     // except for some of the metadata. So remove the metadata from each and
@@ -138,17 +140,18 @@ async fn resolve_multiple() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(&did)
         .verification_method(vm.clone())
@@ -225,7 +228,8 @@ async fn resolve_multiple() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
-        .key_id(did, VmKeyId::Authorization(id_multi))
+        .did(did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
@@ -267,8 +271,9 @@ async fn resolve_multiple() {
         proof: vec![witness_proof1, witness_proof2],
     });
 
-    let resolved_doc =
-        resolve_log(&result.log, Some(&witness_proofs), None).await.expect("should resolve log");
+    let resolved_doc = webvh::resolve_log(&result.log, Some(&witness_proofs), None)
+        .await
+        .expect("should resolve log");
 
     // The resolved document should *almost* match the result of the update
     // except for some of the metadata. So remove the metadata from each and
@@ -300,17 +305,18 @@ async fn resolve_deactivated() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
 
     let doc = DocumentBuilder::new(&did)
@@ -388,7 +394,8 @@ async fn resolve_deactivated() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
-        .key_id(did, VmKeyId::Authorization(id_multi))
+        .did(did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
@@ -447,7 +454,7 @@ async fn resolve_deactivated() {
     println!("{logs}");
 
     let resolved_doc =
-        resolve_log(&deactivate_result.log, None, None).await.expect("should resolve log");
+        webvh::resolve_log(&deactivate_result.log, None, None).await.expect("should resolve log");
     assert!(
         resolved_doc
             .did_document_metadata

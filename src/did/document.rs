@@ -392,7 +392,7 @@ impl DocumentBuilder {
     // pub fn add_verifying_key(mut self, jwk: &PublicKeyJwk, key_agreement: bool) -> Result<Self> {
     //     let vk = jwk.to_multibase()?;
     //     let vm = VerificationMethodBuilder::new(vk)
-    //         .key_id(self.did(), VmKeyId::Index("key".to_string(), 0))?
+    //         .key_id(self.did(), KeyId::Index("key".to_string(), 0))?
     //         .method_type(MethodType::Ed25519VerificationKey2020)?
     //         .build();
     //     self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
@@ -758,7 +758,7 @@ impl VerificationMethod {
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
         let vm = VerificationMethodBuilder::new(multikey)
-            .key_id(self.did(), VmKeyId::Did)
+            .did(self.did())
             .method_type(MethodType::X25519KeyAgreementKey2020)
             .build()?;
 
@@ -771,7 +771,7 @@ impl VerificationMethod {
 pub struct VerificationMethodBuilder {
     key: KeyFormat,
     did: String,
-    id_type: VmKeyId,
+    id_type: KeyId,
     method_type: MethodType,
 }
 
@@ -787,8 +787,14 @@ impl VerificationMethodBuilder {
 
     /// Specify how to construct the key ID.
     #[must_use]
-    pub fn key_id(mut self, did: impl Into<String>, id_type: VmKeyId) -> Self {
+    pub fn did(mut self, did: impl Into<String>) -> Self {
         self.did = did.into();
+        self
+    }
+
+    /// Specify how to construct the key ID.
+    #[must_use]
+    pub fn key_id(mut self, id_type: KeyId) -> Self {
         self.id_type = id_type;
         self
     }
@@ -813,18 +819,19 @@ impl VerificationMethodBuilder {
     /// Will fail if the key format does not match the method type, or if the
     /// key cannot be converted to a multibase string or JWK.
     pub fn build(self) -> Result<VerificationMethod> {
-        let id = match self.id_type {
-            VmKeyId::Did => self.did.clone(),
-            VmKeyId::Authorization(auth_key) => format!("{}#{auth_key}", self.did),
-            VmKeyId::Verification => {
+        let suffix = match self.id_type {
+            KeyId::Did => String::new(),
+            KeyId::Authorization(auth_key) => format!("#{auth_key}"),
+            KeyId::Verification => {
                 let mb = match &self.key {
                     KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
                     KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
                 };
-                format!("{}#{mb}", self.did)
+                format!("#{mb}")
             }
-            VmKeyId::Index(prefix, index) => format!("{}#{prefix}{index}", self.did),
+            KeyId::Index(index) => format!("#{index}"),
         };
+        let id = format!("{}{suffix}", self.did);
 
         match &self.key {
             KeyFormat::Jwk { .. } => {
@@ -859,7 +866,7 @@ impl VerificationMethodBuilder {
 /// Instruction to the `VerificationMethodBuilder` on how to construct the key
 /// ID.
 #[derive(Default)]
-pub enum VmKeyId {
+pub enum KeyId {
     /// Use the DID as the identifier without any fragment.
     #[default]
     Did,
@@ -877,9 +884,9 @@ pub enum VmKeyId {
     /// is required.
     ///
     /// # Examples
-    /// With prefix `key-` and index `0`, the key ID will be
+    ///
     /// `did:<method>:<method-specific-identifier>#key-0`.
-    Index(String, u32),
+    Index(String),
 }
 
 /// The format of the public key material.
@@ -967,6 +974,7 @@ pub enum MethodType {
 
     /// JSON Web Key (JWK), version 2020.
     JsonWebKey2020,
+    //
     // /// Secp256k1 Verification Key, version 2019.
     // EcdsaSecp256k1VerificationKey2019,
 }
@@ -978,9 +986,6 @@ impl Display for MethodType {
             Self::Ed25519VerificationKey2020 => write!(f, "Ed25519VerificationKey2020"),
             Self::X25519KeyAgreementKey2020 => write!(f, "X25519KeyAgreementKey2020"),
             Self::JsonWebKey2020 => write!(f, "JsonWebKey2020"),
-            // Self::EcdsaSecp256k1VerificationKey2019 => {
-            //     write!(f, "EcdsaSecp256k1VerificationKey2019")
-            // }
         }
     }
 }

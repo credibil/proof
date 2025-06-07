@@ -2,10 +2,10 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did, verify_proofs,
+    self, CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight,
 };
 use credibil_identity::did::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -29,10 +29,11 @@ async fn simple_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
@@ -53,7 +54,7 @@ async fn simple_proof() {
         .expect("should build document");
 
     println!("result log[0]: {:?}", result.log[0]);
-    verify_proofs(&result.log[0]).await.expect("should verify proof");
+    webvh::verify_proofs(&result.log[0]).await.expect("should verify proof");
 }
 
 // Create a document with more options and then verify the proof. Should verify
@@ -75,16 +76,17 @@ async fn complex_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
         .verification_method(vm.clone())
@@ -140,5 +142,5 @@ async fn complex_proof() {
         .await
         .expect("should build document");
 
-    verify_proofs(&result.log[0]).await.expect("should verify proof");
+    webvh::verify_proofs(&result.log[0]).await.expect("should verify proof");
 }

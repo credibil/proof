@@ -43,11 +43,11 @@ impl<T> From<String> for Kind<T> {
     }
 }
 
-// impl<T> From<T> for Kind<T> {
-//     fn from(value: T) -> Self {
-//         Self::Object(value)
-//     }
-// }
+impl<T> From<&str> for Kind<T> {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_string())
+    }
+}
 
 /// `OneMany` allows serde to serialize/deserialize a single object or a set of
 /// objects.

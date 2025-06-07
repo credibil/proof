@@ -2,7 +2,7 @@
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId, web,
+    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder, web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -21,13 +21,14 @@ async fn create_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
     let vm = VerificationMethodBuilder::new(jwk)
-        .key_id(&did, VmKeyId::Index("key".to_string(), 0))
+        .did(&did)
+        .key_id(KeyId::Index("key-0".to_string()))
         .method_type(MethodType::JsonWebKey2020)
         .build()
         .expect("should build");
     let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
         .verification_method(vm)
@@ -35,6 +36,6 @@ async fn create_success() {
         .build()
         .expect("should build document");
 
-    let json_doc = serde_json::to_string_pretty(&doc).expect("should serialize");
-    print!("{json_doc}");
+    let json = serde_json::to_string_pretty(&doc).expect("should serialize");
+    print!("{json}");
 }

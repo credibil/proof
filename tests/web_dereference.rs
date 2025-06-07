@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, MethodType, Resource, ServiceBuilder, Url,
-    VerificationMethodBuilder, VmKeyId, document_resource, web,
+    DocumentBuilder, KeyFormat, KeyId, MethodType, Resource, ServiceBuilder, Url,
+    VerificationMethodBuilder, document_resource, web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -23,14 +23,15 @@ async fn create_then_deref() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
     let vm = VerificationMethodBuilder::new(jwk.clone())
-        .key_id(&did, VmKeyId::Index("key".to_string(), 0))
+        .did(&did)
+        .key_id(KeyId::Index("key-0".to_string()))
         .method_type(MethodType::JsonWebKey2020)
         .build()
         .expect("should build");
 
     let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
         .verification_method(vm.clone())

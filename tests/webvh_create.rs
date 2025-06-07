@@ -3,10 +3,10 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight, default_did,
+    self, CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight,
 };
 use credibil_identity::did::{
-    DocumentBuilder, MethodType, ServiceBuilder, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
 };
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -31,16 +31,17 @@ async fn create_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = default_did(domain_and_path).expect("should get default DID");
+    let did = webvh::default_did(domain_and_path).expect("should get default DID");
 
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&did, VmKeyId::Authorization(id_multi))
+        .did(&did)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()
         .expect("should build");
     let svc = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois".to_string())
+        .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
         .verification_method(vm)
@@ -48,8 +49,8 @@ async fn create_success() {
         .build()
         .expect("should build document");
 
-    let json_doc = serde_json::to_string_pretty(&doc).expect("should serialize");
-    print!("{json_doc}");
+    let json = serde_json::to_string_pretty(&doc).expect("should serialize");
+    print!("{json}");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");

@@ -8,7 +8,7 @@ use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{UpdateBuilder, UpdateResult, resolve_log};
 use credibil_identity::did::{
-    DocumentBuilder, KeyPurpose, MethodType, VerificationMethodBuilder, VmKeyId,
+    DocumentBuilder, KeyId, KeyPurpose, MethodType, VerificationMethodBuilder,
 };
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,8 @@ pub async fn update(
 
     // Create a new verification method.
     let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .key_id(&current_doc.id, VmKeyId::Authorization(id_multi))
+        .did(&current_doc.id)
+        .key_id(KeyId::Authorization(id_multi))
         .method_type(MethodType::Ed25519VerificationKey2020)
         .build()?;
     db = db.verification_method(vm.clone());
