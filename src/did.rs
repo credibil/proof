@@ -21,7 +21,7 @@ pub mod web;
 pub mod webvh;
 
 pub use document::{
-    Document, DocumentBuilder, DocumentMetadata, DocumentMetadataBuilder, KeyFormat, KeyId,
+    Document, DocumentBuilder, DocumentMetadata, DocumentMetadataBuilder, KeyEncoding, KeyId,
     KeyPurpose, MethodType, Service, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
 };
 pub use resolve::{Resource, deref_url, dereference, document_resource};

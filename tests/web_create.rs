@@ -2,7 +2,7 @@
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder, web,
+    DocumentBuilder, KeyId, ServiceBuilder, VerificationMethodBuilder, web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -23,7 +23,6 @@ async fn create_success() {
     let vm = VerificationMethodBuilder::new(jwk)
         .did(&did)
         .key_id(KeyId::Index("key-0".to_string()))
-        .method_type(MethodType::JsonWebKey)
         .build()
         .expect("should build");
     let service = ServiceBuilder::new(format!("{did}#whois"))

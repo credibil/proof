@@ -5,9 +5,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
     self, CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
 };
-use credibil_identity::did::{
-    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
-};
+use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethodBuilder};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -37,7 +35,6 @@ async fn update_success() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -123,7 +120,6 @@ async fn update_success() {
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
         .did(did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 

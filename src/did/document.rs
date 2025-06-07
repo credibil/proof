@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC, derive_x25519_public};
 use credibil_jose::PublicKeyJwk;
@@ -718,7 +718,7 @@ pub struct VerificationMethod {
 
     /// The format of the public key material.
     #[serde(flatten)]
-    pub key: KeyFormat,
+    pub key: KeyEncoding,
 }
 
 impl VerificationMethod {
@@ -736,7 +736,7 @@ impl VerificationMethod {
     /// returned, including testing the assumption that the signing key is
     /// `Ed25519` in the first place.
     pub fn derive_key_agreement(&self) -> Result<Self> {
-        let KeyFormat::Multibase { public_key_multibase } = &self.key else {
+        let KeyEncoding::Multibase { public_key_multibase } = &self.key else {
             return Err(anyhow!("not a multibase key"));
         };
         let (base, multi_bytes) = multibase::decode(public_key_multibase)
@@ -759,10 +759,7 @@ impl VerificationMethod {
         multi_bytes.extend_from_slice(&x25519_key.to_bytes());
         let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-        let vm = VerificationMethodBuilder::new(multikey)
-            .did(self.did())
-            .method_type(MethodType::Multikey)
-            .build()?;
+        let vm = VerificationMethodBuilder::new(multikey).did(self.did()).build()?;
 
         Ok(vm)
     }
@@ -771,16 +768,16 @@ impl VerificationMethod {
 /// A builder for creating a verification method.
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
-    key: KeyFormat,
+    key: KeyEncoding,
     did: String,
     id_type: KeyId,
-    method_type: MethodType,
+    // method_type: MethodType,
 }
 
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(key: impl Into<KeyFormat>) -> Self {
+    pub fn new(key: impl Into<KeyEncoding>) -> Self {
         Self {
             key: key.into(),
             ..Default::default()
@@ -801,19 +798,6 @@ impl VerificationMethodBuilder {
         self
     }
 
-    /// Specify the verification method type.
-    ///
-    /// To generate an `X25519` public encryption key from an `Ed25519` key, use
-    /// [`derive_key_agreement`] instead of this function.
-    ///
-    /// # Errors
-    /// Will fail if required format does not match the provided key format.
-    #[must_use]
-    pub const fn method_type(mut self, method_type: MethodType) -> Self {
-        self.method_type = method_type;
-        self
-    }
-
     /// Build the verification method.
     ///
     /// # Errors
@@ -821,37 +805,28 @@ impl VerificationMethodBuilder {
     /// Will fail if the key format does not match the method type, or if the
     /// key cannot be converted to a multibase string or JWK.
     pub fn build(self) -> Result<VerificationMethod> {
+        let method_type = match &self.key {
+            KeyEncoding::Jwk { .. } => MethodType::JsonWebKey,
+            KeyEncoding::Multibase { .. } => MethodType::Multikey,
+        };
+
         let suffix = match self.id_type {
             KeyId::Did => String::new(),
             KeyId::Authorization(auth_key) => format!("#{auth_key}"),
             KeyId::Verification => {
                 let mb = match &self.key {
-                    KeyFormat::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
-                    KeyFormat::Multibase { public_key_multibase } => public_key_multibase.clone(),
+                    KeyEncoding::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
+                    KeyEncoding::Multibase { public_key_multibase } => public_key_multibase.clone(),
                 };
                 format!("#{mb}")
             }
             KeyId::Index(index) => format!("#{index}"),
         };
-        let id = format!("{}{suffix}", self.did);
-
-        match &self.key {
-            KeyFormat::Jwk { .. } => {
-                if self.method_type != MethodType::JsonWebKey {
-                    bail!("JWK key format only supports JsonWebKey");
-                }
-            }
-            KeyFormat::Multibase { .. } => {
-                if self.method_type != MethodType::Multikey {
-                    bail!("Multibase key format only supports Multikey");
-                }
-            }
-        }
 
         Ok(VerificationMethod {
-            id,
+            id: format!("{}{suffix}", self.did),
             controller: self.did,
-            type_: self.method_type,
+            type_: method_type,
             key: self.key,
             ..VerificationMethod::default()
         })
@@ -888,7 +863,7 @@ pub enum KeyId {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all_fields = "camelCase")]
 #[serde(untagged)]
-pub enum KeyFormat {
+pub enum KeyEncoding {
     /// The key is encoded as a Multibase string.
     Multibase {
         /// The public key encoded as a Multibase.
@@ -902,7 +877,7 @@ pub enum KeyFormat {
     },
 }
 
-impl Default for KeyFormat {
+impl Default for KeyEncoding {
     fn default() -> Self {
         Self::Multibase {
             public_key_multibase: String::new(),
@@ -910,7 +885,7 @@ impl Default for KeyFormat {
     }
 }
 
-impl KeyFormat {
+impl KeyEncoding {
     /// Return the key as a JWK
     ///
     /// # Errors
@@ -938,13 +913,13 @@ impl KeyFormat {
     }
 }
 
-impl From<PublicKeyJwk> for KeyFormat {
+impl From<PublicKeyJwk> for KeyEncoding {
     fn from(jwk: PublicKeyJwk) -> Self {
         Self::Jwk { public_key_jwk: jwk }
     }
 }
 
-impl From<String> for KeyFormat {
+impl From<String> for KeyEncoding {
     fn from(multibase: String) -> Self {
         Self::Multibase {
             public_key_multibase: multibase,
@@ -952,17 +927,19 @@ impl From<String> for KeyFormat {
     }
 }
 
-/// Verification method types supported by this library.
+/// Verification method types supported.
 ///
-/// See https://www.w3.org/TR/cid-1.0/#verification-methods.
+/// See <https://www.w3.org/TR/cid-1.0/#verification-methods>.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all_fields = "camelCase")]
 pub enum MethodType {
-    /// The Multikey verification method encodes key types into a Multibase value.
+    /// The Multikey verification method encodes key types into Multibase
+    /// format.
     #[default]
     Multikey,
 
-    /// The JSON Web Key verification method encodes key types into JWK format.
+    /// The JSON Web Key verification method encodes key types into JWK
+    /// format.
     JsonWebKey,
 }
 

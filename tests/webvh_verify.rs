@@ -4,9 +4,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
     self, CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight,
 };
-use credibil_identity::did::{
-    DocumentBuilder, KeyId, MethodType, ServiceBuilder, VerificationMethodBuilder,
-};
+use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethodBuilder};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -34,7 +32,6 @@ async fn simple_proof() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
 
@@ -81,7 +78,6 @@ async fn complex_proof() {
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()
         .expect("should build");
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))

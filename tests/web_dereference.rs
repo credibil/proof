@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyId, MethodType, Resource, ServiceBuilder, Url,
-    VerificationMethodBuilder, document_resource, web,
+    DocumentBuilder, KeyEncoding, KeyId, Resource, ServiceBuilder, Url, VerificationMethodBuilder,
+    document_resource, web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -25,7 +25,6 @@ async fn create_then_deref() {
     let vm = VerificationMethodBuilder::new(jwk.clone())
         .did(&did)
         .key_id(KeyId::Index("key-0".to_string()))
-        .method_type(MethodType::JsonWebKey)
         .build()
         .expect("should build");
 
@@ -45,7 +44,7 @@ async fn create_then_deref() {
         panic!("should be a verification method");
     };
 
-    let KeyFormat::Jwk { public_key_jwk } = deref_vm.key else {
+    let KeyEncoding::Jwk { public_key_jwk } = deref_vm.key else {
         panic!("should be a JWK");
     };
     assert_eq!(public_key_jwk.x, jwk.x);

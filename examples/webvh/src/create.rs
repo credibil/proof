@@ -6,7 +6,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
-use credibil_identity::did::{DocumentBuilder, KeyId, MethodType, VerificationMethodBuilder};
+use credibil_identity::did::{DocumentBuilder, KeyId, VerificationMethodBuilder};
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
@@ -46,7 +46,6 @@ pub async fn create(
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&did)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()?;
 
     tracing::debug!("keys established");

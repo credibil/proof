@@ -7,9 +7,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{UpdateBuilder, UpdateResult, resolve_log};
-use credibil_identity::did::{
-    DocumentBuilder, KeyId, KeyPurpose, MethodType, VerificationMethodBuilder,
-};
+use credibil_identity::did::{DocumentBuilder, KeyId, KeyPurpose, VerificationMethodBuilder};
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +67,6 @@ pub async fn update(
     let vm = VerificationMethodBuilder::new(update_multi.clone())
         .did(&current_doc.id)
         .key_id(KeyId::Authorization(id_multi))
-        .method_type(MethodType::Multikey)
         .build()?;
     db = db.verification_method(vm.clone());
 
