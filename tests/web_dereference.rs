@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, KeyEncoding, KeyId, Resource, ServiceBuilder, Url, VerificationMethodBuilder,
+    DocumentBuilder, KeyFormat, KeyId, Resource, ServiceBuilder, Url, VerificationMethodBuilder,
     document_resource, web,
 };
 use credibil_jose::PublicKeyJwk;
@@ -44,7 +44,7 @@ async fn create_then_deref() {
         panic!("should be a verification method");
     };
 
-    let KeyEncoding::Jwk { public_key_jwk } = deref_vm.key else {
+    let KeyFormat::JsonWebKey { public_key_jwk } = deref_vm.key else {
         panic!("should be a JWK");
     };
     assert_eq!(public_key_jwk.x, jwk.x);

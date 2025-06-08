@@ -10,8 +10,9 @@ use test_utils::Vault;
 // Test the happy path of creating a new `did:web` document. Should just work
 // without errors.
 #[tokio::test]
-async fn create_success() {
+async fn create_ok() {
     const DID_URL: &str = "https://credibil.io/issuers/example";
+
     let did = web::default_did(DID_URL).expect("should create DID");
     assert_eq!(did, "did:web:credibil.io:issuers:example");
 

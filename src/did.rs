@@ -8,35 +8,23 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
+mod document;
+pub mod key;
+mod resolve;
+mod url;
+mod verification;
+pub mod web;
+pub mod webvh;
+
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use anyhow::anyhow;
 
-mod document;
-pub mod key;
-mod resolve;
-mod url;
-pub mod web;
-pub mod webvh;
-
-pub use document::{
-    Document, DocumentBuilder, DocumentMetadata, DocumentMetadataBuilder, KeyEncoding, KeyId,
-    KeyPurpose, MethodType, Service, ServiceBuilder, VerificationMethod, VerificationMethodBuilder,
-};
-pub use resolve::{Resource, deref_url, dereference, document_resource};
-pub use url::{QueryParams, Url};
-
-// TODO: set context based on key format:
-// - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
-// - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
-// Perhaps this needs to be an enum with Display impl?
-/// Candidate contexts to add to a DID document.
-pub const BASE_CONTEXT: [&str; 3] = [
-    "https://www.w3.org/ns/did/v1",
-    "https://w3id.org/security/multikey/v1",
-    "https://w3id.org/security/suites/jws-2020/v1",
-];
+pub use self::document::*;
+pub use self::resolve::{Resource, deref_url, dereference, document_resource};
+pub use self::url::{QueryParams, Url};
+pub use self::verification::*;
 
 /// DID methods supported by this crate.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

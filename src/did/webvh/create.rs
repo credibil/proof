@@ -10,7 +10,7 @@ use super::verify::validate_witness;
 use super::{DidLogEntry, METHOD, Parameters, SCID_PLACEHOLDER, VERSION, Witness};
 use crate::Signature;
 use crate::core::Kind;
-use crate::did::{BASE_CONTEXT, Document};
+use crate::did::{CONTEXT, Document};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -94,7 +94,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
         let mut document = document;
 
         // Ensure we have the base context on the document for this DID method.
-        for ctx in &BASE_CONTEXT {
+        for ctx in &CONTEXT {
             let c = Kind::String((*ctx).to_string());
             if !document.context.contains(&c) {
                 document.context.push(c);

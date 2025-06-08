@@ -4,70 +4,24 @@
 //! DID.
 
 use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC, derive_x25519_public};
-use credibil_jose::PublicKeyJwk;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::BASE_CONTEXT;
 use crate::core::{Kind, OneMany};
+use crate::did::VerificationMethodBuilder;
+use crate::did::verification::VerificationMethod;
 
-/// The purpose key material will be used for.
-#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize, Eq)]
-pub enum KeyPurpose {
-    /// The document's `verification_method` field.
-    VerificationMethod,
-
-    /// The document's `authentication` field.
-    Authentication,
-
-    /// The document's `assertion_method` field.
-    AssertionMethod,
-
-    /// The document's `key_agreement` field.
-    KeyAgreement,
-
-    /// The document's `capability_invocation` field.
-    CapabilityInvocation,
-
-    /// The document's `capability_delegation` field.
-    CapabilityDelegation,
-}
-
-impl Display for KeyPurpose {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::VerificationMethod => write!(f, "verificationMethod"),
-            Self::Authentication => write!(f, "authentication"),
-            Self::AssertionMethod => write!(f, "assertionMethod"),
-            Self::KeyAgreement => write!(f, "keyAgreement"),
-            Self::CapabilityInvocation => write!(f, "capabilityInvocation"),
-            Self::CapabilityDelegation => write!(f, "capabilityDelegation"),
-        }
-    }
-}
-
-impl FromStr for KeyPurpose {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "verificationMethod" => Ok(Self::VerificationMethod),
-            "authentication" => Ok(Self::Authentication),
-            "assertionMethod" => Ok(Self::AssertionMethod),
-            "keyAgreement" => Ok(Self::KeyAgreement),
-            "capabilityInvocation" => Ok(Self::CapabilityInvocation),
-            "capabilityDelegation" => Ok(Self::CapabilityDelegation),
-            _ => Err(anyhow!("invalid key purpose")),
-        }
-    }
-}
+// TODO: set context based on key format:
+// - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
+// - JsonWebKey2020	https://w3id.org/security/suites/jws-2020/v1
+// Perhaps this needs to be an enum with Display impl?
+/// Candidate contexts to add to a DID document.
+pub const CONTEXT: [&str; 2] = ["https://www.w3.org/ns/did/v1", "https://www.w3.org/ns/cid/v1"];
 
 /// DID Document
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -205,6 +159,7 @@ impl DocumentBuilder {
     pub fn new(did: impl Into<String>) -> Self {
         Self {
             id: Some(did.into()),
+            context: CONTEXT.iter().map(|ctx| Kind::String((*ctx).to_string())).collect(),
             ..Default::default()
         }
     }
@@ -303,7 +258,7 @@ impl DocumentBuilder {
     ///
     /// Chain to add multiple contexts.
     #[must_use]
-    pub fn add_context(mut self, context: Kind<Value>) -> Self {
+    pub fn context(mut self, context: Kind<Value>) -> Self {
         self.context.push(context);
         self
     }
@@ -369,39 +324,6 @@ impl DocumentBuilder {
         self
     }
 
-    // /// Add a verification method that is a verifying key and optionally create
-    // /// a derived key agreement.
-    // ///
-    // /// This is a shortcut for adding a verification method that constructs the
-    // /// verification method from a `PublicKeyJwk` and adds it to the document,
-    // /// then optionally derives an `X25519` key agreement from it.
-    // ///
-    // /// # Note
-    // ///
-    // /// 1. The verification key format will be multibase encoded, derived from
-    // ///    the JWK passed in. This is hard-coded for this function.
-    // ///
-    // /// 2. The key identifier will be `{did}#key-0`.
-    // ///
-    // /// If you have other needs, use `add_verification_method` instead.
-    // ///
-    // /// # Errors
-    // /// Will fail if the JWK cannot be converted to a multibase string or if the
-    // /// conversion from `Ed25519` to `X25519` fails.
-    // pub fn add_verifying_key(mut self, jwk: &PublicKeyJwk, key_agreement: bool) -> Result<Self> {
-    //     let vk = jwk.to_multibase()?;
-    //     let vm = VerificationMethodBuilder::new(vk)
-    //         .key_id(self.did(), KeyId::Index("key".to_string(), 0))?
-    //         .method_type(MethodType::Ed25519VerificationKey2020)?
-    //         .build();
-    //     self.doc.verification_method.get_or_insert(vec![]).push(vm.clone());
-    //     if key_agreement {
-    //         let ka = vm.derive_key_agreement()?;
-    //         self.doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
-    //     }
-    //     Ok(self)
-    // }
-
     // /// Remove the specified verification method.
     // pub fn remove_verification_method(mut self, vm_id: impl Into<String>) -> Self {
     //     self.remove_verification_method.push(vm_id.into());
@@ -422,8 +344,8 @@ impl DocumentBuilder {
     ///
     /// TODO: Consider returning an error if not `did:key`.
     #[must_use]
-    pub fn derive_key_agreement(mut self, vm_id: impl Into<String>) -> Self {
-        self.derive_key_agreement = Some(vm_id.into());
+    pub fn derive_key_agreement(mut self, ed25519_key: impl Into<String>) -> Self {
+        self.derive_key_agreement = Some(ed25519_key.into());
         self
     }
 
@@ -479,24 +401,39 @@ impl DocumentBuilder {
 
         doc.did_document_metadata = Some(md);
 
-        if let Some(vm_id) = &self.derive_key_agreement {
-            let vm = doc
-                .verification_method(vm_id)
-                .ok_or_else(|| anyhow!("verification method missing"))?;
-            let ka = vm.derive_key_agreement()?;
-            doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(ka));
+        if let Some(ed25519_key) = &self.derive_key_agreement {
+            let vm = x25519_key_agreement(&doc.id, ed25519_key)?;
+            doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
         }
 
-        doc.context = self.context;
-        for ctx in BASE_CONTEXT {
-            let c = Kind::String((ctx).to_string());
-            if !doc.context.contains(&c) {
-                doc.context.push(c);
-            }
-        }
+        doc.context.extend(self.context);
 
         Ok(doc)
     }
+}
+
+// Derive and X25519-based Key Agreement from an Ed25519 public key.
+fn x25519_key_agreement(did: &str, ed25519_key: &str) -> Result<VerificationMethod> {
+    let (base, multi_bytes) = multibase::decode(ed25519_key)
+        .map_err(|e| anyhow!("failed to decode multibase key: {e}"))?;
+    if base != Base::Base58Btc {
+        return Err(anyhow!("multibase base is not Base58Btc"));
+    }
+    if multi_bytes[0..ED25519_CODEC.len()] != ED25519_CODEC {
+        return Err(anyhow!("key is not an Ed25519 key"));
+    }
+
+    let key_bytes = multi_bytes[ED25519_CODEC.len()..].to_vec();
+    let pub_key = PublicKey::from_slice(&key_bytes)?;
+    let x25519_key = derive_x25519_public(&pub_key)?;
+
+    // base58B encode the raw key
+    let mut multi_bytes = vec![];
+    multi_bytes.extend_from_slice(&X25519_CODEC);
+    multi_bytes.extend_from_slice(&x25519_key.to_bytes());
+    let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
+
+    VerificationMethodBuilder::new(multikey).did(did).build()
 }
 
 // let mut found = false;
@@ -677,277 +614,6 @@ impl ServiceBuilder<WithType, WithEndpoint> {
             id: self.id,
             type_: self.service_type.0,
             service_endpoint: ep,
-        }
-    }
-}
-
-/// A DID document can express verification methods, such as cryptographic
-/// public keys, which can be used to authenticate or authorize interactions
-/// with the DID subject or associated parties.
-///
-/// For example, a cryptographic
-/// public key can be used as a verification method with respect to a digital
-/// signature; in such usage, it verifies that the signer could use the
-/// associated cryptographic private key. Verification methods might take many
-/// parameters. An example of this is a set of five cryptographic keys from
-/// which any three are required to contribute to a cryptographic threshold
-/// signature.
-///
-/// MAY include additional properties which can be determined from the
-/// verification method as registered in the
-/// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries/).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct VerificationMethod {
-    /// Only used when the verification method uses terms not defined in the
-    /// containing document.
-    #[serde(rename = "@context")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context: Option<Kind<Value>>,
-
-    /// A DID that identifies the verification method.
-    pub id: String,
-
-    /// The type of verification method. SHOULD be a registered type in the
-    /// [DID Specification Registries](https://www.w3.org/TR/did-spec-registries).
-    #[serde(rename = "type")]
-    pub type_: MethodType,
-
-    /// The DID of the controller of the verification method.
-    pub controller: String,
-
-    /// The format of the public key material.
-    #[serde(flatten)]
-    pub key: KeyEncoding,
-}
-
-impl VerificationMethod {
-    /// Infer the DID from the key ID.
-    #[must_use]
-    pub fn did(&self) -> String {
-        self.id.split('#').next().unwrap_or_default().to_string()
-    }
-
-    /// Create a new `X25519` key agreement verification method from the
-    /// `Ed25519` signing key.
-    ///
-    /// # Errors
-    /// If the conversion from `Ed25519` to `X25519` fails, an error will be
-    /// returned, including testing the assumption that the signing key is
-    /// `Ed25519` in the first place.
-    pub fn derive_key_agreement(&self) -> Result<Self> {
-        let KeyEncoding::Multibase { public_key_multibase } = &self.key else {
-            return Err(anyhow!("not a multibase key"));
-        };
-        let (base, multi_bytes) = multibase::decode(public_key_multibase)
-            .map_err(|e| anyhow!("failed to decode multibase key: {e}"))?;
-
-        if base != Base::Base58Btc {
-            return Err(anyhow!("multibase base is not Base58Btc"));
-        }
-        if multi_bytes[0..ED25519_CODEC.len()] != ED25519_CODEC {
-            return Err(anyhow!("key is not an Ed25519 key"));
-        }
-
-        let key_bytes = multi_bytes[ED25519_CODEC.len()..].to_vec();
-        let pub_key = PublicKey::from_slice(&key_bytes)?;
-        let x25519_key = derive_x25519_public(&pub_key)?;
-
-        // base58B encode the raw key
-        let mut multi_bytes = vec![];
-        multi_bytes.extend_from_slice(&X25519_CODEC);
-        multi_bytes.extend_from_slice(&x25519_key.to_bytes());
-        let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
-
-        let vm = VerificationMethodBuilder::new(multikey).did(self.did()).build()?;
-
-        Ok(vm)
-    }
-}
-
-/// A builder for creating a verification method.
-#[derive(Default)]
-pub struct VerificationMethodBuilder {
-    key: KeyEncoding,
-    did: String,
-    id_type: KeyId,
-    // method_type: MethodType,
-}
-
-impl VerificationMethodBuilder {
-    /// Creates a new `VerificationMethodBuilder` with the given public key.
-    #[must_use]
-    pub fn new(key: impl Into<KeyEncoding>) -> Self {
-        Self {
-            key: key.into(),
-            ..Default::default()
-        }
-    }
-
-    /// Specify how to construct the key ID.
-    #[must_use]
-    pub fn did(mut self, did: impl Into<String>) -> Self {
-        self.did = did.into();
-        self
-    }
-
-    /// Specify how to construct the key ID.
-    #[must_use]
-    pub fn key_id(mut self, id_type: KeyId) -> Self {
-        self.id_type = id_type;
-        self
-    }
-
-    /// Build the verification method.
-    ///
-    /// # Errors
-    ///
-    /// Will fail if the key format does not match the method type, or if the
-    /// key cannot be converted to a multibase string or JWK.
-    pub fn build(self) -> Result<VerificationMethod> {
-        let method_type = match &self.key {
-            KeyEncoding::Jwk { .. } => MethodType::JsonWebKey,
-            KeyEncoding::Multibase { .. } => MethodType::Multikey,
-        };
-
-        let suffix = match self.id_type {
-            KeyId::Did => String::new(),
-            KeyId::Authorization(auth_key) => format!("#{auth_key}"),
-            KeyId::Verification => {
-                let mb = match &self.key {
-                    KeyEncoding::Jwk { public_key_jwk } => public_key_jwk.to_multibase()?,
-                    KeyEncoding::Multibase { public_key_multibase } => public_key_multibase.clone(),
-                };
-                format!("#{mb}")
-            }
-            KeyId::Index(index) => format!("#{index}"),
-        };
-
-        Ok(VerificationMethod {
-            id: format!("{}{suffix}", self.did),
-            controller: self.did,
-            type_: method_type,
-            key: self.key,
-            ..VerificationMethod::default()
-        })
-    }
-}
-
-/// Instruction to the `VerificationMethodBuilder` on how to construct the key
-/// ID.
-#[derive(Default)]
-pub enum KeyId {
-    /// Use the DID as the identifier without any fragment.
-    #[default]
-    Did,
-
-    /// Use the provided multibase authorization key and append to the document
-    /// identifier (DID URL).
-    Authorization(String),
-
-    /// Use the verification method key from the `DidOperator` to construct a
-    /// multibase value to append to the document identifier (DID URL).
-    Verification,
-
-    /// Append the document identifier (DID URL) with a prefix and an
-    /// incrementing index. Use an empty string for the prefix if only the index
-    /// is required.
-    ///
-    /// # Examples
-    ///
-    /// `did:<method>:<method-specific-identifier>#key-0`.
-    Index(String),
-}
-
-/// The format of the public key material.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all_fields = "camelCase")]
-#[serde(untagged)]
-pub enum KeyEncoding {
-    /// The key is encoded as a Multibase string.
-    Multibase {
-        /// The public key encoded as a Multibase.
-        public_key_multibase: String,
-    },
-
-    /// The key is encoded as a JWK.
-    Jwk {
-        /// The public key encoded as a JWK.
-        public_key_jwk: PublicKeyJwk,
-    },
-}
-
-impl Default for KeyEncoding {
-    fn default() -> Self {
-        Self::Multibase {
-            public_key_multibase: String::new(),
-        }
-    }
-}
-
-impl KeyEncoding {
-    /// Return the key as a JWK
-    ///
-    /// # Errors
-    /// Will return an error if the key is multibase encoded and cannot be
-    /// decoded.
-    pub fn jwk(&self) -> Result<PublicKeyJwk> {
-        match self {
-            Self::Jwk { public_key_jwk } => Ok(public_key_jwk.clone()),
-            Self::Multibase { public_key_multibase } => {
-                PublicKeyJwk::from_multibase(public_key_multibase)
-            }
-        }
-    }
-
-    /// Return the key as a multibase string.
-    ///
-    /// # Errors
-    /// Will return an error if the key is a JWK and cannot be encoded as a
-    /// multibase string.
-    pub fn multibase(&self) -> Result<String> {
-        match self {
-            Self::Jwk { public_key_jwk } => public_key_jwk.to_multibase(),
-            Self::Multibase { public_key_multibase } => Ok(public_key_multibase.clone()),
-        }
-    }
-}
-
-impl From<PublicKeyJwk> for KeyEncoding {
-    fn from(jwk: PublicKeyJwk) -> Self {
-        Self::Jwk { public_key_jwk: jwk }
-    }
-}
-
-impl From<String> for KeyEncoding {
-    fn from(multibase: String) -> Self {
-        Self::Multibase {
-            public_key_multibase: multibase,
-        }
-    }
-}
-
-/// Verification method types supported.
-///
-/// See <https://www.w3.org/TR/cid-1.0/#verification-methods>.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename_all_fields = "camelCase")]
-pub enum MethodType {
-    /// The Multikey verification method encodes key types into Multibase
-    /// format.
-    #[default]
-    Multikey,
-
-    /// The JSON Web Key verification method encodes key types into JWK
-    /// format.
-    JsonWebKey,
-}
-
-impl Display for MethodType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Multikey => write!(f, "Multikey"),
-            Self::JsonWebKey => write!(f, "JsonWebKey"),
         }
     }
 }

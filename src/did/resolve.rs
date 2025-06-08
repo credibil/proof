@@ -10,10 +10,10 @@ use std::str::FromStr;
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use super::document::{Document, Service, VerificationMethod};
-use super::url::Url;
-use super::{Method, key, web, webvh};
 use crate::IdentityResolver;
+use crate::did::document::{Document, Service};
+use crate::did::url::Url;
+use crate::did::{Method, VerificationMethod, key, web, webvh};
 
 /// Dereference a DID URL into a resource.
 ///
