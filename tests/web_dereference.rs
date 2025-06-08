@@ -3,18 +3,16 @@
 use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
+use credibil_identity::did::web::CreateBuilder;
 use credibil_identity::did::{
-    self, DocumentBuilder, KeyFormat, KeyId, Resource, Service, Url, VerificationMethod, web,
+    self, DocumentBuilder, KeyFormat, KeyId, Resource, Service, Url, VerificationMethod,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 
 // Create a new `did:web` document and dereference a resource from it.
 #[tokio::test]
-async fn create_then_deref() {
-    let did = web::default_did("https://credibil.io/issuers/example").expect("should create DID");
-    assert_eq!(did, "did:web:credibil.io:issuers:example");
-
+async fn dereference() {
     let signer =
         Keyring::generate(&Vault, "wd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -25,20 +23,21 @@ async fn create_then_deref() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-    let doc = DocumentBuilder::new()
-        .verification_method(vm)
-        .service(svc)
-        .build(did)
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
+
+    let document = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
+        .build()
         .expect("should build document");
 
     // verify
-    let Some(vm_list) = &doc.verification_method else {
+    let Some(vm_list) = &document.verification_method else {
         panic!("should have a verification method");
     };
     let vm_url = &vm_list.first().expect("should have at least one VM").id;
     let url = Url::from_str(vm_url).expect("should parse DID");
 
-    let resource = did::document_resource(&url, &doc).expect("should dereference VM");
+    let resource = did::document_resource(&url, &document).expect("should dereference VM");
     let Resource::VerificationMethod(vm) = resource else {
         panic!("should be a verification method");
     };
