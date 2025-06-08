@@ -440,7 +440,8 @@ fn x25519_key_agreement(did: &str, ed25519_key: &str) -> Result<VerificationMeth
     multi_bytes.extend_from_slice(&x25519_key.to_bytes());
     let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-    VerificationMethodBuilder::new(multikey).did(did).build()
+    VerificationMethod::build()
+        .key(multikey).did(did).build()
 }
 
 // let mut found = false;

@@ -5,7 +5,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
     self, CreateBuilder, SCID_PLACEHOLDER, UpdateBuilder, Witness, WitnessWeight,
 };
-use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethodBuilder};
+use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder,VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -32,7 +32,8 @@ async fn update_success() {
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
     let vm =
-        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
+        VerificationMethod::build()
+        .key(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
 
     let service = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
         .service_type("LinkedVerifiablePresentation")
@@ -113,7 +114,8 @@ async fn update_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let vm = VerificationMethodBuilder::new(new_update_multi.clone())
+    let vm = VerificationMethod::build()
+        .key(new_update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
 
     // Add a reference-based verification method as a for-instance.

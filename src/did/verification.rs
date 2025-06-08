@@ -46,6 +46,11 @@ pub struct VerificationMethod {
 }
 
 impl VerificationMethod {
+    /// Create a new `VerificationMethodBuilder` to build a verification method.
+    pub fn build() -> VerificationMethodBuilder {
+        VerificationMethodBuilder::new()
+    }
+
     /// Infer the DID from the key ID.
     #[must_use]
     pub fn did(&self) -> String {
@@ -124,26 +129,22 @@ impl From<String> for KeyFormat {
 /// A builder for creating a verification method.
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
-    key: KeyFormat,
+    key: Option<KeyFormat>,
     did: String,
     id_type: KeyId,
-    // method_type: MethodType,
 }
 
 impl VerificationMethodBuilder {
     /// Creates a new `VerificationMethodBuilder` with the given public key.
     #[must_use]
-    pub fn new(key: impl Into<KeyFormat>) -> Self {
-        Self {
-            key: key.into(),
-            ..Default::default()
-        }
+    pub fn new() -> Self {
+        VerificationMethodBuilder::default()
     }
 
-    /// Specify how to construct the key ID.
+    /// Specify the key to use for the verification method.
     #[must_use]
-    pub(crate) fn did(mut self, did: impl Into<String>) -> Self {
-        self.did = did.into();
+    pub fn key(mut self, key: impl Into<KeyFormat>) -> Self {
+        self.key = Some(key.into());
         self
     }
 
@@ -154,6 +155,13 @@ impl VerificationMethodBuilder {
         self
     }
 
+    /// Specify how to construct the key ID.
+    #[must_use]
+    pub(crate) fn did(mut self, did: impl Into<String>) -> Self {
+        self.did = did.into();
+        self
+    }
+
     /// Build the verification method.
     ///
     /// # Errors
@@ -161,11 +169,15 @@ impl VerificationMethodBuilder {
     /// Will fail if the key format does not match the method type, or if the
     /// key cannot be converted to a multibase string or JWK.
     pub(crate) fn build(self) -> Result<VerificationMethod> {
+        let Some(key) = &self.key else {
+            return Err(anyhow::anyhow!("Verification method key must be set"));
+        };
+
         let suffix = match self.id_type {
             KeyId::Did => String::new(),
             KeyId::Authorization(auth_key) => format!("#{auth_key}"),
             KeyId::Verification => {
-                let mb = match &self.key {
+                let mb = match key {
                     KeyFormat::JsonWebKey { public_key_jwk } => public_key_jwk.to_multibase()?,
                     KeyFormat::Multikey { public_key_multibase } => public_key_multibase.clone(),
                 };
@@ -177,7 +189,7 @@ impl VerificationMethodBuilder {
         Ok(VerificationMethod {
             id: format!("{}{suffix}", self.did),
             controller: self.did,
-            key: self.key,
+            key: key.clone(),
             ..VerificationMethod::default()
         })
     }
@@ -239,7 +251,8 @@ mod tests {
     fn create() {
         let key = PublicKeyJwk::from_multibase("z6MkmM42vxfqZQsv4ehtTjFFxQ4sQKS2w6WR7emozFAn5cxu")
             .unwrap();
-        let vm = VerificationMethodBuilder::new(key)
+        let vm = VerificationMethod::build()
+            .key(key)
             .did("did:web:example.com")
             .key_id(KeyId::Verification)
             .build()
@@ -262,7 +275,8 @@ mod tests {
     fn json_web_key() {
         let jwk = PublicKeyJwk::from_multibase("z6MkmM42vxfqZQsv4ehtTjFFxQ4sQKS2w6WR7emozFAn5cxu")
             .unwrap();
-        let vm = VerificationMethodBuilder::new(jwk)
+        let vm = VerificationMethod::build()
+            .key(jwk)
             .did("did:web:example.com")
             .key_id(KeyId::Verification)
             .build()
@@ -285,7 +299,8 @@ mod tests {
     #[test]
     fn multikey() {
         let multikey = "z6MkmM42vxfqZQsv4ehtTjFFxQ4sQKS2w6WR7emozFAn5cxu".to_string();
-        let vm = VerificationMethodBuilder::new(multikey)
+        let vm = VerificationMethod::build()
+            .key(multikey)
             .did("did:web:example.com")
             .key_id(KeyId::Verification)
             .build()

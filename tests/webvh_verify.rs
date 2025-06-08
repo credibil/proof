@@ -4,7 +4,7 @@ use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
     self, CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight,
 };
-use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethodBuilder};
+use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -28,8 +28,9 @@ async fn simple_proof() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
-    let vm =
-        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
+    let vm = VerificationMethod::build()
+        .key(update_multi.clone())
+        .key_id(KeyId::Authorization(id_multi));
 
     let doc =
         DocumentBuilder::new(did).verification_method(vm).build().expect("should build document");
@@ -69,8 +70,9 @@ async fn complex_proof() {
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
 
-    let vm =
-        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
+    let vm = VerificationMethod::build()
+        .key(update_multi.clone())
+        .key_id(KeyId::Authorization(id_multi));
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois")
