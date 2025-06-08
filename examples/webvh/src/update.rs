@@ -64,22 +64,20 @@ pub async fn update(
     let mut db = DocumentBuilder::from(current_doc.clone());
 
     // Create a new verification method.
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&current_doc.id)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()?;
-    db = db.verification_method(vm.clone());
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
+    db = db.verification_method(vm);
 
     // Add a reference-based verification method if requested.
-    if let Some(purpose) = req.add {
-        match purpose {
-            KeyPurpose::AssertionMethod => db = db.assertion_method(vm.id.clone()),
-            KeyPurpose::Authentication => db = db.authentication(vm.id.clone()),
-            KeyPurpose::CapabilityInvocation => db = db.capability_invocation(vm.id.clone()),
-            KeyPurpose::CapabilityDelegation => db = db.capability_delegation(vm.id.clone()),
-            KeyPurpose::VerificationMethod | KeyPurpose::KeyAgreement => {}
-        }
-    }
+    // if let Some(purpose) = req.add {
+    //     match purpose {
+    //         KeyPurpose::AssertionMethod => db = db.assertion_method(vm.id.clone()),
+    //         KeyPurpose::Authentication => db = db.authentication(vm.id.clone()),
+    //         KeyPurpose::CapabilityInvocation => db = db.capability_invocation(vm.id.clone()),
+    //         KeyPurpose::CapabilityDelegation => db = db.capability_delegation(vm.id.clone()),
+    //         KeyPurpose::VerificationMethod | KeyPurpose::KeyAgreement => {}
+    //     }
+    // }
 
     // Create an update log entry.
     let doc = db.build()?;

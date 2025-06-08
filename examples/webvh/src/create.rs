@@ -43,10 +43,8 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&next_key)?;
     let next_multi = jwk.to_multibase()?;
 
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()?;
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
 
     tracing::debug!("keys established");
 

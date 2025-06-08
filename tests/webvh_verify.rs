@@ -28,17 +28,11 @@ async fn simple_proof() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
 
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()
-        .expect("should build");
-
-    let doc = DocumentBuilder::new(did)
-        .verification_method(vm.clone())
-        .build()
-        .expect("should build document");
+    let doc =
+        DocumentBuilder::new(did).verification_method(vm).build().expect("should build document");
 
     let result = CreateBuilder::new()
         .document(doc)
@@ -75,17 +69,14 @@ async fn complex_proof() {
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
 
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()
-        .expect("should build");
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
-        .verification_method(vm.clone())
+        .verification_method(vm)
         .add_service(service)
         .build()
         .expect("should build document");

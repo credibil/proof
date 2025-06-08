@@ -142,7 +142,7 @@ impl VerificationMethodBuilder {
 
     /// Specify how to construct the key ID.
     #[must_use]
-    pub fn did(mut self, did: impl Into<String>) -> Self {
+    pub(crate) fn did(mut self, did: impl Into<String>) -> Self {
         self.did = did.into();
         self
     }
@@ -160,7 +160,7 @@ impl VerificationMethodBuilder {
     ///
     /// Will fail if the key format does not match the method type, or if the
     /// key cannot be converted to a multibase string or JWK.
-    pub fn build(self) -> Result<VerificationMethod> {
+    pub(crate) fn build(self) -> Result<VerificationMethod> {
         let suffix = match self.id_type {
             KeyId::Did => String::new(),
             KeyId::Authorization(auth_key) => format!("#{auth_key}"),

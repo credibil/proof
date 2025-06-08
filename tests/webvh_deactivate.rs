@@ -31,11 +31,8 @@ async fn create_then_deactivate() {
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
 
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()
-        .expect("should build");
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -131,12 +128,8 @@ async fn update_then_deactivate() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let did = webvh::default_did(DID_URL).expect("should create DID");
-
-    let vm = VerificationMethodBuilder::new(update_multi.clone())
-        .did(&did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()
-        .expect("should build");
+    let vm =
+        VerificationMethodBuilder::new(update_multi.clone()).key_id(KeyId::Authorization(id_multi));
 
     let service = ServiceBuilder::new(format!("did:webvh:{}:example.com#whois", SCID_PLACEHOLDER))
         .service_type("LinkedVerifiablePresentation")
@@ -218,10 +211,7 @@ async fn update_then_deactivate() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethodBuilder::new(new_update_multi.clone())
-        .did(did)
-        .key_id(KeyId::Authorization(id_multi))
-        .build()
-        .expect("should build");
+        .key_id(KeyId::Authorization(id_multi));
 
     // Add another reference-based verification method as a for-instance.
     let vm_list = doc.verification_method.clone().expect("should get verification methods");

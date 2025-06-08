@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_identity::did::{
-    DocumentBuilder, KeyFormat, KeyId, Resource, ServiceBuilder, Url, VerificationMethodBuilder,
-    document_resource, web,
+    self, DocumentBuilder, KeyFormat, KeyId, Resource, ServiceBuilder, Url,
+    VerificationMethodBuilder, web,
 };
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -22,24 +22,26 @@ async fn create_then_deref() {
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
-    let vm = VerificationMethodBuilder::new(jwk.clone())
-        .did(&did)
-        .key_id(KeyId::Index("key-0".to_string()))
-        .build()
-        .expect("should build");
+    let vm = VerificationMethodBuilder::new(jwk.clone()).key_id(KeyId::Index("key-0".to_string()));
 
     let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois")
         .build();
     let doc = DocumentBuilder::new(did)
-        .verification_method(vm.clone())
+        .verification_method(vm)
         .add_service(service)
         .build()
         .expect("should build document");
-    let url = Url::from_str(&vm.id).expect("should parse DID");
 
-    let deref_vm = document_resource(&url, &doc).expect("should dereference VM");
+    // verify
+    let Some(vm_list) = &doc.verification_method else {
+        panic!("should have a verification method");
+    };
+    let vm_url = &vm_list.first().expect("should have at least one VM").id;
+    let url = Url::from_str(vm_url).expect("should parse DID");
+
+    let deref_vm = did::document_resource(&url, &doc).expect("should dereference VM");
     let Resource::VerificationMethod(deref_vm) = deref_vm else {
         panic!("should be a verification method");
     };

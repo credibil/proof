@@ -21,11 +21,7 @@ async fn create_ok() {
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
 
-    let vm = VerificationMethodBuilder::new(jwk)
-        .did(&did)
-        .key_id(KeyId::Index("key-0".to_string()))
-        .build()
-        .expect("should build");
+    let vm = VerificationMethodBuilder::new(jwk).key_id(KeyId::Index("key-0".to_string()));
     let service = ServiceBuilder::new(format!("{did}#whois"))
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois")

@@ -135,7 +135,7 @@ impl Document {
 }
 
 /// A builder for creating a DID Document.
-#[derive(Clone, Debug, Default)]
+#[derive(Default)]
 pub struct DocumentBuilder {
     id: Option<String>,
     doc: Option<Document>,
@@ -144,7 +144,7 @@ pub struct DocumentBuilder {
     key_agreement: Option<Vec<Kind<VerificationMethod>>>,
     capability_invocation: Option<Vec<Kind<VerificationMethod>>>,
     capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
-    verification_method: Option<Vec<VerificationMethod>>,
+    verification_method: Option<Vec<VerificationMethodBuilder>>,
     derive_key_agreement: Option<String>,
     also_known_as: Option<Vec<String>>,
     controller: Option<OneMany<String>>,
@@ -319,8 +319,8 @@ impl DocumentBuilder {
 
     /// Add a verification method to the `key_agreement` relationship.
     #[must_use]
-    pub fn verification_method(mut self, verification_method: VerificationMethod) -> Self {
-        self.verification_method.get_or_insert(vec![]).push(verification_method);
+    pub fn verification_method(mut self, builder: VerificationMethodBuilder) -> Self {
+        self.verification_method.get_or_insert(vec![]).push(builder);
         self
     }
 
@@ -389,12 +389,19 @@ impl DocumentBuilder {
             }
         };
 
+        if let Some(builders) = self.verification_method {
+            for b in builders {
+                let vm = b.did(&doc.id).build()?;
+                doc.verification_method.get_or_insert(vec![]).push(vm);
+            }
+        }
+
         doc.assertion_method = self.assertion_method;
         doc.authentication = self.authentication;
         doc.key_agreement = self.key_agreement;
         doc.capability_invocation = self.capability_invocation;
         doc.capability_delegation = self.capability_delegation;
-        doc.verification_method = self.verification_method;
+
         doc.also_known_as = self.also_known_as;
         doc.controller = self.controller;
         doc.service = self.service;
