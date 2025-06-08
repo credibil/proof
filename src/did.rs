@@ -9,6 +9,7 @@
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
 mod document;
+mod service;
 pub mod key;
 mod resolve;
 mod url;
@@ -21,6 +22,7 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 
+pub use self::service::*;
 pub use self::document::*;
 pub use self::resolve::{Resource, deref_url, dereference, document_resource};
 pub use self::url::{QueryParams, Url};

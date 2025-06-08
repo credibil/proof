@@ -49,8 +49,7 @@ pub async fn create(
 
     tracing::debug!("keys established");
 
-    // Could add other verification methods and service endpoints to the
-    // `CreateRequest` and build them here.
+    // TODO: add other verification methods and service endpoints to the `CreateRequest`.
     let doc = DocumentBuilder::new(did).verification_method(vm).build()?;
 
     let result = CreateBuilder::new()

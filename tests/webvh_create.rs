@@ -3,9 +3,9 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    self, CreateBuilder, SCID_PLACEHOLDER, Witness, WitnessWeight,
+    self, CreateBuilder, Witness, WitnessWeight,
 };
-use credibil_identity::did::{DocumentBuilder, KeyId, ServiceBuilder, VerificationMethod};
+use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -34,14 +34,14 @@ async fn create_success() {
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(auth_multi));
 
-    let svc = ServiceBuilder::new(format!("did:webvh:{SCID_PLACEHOLDER}:example.com#whois"))
+    let svc = Service::build()
+        .id("whois")
         .service_type("LinkedVerifiablePresentation")
-        .endpoint("https://example.com/.well-known/whois")
-        .build();
+        .endpoint("https://example.com/.well-known/whois");
 
     let doc = DocumentBuilder::new(did)
         .verification_method(vm)
-        .add_service(svc)
+        .service(svc)
         .build()
         .expect("should build document");
 

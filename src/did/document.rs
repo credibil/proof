@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::core::{Kind, OneMany};
-use crate::did::VerificationMethodBuilder;
-use crate::did::verification::VerificationMethod;
+use crate::did::service::{Service, ServiceBuilder};
+use crate::did::verification::{VerificationMethod, VerificationMethodBuilder};
 
 // TODO: set context based on key format:
 // - Ed25519VerificationKey2020	https://w3id.org/security/suites/ed25519-2020/v1
@@ -148,7 +148,7 @@ pub struct DocumentBuilder {
     derive_key_agreement: Option<String>,
     also_known_as: Option<Vec<String>>,
     controller: Option<OneMany<String>>,
-    service: Option<Vec<Service>>,
+    service: Option<Vec<ServiceBuilder>>,
     context: Vec<Kind<Value>>,
     did_document_metadata: Option<DocumentMetadata>,
 }
@@ -232,7 +232,7 @@ impl DocumentBuilder {
     ///
     /// Chain to add multiple service endpoints.
     #[must_use]
-    pub fn add_service(mut self, service: Service) -> Self {
+    pub fn service(mut self, service: ServiceBuilder) -> Self {
         self.service.get_or_insert(vec![]).push(service);
         self
     }
@@ -389,10 +389,19 @@ impl DocumentBuilder {
             }
         };
 
+        // verification methods
         if let Some(builders) = self.verification_method {
             for b in builders {
-                let vm = b.did(&doc.id).build()?;
+                let vm = b.build(&doc.id)?;
                 doc.verification_method.get_or_insert(vec![]).push(vm);
+            }
+        }
+
+        // services
+        if let Some(builders) = self.service {
+            for b in builders {
+                let svc = b.build(&doc.id)?;
+                doc.service.get_or_insert(vec![]).push(svc);
             }
         }
 
@@ -401,10 +410,8 @@ impl DocumentBuilder {
         doc.key_agreement = self.key_agreement;
         doc.capability_invocation = self.capability_invocation;
         doc.capability_delegation = self.capability_delegation;
-
         doc.also_known_as = self.also_known_as;
         doc.controller = self.controller;
-        doc.service = self.service;
 
         doc.did_document_metadata = Some(md);
 
@@ -420,7 +427,7 @@ impl DocumentBuilder {
 }
 
 // Derive and X25519-based Key Agreement from an Ed25519 public key.
-fn x25519_key_agreement(did: &str, ed25519_key: &str) -> Result<VerificationMethod> {
+fn x25519_key_agreement(did: impl Into<String>, ed25519_key: &str) -> Result<VerificationMethod> {
     let (base, multi_bytes) = multibase::decode(ed25519_key)
         .map_err(|e| anyhow!("failed to decode multibase key: {e}"))?;
     if base != Base::Base58Btc {
@@ -440,8 +447,7 @@ fn x25519_key_agreement(did: &str, ed25519_key: &str) -> Result<VerificationMeth
     multi_bytes.extend_from_slice(&x25519_key.to_bytes());
     let multikey = multibase::encode(Base::Base58Btc, &multi_bytes);
 
-    VerificationMethod::build()
-        .key(multikey).did(did).build()
+    VerificationMethod::build().key(multikey).build(did)
 }
 
 // let mut found = false;
@@ -499,132 +505,6 @@ fn x25519_key_agreement(did: &str, ed25519_key: &str) -> Result<VerificationMeth
 // if !found {
 //     bail!("verification method not found");
 // }
-
-/// Services are used to express ways of communicating with the DID subject or
-/// associated entities.
-///
-/// They can be any type of service the DID subject wants
-/// to advertise, including decentralized identity management services for
-/// further discovery, authentication, authorization, or interaction.
-///
-/// Service information is often service specific. For example, a reference to
-/// an encrypted messaging service can detail how to initiate the encrypted link
-/// before messaging begins.
-///
-/// Due to privacy concerns, revealing public information through services, such
-/// as social media accounts, personal websites, and email addresses, is
-/// discouraged.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct Service {
-    /// A URI unique to the service.
-    pub id: String,
-
-    /// The service type. SHOULD be registered in the DID Specification
-    /// Registries.
-    #[serde(rename = "type")]
-    pub type_: String,
-
-    /// One or more endpoints for the service.
-    #[allow(clippy::struct_field_names)]
-    pub service_endpoint: OneMany<Kind<Value>>,
-}
-
-/// Service builder
-#[derive(Clone, Debug, Default)]
-pub struct ServiceBuilder<T, E> {
-    id: String,
-    service_type: T,
-    endpoint: E,
-}
-
-/// Service builder does not have a type specified (can't build)
-#[derive(Clone, Debug)]
-pub struct WithoutType;
-
-/// Service builder has a type specified (can build)
-#[derive(Clone, Debug)]
-pub struct WithType(String);
-
-/// Service builder does not have an endpoint specified (can't build)
-#[derive(Clone, Debug)]
-pub struct WithoutEndpoint;
-
-/// Service builder has at least one endpoint specified (can build)
-#[derive(Clone, Debug)]
-pub struct WithEndpoint(Vec<Kind<Value>>);
-
-impl ServiceBuilder<WithoutType, WithoutEndpoint> {
-    /// Creates a new `ServiceBuilder` with the given service ID.
-    #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            service_type: WithoutType,
-            endpoint: WithoutEndpoint,
-        }
-    }
-
-    /// Specify the service type.
-    #[must_use]
-    pub fn service_type(
-        &self, service_type: impl Into<String>,
-    ) -> ServiceBuilder<WithType, WithoutEndpoint> {
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: WithType(service_type.into()),
-            endpoint: WithoutEndpoint,
-        }
-    }
-}
-
-impl ServiceBuilder<WithType, WithoutEndpoint> {
-    /// Specify a string-based service endpoint.
-    #[must_use]
-    pub fn endpoint(
-        &self, endpoint: impl Into<Kind<Value>>,
-    ) -> ServiceBuilder<WithType, WithEndpoint> {
-        let ep = endpoint.into();
-        ServiceBuilder {
-            id: self.id.clone(),
-            service_type: self.service_type.clone(),
-            endpoint: WithEndpoint(vec![ep]),
-        }
-    }
-}
-
-impl ServiceBuilder<WithType, WithEndpoint> {
-    /// Add a string-based service endpoint.
-    #[must_use]
-    pub fn add_endpoint_str(mut self, endpoint: impl Into<String>) -> Self {
-        let ep = Kind::String(endpoint.into());
-        self.endpoint.0.push(ep);
-        self
-    }
-
-    /// Add a JSON-based service endpoint.
-    #[must_use]
-    pub fn add_endpoint_json(mut self, endpoint: &Value) -> Self {
-        let ep = Kind::Object(endpoint.clone());
-        self.endpoint.0.push(ep);
-        self
-    }
-
-    /// Build the service.
-    #[must_use]
-    pub fn build(self) -> Service {
-        let ep = if self.endpoint.0.len() == 1 {
-            OneMany::One(self.endpoint.0[0].clone())
-        } else {
-            OneMany::Many(self.endpoint.0)
-        };
-        Service {
-            id: self.id,
-            type_: self.service_type.0,
-            service_endpoint: ep,
-        }
-    }
-}
 
 /// DID document metadata. This typically does not change unless the DID
 /// document changes.

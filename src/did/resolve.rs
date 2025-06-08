@@ -11,7 +11,7 @@ use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::IdentityResolver;
-use crate::did::document::{Document, Service};
+use crate::did::{Document, Service};
 use crate::did::url::Url;
 use crate::did::{Method, VerificationMethod, key, web, webvh};
 
