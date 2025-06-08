@@ -6,7 +6,7 @@
 
 use std::vec;
 
-use anyhow::bail;
+use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use multibase::Base;
 use sha2::Digest;
@@ -26,7 +26,7 @@ impl Url {
     /// Will fail if the DID URL is invalid.
     ///
     /// <https://identity.foundation/didwebvh/#the-did-to-https-transformation>
-    pub fn to_webvh_http(&self) -> anyhow::Result<String> {
+    pub fn to_webvh_http(&self) -> Result<String> {
         // 1. Remove the literal `did:webvh:` prefix from the DID URL.
         let scid_and_fqdn = self.id.clone();
 
@@ -74,7 +74,7 @@ impl Url {
 /// # Errors
 ///
 /// Will fail if the DID URL is invalid or the provider returns an error.
-pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> anyhow::Result<Document> {
+pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Document> {
     // Generate the URL to fetch the DID list (log) document.
     let http_url = url.to_webvh_http()?;
 
@@ -102,8 +102,8 @@ pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> anyhow::Res
 /// Will fail if the log entries are invalid.
 #[allow(clippy::too_many_lines)]
 pub async fn resolve_log(
-    log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
-) -> anyhow::Result<Document> {
+    log: &[DidLogEntry], proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
+) -> Result<Document> {
     if log.is_empty() {
         bail!("log entries are empty");
     }
@@ -198,8 +198,8 @@ pub async fn resolve_log(
         prev_next_key_hashes.clone_from(&log[i].parameters.next_key_hashes);
 
         // 9. Check witness proofs if provided.
-        if witness_proofs.is_some() && log[i].parameters.witness.is_some() {
-            if let Some(witness_entries) = witness_proofs {
+        if proofs.is_some() && log[i].parameters.witness.is_some() {
+            if let Some(witness_entries) = proofs {
                 verify_witness(&log[i], witness_entries).await?;
             }
         }

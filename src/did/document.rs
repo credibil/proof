@@ -134,11 +134,9 @@ impl Document {
     }
 }
 
-/// A builder for creating a DID Document.
-#[derive(Default)]
-pub struct DocumentBuilder {
-    // id: Option<String>,
-    doc: Option<Document>,
+/// DID Document builder.
+pub struct DocumentBuilder<D> {
+    document: D,
     authentication: Option<Vec<Kind<VerificationMethod>>>,
     assertion_method: Option<Vec<Kind<VerificationMethod>>>,
     key_agreement: Option<Vec<Kind<VerificationMethod>>>,
@@ -149,30 +147,65 @@ pub struct DocumentBuilder {
     also_known_as: Option<Vec<String>>,
     controller: Option<OneMany<String>>,
     service: Option<Vec<ServiceBuilder>>,
-    context: Vec<Kind<Value>>,
-    did_document_metadata: Option<DocumentMetadata>,
+    context: Option<Vec<Kind<Value>>>,
+    metadata: Option<DocumentMetadata>,
 }
 
-impl DocumentBuilder {
+impl Default for DocumentBuilder<FromScratch> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Builder does not have a document (can't build).
+pub struct FromScratch;
+
+/// Builder has a document (can build).
+pub struct FromDocument(Document);
+
+impl DocumentBuilder<FromScratch> {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
     pub fn new() -> Self {
         Self {
-            // id: Some(did.into()),
-            context: CONTEXT.iter().map(|ctx| Kind::String((*ctx).to_string())).collect(),
-            ..Default::default()
+            document: FromScratch,
+            authentication: None,
+            assertion_method: None,
+            key_agreement: None,
+            capability_invocation: None,
+            capability_delegation: None,
+            verification_method: None,
+            derive_key_agreement: None,
+            also_known_as: None,
+            controller: None,
+            service: None,
+            context: Some(CONTEXT.iter().map(|ctx| Kind::String((*ctx).to_string())).collect()),
+            metadata: None,
         }
     }
 
     /// Creates a new `DocumentBuilder` from an existing `Document`.
     #[must_use]
-    pub fn from(doc: Document) -> Self {
-        Self {
-            doc: Some(doc),
-            ..Default::default()
+    pub const fn from(document: Document) -> DocumentBuilder<FromDocument> {
+        DocumentBuilder {
+            document: FromDocument(document),
+            authentication: None,
+            assertion_method: None,
+            key_agreement: None,
+            capability_invocation: None,
+            capability_delegation: None,
+            verification_method: None,
+            derive_key_agreement: None,
+            also_known_as: None,
+            controller: None,
+            service: None,
+            context: None,
+            metadata: None,
         }
     }
+}
 
+impl<D> DocumentBuilder<D> {
     /// Add an also-known-as identifier.
     #[must_use]
     pub fn also_known_as(mut self, aka: impl Into<String>) -> Self {
@@ -259,7 +292,7 @@ impl DocumentBuilder {
     /// Chain to add multiple contexts.
     #[must_use]
     pub fn context(mut self, context: Kind<Value>) -> Self {
-        self.context.push(context);
+        self.context.get_or_insert(vec![]).push(context);
         self
     }
 
@@ -363,11 +396,13 @@ impl DocumentBuilder {
 
     /// Set metadata for the document.
     #[must_use]
-    pub fn metadata(mut self, md: DocumentMetadata) -> Self {
-        self.did_document_metadata = Some(md);
+    pub fn metadata(mut self, metadata: DocumentMetadata) -> Self {
+        self.metadata = Some(metadata);
         self
     }
+}
 
+impl DocumentBuilder<FromScratch> {
     /// Update metadata with created or updated timestamp and build the DID
     /// Document.
     ///
@@ -375,54 +410,102 @@ impl DocumentBuilder {
     ///
     /// Will fail if the document is missing required fields or if
     /// verification methods are not properly set up.
-    pub fn build(self, did: impl Into<String>) -> Result<Document> {
-        let mut md = self.did_document_metadata.unwrap_or_default();
-
-        let mut doc = if let Some(doc) = self.doc {
-            md.updated = Some(chrono::Utc::now());
-            doc
-        } else {
-            md.created = chrono::Utc::now();
-            Document {
-                id: did.into(),
-                ..Document::default()
-            }
+    pub(in crate::did) fn build(self, did: impl Into<String>) -> Result<Document> {
+        let mut document = Document {
+            id: did.into(),
+            ..Document::default()
         };
 
         // verification methods
         if let Some(builders) = self.verification_method {
             for b in builders {
-                let vm = b.build(&doc.id)?;
-                doc.verification_method.get_or_insert(vec![]).push(vm);
+                let vm = b.build(&document.id)?;
+                document.verification_method.get_or_insert(vec![]).push(vm);
             }
         }
 
         // services
         if let Some(builders) = self.service {
             for b in builders {
-                let svc = b.build(&doc.id)?;
-                doc.service.get_or_insert(vec![]).push(svc);
+                let svc = b.build(&document.id)?;
+                document.service.get_or_insert(vec![]).push(svc);
             }
         }
 
-        doc.assertion_method = self.assertion_method;
-        doc.authentication = self.authentication;
-        doc.key_agreement = self.key_agreement;
-        doc.capability_invocation = self.capability_invocation;
-        doc.capability_delegation = self.capability_delegation;
-        doc.also_known_as = self.also_known_as;
-        doc.controller = self.controller;
+        document.assertion_method = self.assertion_method;
+        document.authentication = self.authentication;
+        document.key_agreement = self.key_agreement;
+        document.capability_invocation = self.capability_invocation;
+        document.capability_delegation = self.capability_delegation;
+        document.also_known_as = self.also_known_as;
+        document.controller = self.controller;
 
-        doc.did_document_metadata = Some(md);
+        let mut metadata = self.metadata.unwrap_or_default();
+        metadata.created = chrono::Utc::now();
+        document.did_document_metadata = Some(metadata);
 
         if let Some(ed25519_key) = &self.derive_key_agreement {
-            let vm = x25519_key_agreement(&doc.id, ed25519_key)?;
-            doc.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
+            let vm = x25519_key_agreement(&document.id, ed25519_key)?;
+            document.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
         }
 
-        doc.context.extend(self.context);
+        if let Some(context) = self.context {
+            document.context.extend(context);
+        }
 
-        Ok(doc)
+        Ok(document)
+    }
+}
+
+impl DocumentBuilder<FromDocument> {
+    /// Update metadata with created or updated timestamp and build the DID
+    /// Document.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the document is missing required fields or if
+    /// verification methods are not properly set up.
+    pub(in crate::did) fn build(self) -> Result<Document> {
+        let mut document = self.document.0;
+
+        // verification methods
+        if let Some(builders) = self.verification_method {
+            for b in builders {
+                let vm = b.build(&document.id)?;
+                document.verification_method.get_or_insert(vec![]).push(vm);
+            }
+        }
+
+        // services
+        if let Some(builders) = self.service {
+            for b in builders {
+                let svc = b.build(&document.id)?;
+                document.service.get_or_insert(vec![]).push(svc);
+            }
+        }
+
+        document.assertion_method = self.assertion_method;
+        document.authentication = self.authentication;
+        document.key_agreement = self.key_agreement;
+        document.capability_invocation = self.capability_invocation;
+        document.capability_delegation = self.capability_delegation;
+        document.also_known_as = self.also_known_as;
+        document.controller = self.controller;
+
+        let mut metadata = self.metadata.unwrap_or_default();
+        metadata.updated = Some(chrono::Utc::now());
+        document.did_document_metadata = Some(metadata);
+
+        if let Some(ed25519_key) = &self.derive_key_agreement {
+            let vm = x25519_key_agreement(&document.id, ed25519_key)?;
+            document.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
+        }
+
+        if let Some(context) = self.context {
+            document.context.extend(context);
+        }
+
+        Ok(document)
     }
 }
 

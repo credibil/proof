@@ -80,7 +80,7 @@ async fn update_success() {
 
     // --- Update --------------------------------------------------------------
 
-    let doc = create_result.document.clone();
+    let document = create_result.document.clone();
 
     // Rotate the signing key.
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
@@ -103,28 +103,23 @@ async fn update_success() {
         .key_id(KeyId::Authorization(id_multi));
 
     // Add a reference-based verification method as a for-instance.
-    let vm_list = doc.verification_method.clone().expect("should get verification methods");
+    let vm_list = document.verification_method.clone().expect("should get verification methods");
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc.clone())
-        .verification_method(vm)
-        .authentication(auth_vm.id.clone())
-        .build(doc.id)
-        .expect("should build document");
+    let builder =
+        DocumentBuilder::from(document).verification_method(vm).authentication(auth_vm.id.clone());
 
     // Create an update log entry and skip witness verification.
-    let result = UpdateBuilder::from(create_result.log.as_slice(), None)
-        .await
-        .expect("should create builder")
-        .document(&doc)
-        .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
-        .expect("should rotate keys on builder")
+    let result = UpdateBuilder::new()
+        .document(builder)
+        .log_entries(create_result.log)
+        .rotate_keys(&vec![new_update_multi], &vec![new_next_multi])
         .signer(&signer)
         .build()
         .await
         .expect("should build document");
 
-    let logs = serde_json::to_string(&result.log).expect("should serialize log entries");
+    let logs = serde_json::to_string(&result.log_entries).expect("should serialize log entries");
     println!("{logs}");
 }

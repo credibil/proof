@@ -10,7 +10,7 @@ use super::verify::validate_witness;
 use super::{DidLogEntry, Parameters, SCID, VERSION, Witness};
 use crate::Signature;
 use crate::did::webvh::default_did;
-use crate::did::{Document, DocumentBuilder};
+use crate::did::{Document, DocumentBuilder, FromScratch};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -44,7 +44,7 @@ pub struct WithSigner<'a, S: Signature>(pub &'a S);
 pub struct NoDocument;
 
 /// Builder has a document (can build).
-pub struct WithDocument(DocumentBuilder);
+pub struct WithDocument(DocumentBuilder<FromScratch>);
 
 impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     /// Create a new `CreateBuilder`.
@@ -67,7 +67,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     /// Add a populated [`DocumentBuilder`] instance.
     #[must_use]
     pub fn document(
-        self, builder: DocumentBuilder,
+        self, builder: DocumentBuilder<FromScratch>,
     ) -> CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
         CreateBuilder {
             url: self.url,
@@ -212,11 +212,12 @@ impl<S: Signature> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument
         };
 
         // Construct an initial log entry.
-        let version_time =
-            document.did_document_metadata.as_ref().map_or_else(Utc::now, |m| m.created);
         let initial_log_entry = DidLogEntry {
             version_id: SCID.to_string(),
-            version_time,
+            version_time: document
+                .did_document_metadata
+                .as_ref()
+                .map_or_else(Utc::now, |m| m.created),
             parameters: params.clone(),
             state: document,
             proof: vec![],

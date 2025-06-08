@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::did::web::default_did;
-use crate::did::{Document, DocumentBuilder};
+use crate::did::{Document, DocumentBuilder, FromScratch};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -15,7 +15,7 @@ pub struct CreateBuilder<D> {
 pub struct NoDocument;
 
 /// Builder has a document (can build).
-pub struct WithDocument(DocumentBuilder);
+pub struct WithDocument(DocumentBuilder<FromScratch>);
 
 impl CreateBuilder<NoDocument> {
     /// Create a new `CreateBuilder`.
@@ -28,7 +28,7 @@ impl CreateBuilder<NoDocument> {
 
     /// Add a populated [`DocumentBuilder`] instance.
     #[must_use]
-    pub fn document(self, builder: DocumentBuilder) -> CreateBuilder<WithDocument> {
+    pub fn document(self, builder: DocumentBuilder<FromScratch>) -> CreateBuilder<WithDocument> {
         CreateBuilder {
             url: self.url,
             document: WithDocument(builder),

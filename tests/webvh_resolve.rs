@@ -198,38 +198,38 @@ async fn resolve_multiple() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc.clone())
+    let builder = DocumentBuilder::from(doc.clone())
         .verification_method(vm)
-        .authentication(auth_vm.id.clone())
-        .build(doc.id)
-        .expect("should build document");
+        .authentication(auth_vm.id.clone());
 
     // Create an update log entry and skip witness verification of existing log.
-    let result = UpdateBuilder::from(create_result.log.as_slice(), None)
-        .await
-        .expect("should create builder")
-        .document(&doc)
-        .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
-        .expect("should rotate keys on builder")
+    let result = UpdateBuilder::new()
+        .document(builder)
+        .log_entries(create_result.log)
+        .rotate_keys(&vec![new_update_multi], &vec![new_next_multi])
         .signer(&signer)
         .build()
         .await
         .expect("should build document");
 
-    let witness_proof1 = result.log[0].proof(&witness_1).await.expect("should get witness proof");
-    let witness_proof2 = result.log[0].proof(&witness_2).await.expect("should get witness proof");
+    let witness_proof1 =
+        result.log_entries[0].proof(&witness_1).await.expect("should get witness proof");
+    let witness_proof2 =
+        result.log_entries[0].proof(&witness_2).await.expect("should get witness proof");
     let mut witness_proofs = vec![WitnessEntry {
-        version_id: result.log[0].version_id.clone(),
+        version_id: result.log_entries[0].version_id.clone(),
         proof: vec![witness_proof1, witness_proof2],
     }];
-    let witness_proof1 = result.log[1].proof(&witness_1).await.expect("should get witness proof");
-    let witness_proof2 = result.log[1].proof(&witness_2).await.expect("should get witness proof");
+    let witness_proof1 =
+        result.log_entries[1].proof(&witness_1).await.expect("should get witness proof");
+    let witness_proof2 =
+        result.log_entries[1].proof(&witness_2).await.expect("should get witness proof");
     witness_proofs.push(WitnessEntry {
-        version_id: result.log[1].version_id.clone(),
+        version_id: result.log_entries[1].version_id.clone(),
         proof: vec![witness_proof1, witness_proof2],
     });
 
-    let resolved_doc = webvh::resolve_log(&result.log, Some(&witness_proofs), None)
+    let resolved_doc = webvh::resolve_log(&result.log_entries, Some(&witness_proofs), None)
         .await
         .expect("should resolve log");
 
@@ -342,19 +342,15 @@ async fn resolve_deactivated() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc.clone())
+    let builder = DocumentBuilder::from(doc.clone())
         .verification_method(vm)
-        .authentication(auth_vm.id.clone())
-        .build(doc.id)
-        .expect("should build document");
+        .authentication(auth_vm.id.clone());
 
     // Create an update log entry and skip witness verification of existing log.
-    let update_result = UpdateBuilder::from(create_result.log.as_slice(), None)
-        .await
-        .expect("should create builder")
-        .document(&doc)
-        .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
-        .expect("should rotate keys on builder")
+    let update_result = UpdateBuilder::new()
+        .document(builder)
+        .log_entries(create_result.log)
+        .rotate_keys(&vec![new_update_multi], &vec![new_next_multi])
         .signer(&signer)
         .build()
         .await
@@ -377,7 +373,7 @@ async fn resolve_deactivated() {
     let new_next_keys = vec![new_next_multi.clone()];
     let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
 
-    let deactivate_result = DeactivateBuilder::from(&update_result.log)
+    let deactivate_result = DeactivateBuilder::from(&update_result.log_entries)
         .expect("should create builder")
         .rotate_keys(&new_update_keys, &new_next_keys)
         .expect("should rotate keys on builder")

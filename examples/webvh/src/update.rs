@@ -81,17 +81,16 @@ pub async fn update(
     // }
 
     // Create an update log entry.
-    let doc = db.build(current_doc.id)?;
-    let result = UpdateBuilder::from(&did_log, None)
-        .await?
-        .document(&doc)
-        .rotate_keys(vec![update_multi], &vec![next_multi])?
+    let result = UpdateBuilder::new()
+        .document(db)
+        .log_entries(did_log)
+        .rotate_keys(&vec![update_multi], &vec![next_multi])
         .signer(&signer)
         .build()
         .await?;
 
     // Store the log in app state
-    log.add_log(&did_url, result.log.clone())?;
+    log.add_log(&did_url, result.log_entries.clone())?;
 
     Ok(AppJson(result))
 }
