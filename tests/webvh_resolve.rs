@@ -2,8 +2,7 @@
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_identity::did::webvh::{
-    self, CreateBuilder, DeactivateBuilder, UpdateBuilder, Witness, WitnessEntry,
-    WitnessWeight,
+    self, CreateBuilder, DeactivateBuilder, UpdateBuilder, Witness, WitnessEntry, WitnessWeight,
 };
 use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
@@ -13,10 +12,6 @@ use test_utils::Vault;
 // Construct a log with a single entry and make sure it resolves to a DID document.
 #[tokio::test]
 async fn resolve_single() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
-    // let mut signer = Keyring::new("wrs").await.expect("should create keyring");
-    // let update_multi = signer.multibase("signing").await.expect("should get multibase key");
     let signer =
         Keyring::generate(&Vault, "wrs", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -29,8 +24,6 @@ async fn resolve_single() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
-
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
@@ -38,12 +31,7 @@ async fn resolve_single() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-
-    let doc = DocumentBuilder::new(did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -78,15 +66,12 @@ async fn resolve_single() {
         ],
     };
 
-    let result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()
@@ -118,10 +103,6 @@ async fn resolve_single() {
 // Construct a log with multiple entries and make sure it resolves to a DID document.
 #[tokio::test]
 async fn resolve_multiple() {
-    // --- Create --------------------------------------------------------------
-
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer =
         Keyring::generate(&Vault, "wrm", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -134,8 +115,6 @@ async fn resolve_multiple() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
-
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
@@ -143,12 +122,7 @@ async fn resolve_multiple() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-
-    let doc = DocumentBuilder::new(&did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -183,15 +157,12 @@ async fn resolve_multiple() {
         ],
     };
 
-    let create_result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let create_result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()
@@ -227,10 +198,10 @@ async fn resolve_multiple() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc)
+    let doc = DocumentBuilder::from(doc.clone())
         .verification_method(vm)
         .authentication(auth_vm.id.clone())
-        .build()
+        .build(doc.id)
         .expect("should build document");
 
     // Create an update log entry and skip witness verification of existing log.
@@ -238,7 +209,6 @@ async fn resolve_multiple() {
         .await
         .expect("should create builder")
         .document(&doc)
-        .expect("should apply document")
         .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
         .expect("should rotate keys on builder")
         .signer(&signer)
@@ -277,10 +247,6 @@ async fn resolve_multiple() {
 // Test resolving a deactivated document.
 #[tokio::test]
 async fn resolve_deactivated() {
-    // --- Create --------------------------------------------------------------
-
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer =
         Keyring::generate(&Vault, "wrd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -293,7 +259,6 @@ async fn resolve_deactivated() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should get DID");
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
@@ -301,12 +266,7 @@ async fn resolve_deactivated() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-
-    let doc = DocumentBuilder::new(&did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -341,15 +301,12 @@ async fn resolve_deactivated() {
         ],
     };
 
-    let create_result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let create_result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()
@@ -385,10 +342,10 @@ async fn resolve_deactivated() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc)
+    let doc = DocumentBuilder::from(doc.clone())
         .verification_method(vm)
         .authentication(auth_vm.id.clone())
-        .build()
+        .build(doc.id)
         .expect("should build document");
 
     // Create an update log entry and skip witness verification of existing log.
@@ -396,7 +353,6 @@ async fn resolve_deactivated() {
         .await
         .expect("should create builder")
         .document(&doc)
-        .expect("should apply document")
         .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
         .expect("should rotate keys on builder")
         .signer(&signer)

@@ -1,9 +1,7 @@
 //! Tests to verify log entries.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::did::webvh::{
-    self, CreateBuilder, Witness, WitnessWeight,
-};
+use credibil_identity::did::webvh::{self, CreateBuilder, Witness, WitnessWeight};
 use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -13,8 +11,6 @@ use test_utils::Vault;
 // errors.
 #[tokio::test]
 async fn simple_proof() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer =
         Keyring::generate(&Vault, "utd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -27,19 +23,14 @@ async fn simple_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
+    let builder = DocumentBuilder::new().verification_method(vm);
 
-    let doc =
-        DocumentBuilder::new(did).verification_method(vm).build().expect("should build document");
-
-    let result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .signer(&signer)
         .build()
         .await
@@ -53,8 +44,6 @@ async fn simple_proof() {
 // without errors.
 #[tokio::test]
 async fn complex_proof() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer = Keyring::generate(&Vault, "wvhd", "signing", Curve::Ed25519)
         .await
         .expect("should generate");
@@ -68,8 +57,6 @@ async fn complex_proof() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
-
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
@@ -77,11 +64,7 @@ async fn complex_proof() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-    let doc = DocumentBuilder::new(did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -116,15 +99,12 @@ async fn complex_proof() {
         ],
     };
 
-    let result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()

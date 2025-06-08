@@ -7,8 +7,10 @@
 //! - <https://w3c-ccg.github.io/did-method-web>
 //! - <https://w3c.github.io/did-resolution>
 
+mod create;
 mod resolve;
 mod url;
 
-pub use resolve::*;
-pub use url::*;
+pub use self::create::*;
+pub use self::resolve::*;
+pub use self::url::*;

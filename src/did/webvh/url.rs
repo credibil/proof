@@ -5,7 +5,7 @@ use std::fmt::Write;
 use anyhow::bail;
 use url::Url;
 
-use super::SCID_PLACEHOLDER;
+use super::SCID;
 
 /// Convert an HTTP URL into a host and path separated by colons suitable
 /// for use in a `did:webvh` DID.
@@ -56,7 +56,7 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
 /// parsed.
 pub fn default_did(url: &str) -> anyhow::Result<String> {
     let host_and_path = parse_url(url)?;
-    Ok(format!("did:webvh:{SCID_PLACEHOLDER}:{host_and_path}"))
+    Ok(format!("did:webvh:{SCID}:{host_and_path}"))
 }
 
 #[cfg(test)]

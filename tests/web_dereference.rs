@@ -12,8 +12,7 @@ use test_utils::Vault;
 // Create a new `did:web` document and dereference a resource from it.
 #[tokio::test]
 async fn create_then_deref() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-    let did = web::default_did(DID_URL).expect("should create DID");
+    let did = web::default_did("https://credibil.io/issuers/example").expect("should create DID");
     assert_eq!(did, "did:web:credibil.io:issuers:example");
 
     let signer =
@@ -26,11 +25,10 @@ async fn create_then_deref() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-    
-    let doc = DocumentBuilder::new(did)
+    let doc = DocumentBuilder::new()
         .verification_method(vm)
         .service(svc)
-        .build()
+        .build(did)
         .expect("should build document");
 
     // verify
@@ -40,12 +38,12 @@ async fn create_then_deref() {
     let vm_url = &vm_list.first().expect("should have at least one VM").id;
     let url = Url::from_str(vm_url).expect("should parse DID");
 
-    let deref_vm = did::document_resource(&url, &doc).expect("should dereference VM");
-    let Resource::VerificationMethod(deref_vm) = deref_vm else {
+    let resource = did::document_resource(&url, &doc).expect("should dereference VM");
+    let Resource::VerificationMethod(vm) = resource else {
         panic!("should be a verification method");
     };
 
-    let KeyFormat::JsonWebKey { public_key_jwk } = deref_vm.key else {
+    let KeyFormat::JsonWebKey { public_key_jwk } = vm.key else {
         panic!("should be a JWK");
     };
     assert_eq!(public_key_jwk.x, jwk.x);

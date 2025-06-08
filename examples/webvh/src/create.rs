@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::did::webvh::{CreateBuilder, CreateResult, default_did};
+use credibil_identity::did::webvh::{CreateBuilder, CreateResult};
 use credibil_identity::did::{DocumentBuilder, KeyId, VerificationMethod};
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
@@ -22,9 +22,7 @@ pub async fn create(
     State(state): State<AppState>, TypedHeader(host): TypedHeader<Host>,
     Json(_req): Json<CreateRequest>,
 ) -> Result<AppJson<CreateResult>, AppError> {
-    let did_url = format!("http://{host}");
-
-    tracing::debug!("creating DID log document for {did_url}");
+    tracing::debug!("creating DID log document for http://{host}");
 
     let vault = state.vault;
     let signer = Keyring::generate(&vault, "wvhd", "signing", Curve::Ed25519).await?;
@@ -37,8 +35,6 @@ pub async fn create(
     let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
     let id_multi = jwk.to_multibase()?;
 
-    let did = default_did(&did_url)?;
-
     let next_key = signer.next_key().await?;
     let jwk = PublicKeyJwk::from_bytes(&next_key)?;
     let next_multi = jwk.to_multibase()?;
@@ -50,11 +46,11 @@ pub async fn create(
     tracing::debug!("keys established");
 
     // TODO: add other verification methods and service endpoints to the `CreateRequest`.
-    let doc = DocumentBuilder::new(did).verification_method(vm).build()?;
+    let builder = DocumentBuilder::new().verification_method(vm);
 
-    let result = CreateBuilder::new()
-        .document(doc)?
-        .update_keys(vec![update_multi])?
+    let result = CreateBuilder::new(format!("http://{host}"))
+        .document(builder)
+        .update_keys(vec![update_multi])
         .next_key(&next_multi)
         .signer(&signer)
         .build()
@@ -62,7 +58,7 @@ pub async fn create(
 
     // Store the log in app state
     let mut log = state.log.lock().await;
-    log.add_log(&did_url, result.log.clone())?;
+    log.add_log(format!("http://{host}"), result.log.clone())?;
 
     Ok(AppJson(result))
 }

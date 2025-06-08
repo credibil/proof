@@ -2,9 +2,7 @@
 //! entry.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::did::webvh::{
-    self, CreateBuilder, UpdateBuilder, Witness, WitnessWeight,
-};
+use credibil_identity::did::webvh::{CreateBuilder, UpdateBuilder, Witness, WitnessWeight};
 use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -14,10 +12,6 @@ use test_utils::Vault;
 // entries. Should just work without errors.
 #[tokio::test]
 async fn update_success() {
-    // --- Create --------------------------------------------------------------
-
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer =
         Keyring::generate(&Vault, "wu", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -30,7 +24,6 @@ async fn update_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
@@ -38,12 +31,7 @@ async fn update_success() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-
-    let doc = DocumentBuilder::new(&did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -78,15 +66,12 @@ async fn update_success() {
         ],
     };
 
-    let create_result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let create_result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()
@@ -122,10 +107,10 @@ async fn update_success() {
     let auth_vm = vm_list.first().expect("should get first verification method");
 
     // Construct a new document from the existing one.
-    let doc = DocumentBuilder::from(doc)
+    let doc = DocumentBuilder::from(doc.clone())
         .verification_method(vm)
         .authentication(auth_vm.id.clone())
-        .build()
+        .build(doc.id)
         .expect("should build document");
 
     // Create an update log entry and skip witness verification.
@@ -133,7 +118,6 @@ async fn update_success() {
         .await
         .expect("should create builder")
         .document(&doc)
-        .expect("should apply document")
         .rotate_keys(vec![new_update_multi], &vec![new_next_multi])
         .expect("should rotate keys on builder")
         .signer(&signer)

@@ -2,9 +2,7 @@
 //! signer.
 
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_identity::did::webvh::{
-    self, CreateBuilder, Witness, WitnessWeight,
-};
+use credibil_identity::did::webvh::{CreateBuilder, Witness, WitnessWeight};
 use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
@@ -14,8 +12,6 @@ use test_utils::Vault;
 // entry. Should just work without errors.
 #[tokio::test]
 async fn create_success() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
     let signer = Keyring::generate(&Vault, "wvhc", "signing", Curve::Ed25519)
         .await
         .expect("should generate");
@@ -29,24 +25,14 @@ async fn create_success() {
     let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
     let auth_multi = jwk.to_multibase().expect("should get key");
 
-    let did = webvh::default_did(DID_URL).expect("should create DID");
     let vm = VerificationMethod::build()
         .key(update_multi.clone())
         .key_id(KeyId::Authorization(auth_multi));
-
     let svc = Service::build()
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
-
-    let doc = DocumentBuilder::new(did)
-        .verification_method(vm)
-        .service(svc)
-        .build()
-        .expect("should build document");
-
-    let json = serde_json::to_string_pretty(&doc).expect("should serialize");
-    print!("{json}");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
@@ -81,21 +67,19 @@ async fn create_success() {
         ],
     };
 
-    let result = CreateBuilder::new()
-        .document(doc)
-        .expect("should apply document")
+    let result = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .update_keys(vec![update_multi])
-        .expect("should apply update keys")
         .next_key(&next_multi)
         .portable(false)
         .witness(&witnesses)
-        .expect("witness information should be applied")
         .ttl(60)
         .signer(&signer)
         .build()
         .await
         .expect("should build document");
 
-    let log_entry = serde_json::to_string(&result.log[0]).expect("should serialize log signer");
+    let log_entry =
+        serde_json::to_string_pretty(&result.log[0]).expect("should serialize log signer");
     println!("{log_entry}");
 }

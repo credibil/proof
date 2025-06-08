@@ -1,7 +1,8 @@
 //! Tests for the creation of a new `did:web` document.
 
 use credibil_ecc::{Curve, Keyring, Signer};
-use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod, web};
+use credibil_identity::did::web::CreateBuilder;
+use credibil_identity::did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 
@@ -9,11 +10,6 @@ use test_utils::Vault;
 // without errors.
 #[tokio::test]
 async fn create_ok() {
-    const DID_URL: &str = "https://credibil.io/issuers/example";
-
-    let did = web::default_did(DID_URL).expect("should create DID");
-    assert_eq!(did, "did:web:credibil.io:issuers:example");
-
     let signer =
         Keyring::generate(&Vault, "wc", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -24,13 +20,13 @@ async fn create_ok() {
         .id("whois")
         .service_type("LinkedVerifiablePresentation")
         .endpoint("https://example.com/.well-known/whois");
+    let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
-    let doc = DocumentBuilder::new(did)
-        .verification_method(vm)
-        .service(svc)
+    let document = CreateBuilder::new("https://credibil.io/issuers/example")
+        .document(builder)
         .build()
         .expect("should build document");
 
-    let json = serde_json::to_string_pretty(&doc).expect("should serialize");
+    let json = serde_json::to_string_pretty(&document).expect("should serialize");
     print!("{json}");
 }

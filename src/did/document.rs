@@ -137,7 +137,7 @@ impl Document {
 /// A builder for creating a DID Document.
 #[derive(Default)]
 pub struct DocumentBuilder {
-    id: Option<String>,
+    // id: Option<String>,
     doc: Option<Document>,
     authentication: Option<Vec<Kind<VerificationMethod>>>,
     assertion_method: Option<Vec<Kind<VerificationMethod>>>,
@@ -156,9 +156,9 @@ pub struct DocumentBuilder {
 impl DocumentBuilder {
     /// Creates a new `DocumentBuilder` with the given DID URL.
     #[must_use]
-    pub fn new(did: impl Into<String>) -> Self {
+    pub fn new() -> Self {
         Self {
-            id: Some(did.into()),
+            // id: Some(did.into()),
             context: CONTEXT.iter().map(|ctx| Kind::String((*ctx).to_string())).collect(),
             ..Default::default()
         }
@@ -375,7 +375,7 @@ impl DocumentBuilder {
     ///
     /// Will fail if the document is missing required fields or if
     /// verification methods are not properly set up.
-    pub fn build(self) -> Result<Document> {
+    pub fn build(self, did: impl Into<String>) -> Result<Document> {
         let mut md = self.did_document_metadata.unwrap_or_default();
 
         let mut doc = if let Some(doc) = self.doc {
@@ -384,7 +384,7 @@ impl DocumentBuilder {
         } else {
             md.created = chrono::Utc::now();
             Document {
-                id: self.id.ok_or_else(|| anyhow!("DID is required"))?,
+                id: did.into(),
                 ..Document::default()
             }
         };

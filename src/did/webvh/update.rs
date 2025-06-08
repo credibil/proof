@@ -1,6 +1,6 @@
 //! Update operation for the `did:webvh` method.
 
-use anyhow::bail;
+use anyhow::{Result, bail};
 use chrono::Utc;
 use credibil_ecc::Signer;
 use multibase::Base;
@@ -22,7 +22,6 @@ pub struct UpdateBuilder<S, D> {
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
     ttl: u64,
-
     log: DidLog,
     signer: S,
     doc: D,
@@ -53,7 +52,7 @@ impl UpdateBuilder<WithoutSigner, WithoutDocument> {
     /// Returns an error if the log entries are not valid.
     pub async fn from(
         log: &[DidLogEntry], witness_proofs: Option<&[WitnessEntry]>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self> {
         // Validate the current log entries by resolving the DID document.
         let _ = resolve_log(log, witness_proofs, None).await?;
         let Some(last_entry) = log.last() else {
@@ -78,39 +77,18 @@ impl UpdateBuilder<WithoutSigner, WithoutDocument> {
     /// # Errors
     /// Checks the SCID hasn't changed and the document location hasn't changed
     /// unless the original log entry allowed portability.
-    pub fn document(
-        &self, document: &Document,
-    ) -> anyhow::Result<UpdateBuilder<WithoutSigner, WithDocument>> {
-        // Check the DID location hasn't changed unless the original log entry
-        // allowed portability. If the location has changed, the SCID must be
-        // unchanged.
-        let Some(last_entry) = self.log.last() else {
-            anyhow::bail!("log must not be empty.");
-        };
-        if last_entry.state.id != document.id {
-            if !last_entry.parameters.portable {
-                anyhow::bail!("location has changed for non-portable DID.");
-            }
-            let parts = last_entry.state.id.split(':').collect::<Vec<&str>>();
-            if parts.len() < 4 {
-                anyhow::bail!("invalid DID format.");
-            }
-            let starts_with = format!("did:webvh:{}:", parts[2]);
-            if !document.id.starts_with(&starts_with) {
-                anyhow::bail!("SCID has changed for portable DID.");
-            }
-        }
-        Ok(UpdateBuilder {
+    #[must_use]
+    pub fn document(&self, document: &Document) -> UpdateBuilder<WithoutSigner, WithDocument> {
+        UpdateBuilder {
             update_keys: self.update_keys.clone(),
             portable: self.portable,
             next_key_hashes: self.next_key_hashes.clone(),
             witness: self.witness.clone(),
             ttl: self.ttl,
-
             log: self.log.clone(),
             doc: WithDocument(document.clone()),
             signer: WithoutSigner,
-        })
+        }
     }
 }
 
@@ -145,7 +123,7 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
     /// current log entry - pre-rotation not required).
     pub fn rotate_keys(
         mut self, new_update_keys: Vec<String>, new_next_keys: &[String],
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self> {
         // Check the new update keys hash to the current next key hashes.
         if let Some(next_key_hashes) = &self.next_key_hashes {
             for new_key in &new_update_keys {
@@ -196,7 +174,7 @@ impl UpdateBuilder<WithoutSigner, WithDocument> {
     /// Will fail if the witness threshold is zero, the witness list is empty,
     /// the contribution (weight) of a witness is zero, or the sum of
     /// contributions would never reach the threshold.
-    pub fn witness(mut self, witness: &Witness) -> anyhow::Result<Self> {
+    pub fn witness(mut self, witness: &Witness) -> Result<Self> {
         validate_witness(witness)?;
         self.witness = Some(witness.clone());
         Ok(self)
@@ -246,7 +224,27 @@ impl<S: Signature> UpdateBuilder<WithSigner<'_, S>, WithDocument> {
     /// Will fail if secondary algorithms fail such as generating a hash of the
     /// log entry to calculate the version ID. Will also fail if the provided
     /// signer fails to sign the log entry.
-    pub async fn build(&self) -> anyhow::Result<UpdateResult> {
+    pub async fn build(&self) -> Result<UpdateResult> {
+        // Check the DID location hasn't changed unless the original log entry
+        // allowed portability. If the location has changed, the SCID must be
+        // unchanged.
+        let Some(last_entry) = self.log.last() else {
+            anyhow::bail!("log must not be empty.");
+        };
+        if last_entry.state.id != self.doc.0.id {
+            if !last_entry.parameters.portable {
+                anyhow::bail!("location has changed for non-portable DID.");
+            }
+            let parts = last_entry.state.id.split(':').collect::<Vec<&str>>();
+            if parts.len() < 4 {
+                anyhow::bail!("invalid DID format.");
+            }
+            let starts_with = format!("did:webvh:{}:", parts[2]);
+            if !self.doc.0.id.starts_with(&starts_with) {
+                anyhow::bail!("SCID has changed for portable DID.");
+            }
+        }
+
         let mut log = self.log.clone();
         let Some(last_entry) = log.last() else {
             anyhow::bail!("log must not be empty.");

@@ -81,10 +81,10 @@ pub async fn update(
     // }
 
     // Create an update log entry.
-    let doc = db.build()?;
+    let doc = db.build(current_doc.id)?;
     let result = UpdateBuilder::from(&did_log, None)
         .await?
-        .document(&doc)?
+        .document(&doc)
         .rotate_keys(vec![update_multi], &vec![next_multi])?
         .signer(&signer)
         .build()

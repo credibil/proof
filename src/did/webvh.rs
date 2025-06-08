@@ -35,9 +35,8 @@ use crate::{Signature, VerifyBy};
 ///
 /// Gets replaced by the generated SCID when constructing a DID document and
 /// log entry.
-pub const SCID_PLACEHOLDER: &str = "{SCID}";
+pub const SCID: &str = "{SCID}";
 
-pub(crate) const METHOD: &str = "webvh";
 pub(crate) const VERSION: &str = "0.5";
 
 /// A `DidLog` is a set of log entries for a DID document.

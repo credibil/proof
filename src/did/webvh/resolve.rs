@@ -12,7 +12,7 @@ use multibase::Base;
 use sha2::Digest;
 
 use super::verify::{verify_proofs, verify_witness};
-use super::{DidLogEntry, SCID_PLACEHOLDER, WitnessEntry};
+use super::{DidLogEntry, SCID, WitnessEntry};
 use crate::did::{Document, DocumentMetadataBuilder, QueryParams, Url};
 use crate::{Identity, IdentityResolver};
 
@@ -109,7 +109,7 @@ pub async fn resolve_log(
     }
 
     let mut prev_index = 0;
-    // let mut prev_version = SCID_PLACEHOLDER.to_string();
+    // let mut prev_version = SCID.to_string();
     let mut prev_version = log[0].parameters.scid.clone();
     let mut prev_time = DateTime::<Utc>::MIN_UTC;
     let mut doc = Document::default();
@@ -150,9 +150,9 @@ pub async fn resolve_log(
         // 5. If the entry is the first one, verify the SCID.
         if i == 0 {
             let initial_string = serde_json::to_string(&log[i])?;
-            let replaced = initial_string.replace(&log[i].parameters.scid, SCID_PLACEHOLDER);
+            let replaced = initial_string.replace(&log[i].parameters.scid, SCID);
             let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)?;
-            initial_log_entry.version_id = SCID_PLACEHOLDER.to_string();
+            initial_log_entry.version_id = SCID.to_string();
             initial_log_entry.proof = vec![];
             let hash = initial_log_entry.hash()?;
             if hash != log[i].parameters.scid {

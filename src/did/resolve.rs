@@ -11,9 +11,8 @@ use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::IdentityResolver;
-use crate::did::{Document, Service};
 use crate::did::url::Url;
-use crate::did::{Method, VerificationMethod, key, web, webvh};
+use crate::did::{Document, Method, Service, VerificationMethod, key, web, webvh};
 
 /// Dereference a DID URL into a resource.
 ///
