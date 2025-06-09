@@ -12,7 +12,6 @@ pub mod key;
 pub mod web;
 pub mod webvh;
 
-mod core;
 mod document;
 mod proof;
 mod provider;

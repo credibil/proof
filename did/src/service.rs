@@ -19,7 +19,7 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::{Kind, OneMany};
+use credibil_core::{Kind, OneMany};
 
 /// A Service is used to express a way of communicating with the DID subject or
 /// associated entities.

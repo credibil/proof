@@ -7,13 +7,13 @@ use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
+use credibil_core::{Kind, OneMany};
 use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC, derive_x25519_public};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::KeyFormat;
-use crate::core::{Kind, OneMany};
 use crate::service::{Service, ServiceBuilder};
 use crate::verification::{VerificationMethod, VerificationMethodBuilder};
 

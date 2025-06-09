@@ -6,11 +6,10 @@
 use std::fmt::Display;
 
 use anyhow::Result;
+use credibil_core::Kind;
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use crate::core::Kind;
 
 /// A DID document can express verification methods, such as cryptographic
 /// public keys, which can be used to authenticate or authorize interactions
