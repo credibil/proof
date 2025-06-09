@@ -2,7 +2,7 @@
 
 use std::fmt::Write;
 
-use anyhow::bail;
+use anyhow::{Result, bail};
 use url::Url;
 
 /// Construct a default `did:webv` DID from a URL.
@@ -17,7 +17,7 @@ use url::Url;
 ///
 /// Will return an error if the url is not a valid URL or a host cannot be
 /// parsed.
-pub fn create_did(url: &str) -> anyhow::Result<String> {
+pub fn to_did(url: &str) -> Result<String> {
     let host_and_path = parse_url(url)?;
     Ok(format!("did:web:{host_and_path}"))
 }
@@ -36,11 +36,12 @@ pub fn create_did(url: &str) -> anyhow::Result<String> {
 ///
 /// Will return an error if the url is not a valid URL or a host cannot be
 /// parsed.
-pub fn parse_url(url: &str) -> anyhow::Result<String> {
+fn parse_url(url: &str) -> Result<String> {
     let url = Url::parse(url)?;
     let Some(host_str) = url.host_str() else {
         bail!("no host in url");
     };
+
     let mut host = host_str.to_string();
     if let Some(port) = url.port() {
         let _ = write!(host, "%3A{port}");
@@ -54,8 +55,6 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
     }
     Ok(host)
 }
-
-
 
 #[cfg(test)]
 mod tests {
