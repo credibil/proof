@@ -1,18 +1,24 @@
 [package]
-name = "test-utils"
+name = "credibil-identity"
+description = "Credibil identity management utilities"
+readme = "README.md"
 authors.workspace = true
-description = "Key management sample code for testing"
 edition.workspace = true
 exclude.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 license.workspace = true
-readme = "README.md"
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
 [dependencies]
-anyhow.workspace = true
+credibil-did.workspace = true
 credibil-ecc.workspace = true
-dashmap = "6.1.0"
+credibil-jose.workspace = true
