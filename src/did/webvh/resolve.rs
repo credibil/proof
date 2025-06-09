@@ -12,7 +12,7 @@ use multibase::Base;
 use sha2::Digest;
 
 use super::verify::{verify_proofs, verify_witness};
-use super::{DidLogEntry, SCID, WitnessEntry};
+use super::{LogEntry, SCID, WitnessEntry};
 use crate::did::{Document, DocumentMetadataBuilder, QueryParams, Url};
 use crate::{Identity, IdentityResolver};
 
@@ -92,7 +92,7 @@ pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Docu
 /// DID document.
 ///
 /// To use this function, read the contents of the `did.jsonl` file into a
-/// vector of `DidLogEntry` structs and pass to this function.
+/// vector of `LogEntry` structs and pass to this function.
 ///
 /// To skip verification of the witness proofs, pass `None` for the
 /// `witness_proofs` parameter.
@@ -102,7 +102,7 @@ pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Docu
 /// Will fail if the log entries are invalid.
 #[allow(clippy::too_many_lines)]
 pub async fn resolve_log(
-    log: &[DidLogEntry], proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
+    log: &[LogEntry], proofs: Option<&[WitnessEntry]>, parameters: Option<&QueryParams>,
 ) -> Result<Document> {
     if log.is_empty() {
         bail!("log entries are empty");
@@ -151,7 +151,7 @@ pub async fn resolve_log(
         if i == 0 {
             let initial_string = serde_json::to_string(&log[i])?;
             let replaced = initial_string.replace(&log[i].parameters.scid, SCID);
-            let mut initial_log_entry = serde_json::from_str::<DidLogEntry>(&replaced)?;
+            let mut initial_log_entry = serde_json::from_str::<LogEntry>(&replaced)?;
             initial_log_entry.version_id = SCID.to_string();
             initial_log_entry.proof = vec![];
             let hash = initial_log_entry.hash()?;

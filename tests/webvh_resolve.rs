@@ -70,7 +70,7 @@ async fn resolve_single() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)
@@ -161,7 +161,7 @@ async fn resolve_multiple() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)
@@ -305,7 +305,7 @@ async fn resolve_deactivated() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

@@ -8,7 +8,7 @@ use sha2::Digest;
 
 use super::resolve::resolve_log;
 use super::verify::validate_witness;
-use super::{DidLogEntry, Witness, WitnessEntry};
+use super::{LogEntry, Witness, WitnessEntry};
 use crate::Signature;
 use crate::did::{Document, DocumentBuilder, FromDocument};
 
@@ -43,7 +43,7 @@ pub struct WithDocument(DocumentBuilder<FromDocument>);
 pub struct NoLog;
 
 /// Builder has a document (can build).
-pub struct WithLog(Vec<DidLogEntry>);
+pub struct WithLog(Vec<LogEntry>);
 
 /// Builder does not have a signer (can't build).
 pub struct NoSigner;
@@ -97,7 +97,7 @@ impl<L, S> UpdateBuilder<NoDocument, L, S> {
 impl<D, S> UpdateBuilder<D, NoLog, S> {
     /// Current log entries.
     #[must_use]
-    pub fn log_entries(self, log_entries: Vec<DidLogEntry>) -> UpdateBuilder<D, WithLog, S> {
+    pub fn log_entries(self, log_entries: Vec<LogEntry>) -> UpdateBuilder<D, WithLog, S> {
         UpdateBuilder {
             document: self.document,
             log_entries: WithLog(log_entries),
@@ -230,8 +230,7 @@ impl<S: Signature> UpdateBuilder<WithDocument, WithLog, WithSigner<'_, S>> {
         let mut log_entries = self.log_entries.0;
 
         // validate the existing log entries by resolving the DID document
-        let entries = self.witness_entries.as_deref();
-        let _ = resolve_log(&log_entries, entries, None).await?;
+        let _ = resolve_log(&log_entries, self.witness_entries.as_deref(), None).await?;
 
         let Some(last_entry) = log_entries.last() else {
             bail!("log must not be empty.");
@@ -274,21 +273,18 @@ impl<S: Signature> UpdateBuilder<WithDocument, WithLog, WithSigner<'_, S>> {
         }
 
         if let Some(witness) = &self.witness {
+            validate_witness(witness)?;
             params.witness = Some(witness.clone());
         }
         if let Some(ttl) = self.ttl {
             params.ttl = ttl;
         }
 
-        if let Some(witness) = &self.witness {
-            validate_witness(witness)?;
-        }
-
         let version_time = document
             .did_document_metadata
             .as_ref()
             .map_or_else(Utc::now, |m| m.updated.unwrap_or_else(Utc::now));
-        let mut entry = DidLogEntry {
+        let mut entry = LogEntry {
             version_id: last_entry.version_id.clone(),
             version_time,
             parameters: params.clone(),
@@ -312,7 +308,7 @@ impl<S: Signature> UpdateBuilder<WithDocument, WithLog, WithSigner<'_, S>> {
 
         Ok(UpdateResult {
             did: document.id.clone(),
-            document: document.clone(),
+            document,
             log_entries,
         })
     }
@@ -329,5 +325,5 @@ pub struct UpdateResult {
 
     /// Version history log consisting of the original log appended with the
     /// entry describing the update operation.
-    pub log_entries: Vec<DidLogEntry>,
+    pub log_entries: Vec<LogEntry>,
 }

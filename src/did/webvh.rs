@@ -40,15 +40,15 @@ pub const SCID: &str = "{SCID}";
 pub(crate) const VERSION: &str = "0.5";
 
 /// A `DidLog` is a set of log entries for a DID document.
-pub type DidLog = Vec<DidLogEntry>;
+pub type DidLog = Vec<LogEntry>;
 
-/// `DidLogEntry` is an entry in the `did.jsonl` log file denoting the
+/// `LogEntry` is an entry in the `did.jsonl` log file denoting the
 /// sequential changes to a DID document.
 ///
 /// <https://identity.foundation/didwebvh/#the-did-log-file>
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DidLogEntry {
+pub struct LogEntry {
     /// DID version number starting at 1 and incrementing by one per DID
     /// version, a literal dash `-`, and the `entryHash`.
     pub version_id: String,
@@ -71,7 +71,7 @@ pub struct DidLogEntry {
     pub proof: Vec<Proof>,
 }
 
-impl DidLogEntry {
+impl LogEntry {
     /// Generate a log entry hash.
     ///
     /// # Errors

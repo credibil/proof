@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
 use super::verify::validate_witness;
-use super::{DidLogEntry, Parameters, SCID, VERSION, Witness};
+use super::{LogEntry, Parameters, SCID, VERSION, Witness};
 use crate::Signature;
 use crate::did::webvh::default_did;
 use crate::did::{Document, DocumentBuilder, FromScratch};
@@ -17,8 +17,6 @@ use crate::did::{Document, DocumentBuilder, FromScratch};
 /// Use this to construct a `CreateResult`.
 pub struct CreateBuilder<U, S, D> {
     url: String,
-    method: String,
-    scid: String,
     portable: bool,
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
@@ -52,8 +50,6 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     pub fn new(url: impl Into<String>) -> Self {
         Self {
             url: url.into(),
-            method: format!("did:webvh:{VERSION}"),
-            scid: SCID.to_string(),
             portable: false,
             next_key_hashes: None,
             witness: None,
@@ -71,8 +67,6 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, NoDocument> {
     ) -> CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
         CreateBuilder {
             url: self.url,
-            method: self.method,
-            scid: self.scid,
             portable: self.portable,
             next_key_hashes: self.next_key_hashes,
             witness: self.witness,
@@ -98,11 +92,9 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
     ) -> CreateBuilder<WithUpdateKeys, NoSigner, WithDocument> {
         CreateBuilder {
             url: self.url,
-            method: self.method.clone(),
-            scid: self.scid.clone(),
             portable: self.portable,
-            next_key_hashes: self.next_key_hashes.clone(),
-            witness: self.witness.clone(),
+            next_key_hashes: self.next_key_hashes,
+            witness: self.witness,
             ttl: self.ttl,
             update_keys: WithUpdateKeys(update_keys),
             signer: NoSigner,
@@ -119,8 +111,6 @@ impl CreateBuilder<WithUpdateKeys, NoSigner, WithDocument> {
     ) -> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
         CreateBuilder {
             url: self.url,
-            method: self.method,
-            scid: self.scid,
             portable: self.portable,
             next_key_hashes: self.next_key_hashes,
             witness: self.witness,
@@ -199,51 +189,43 @@ impl<S: Signature> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument
             validate_witness(witness)?;
         }
 
-        // Construct preliminary parameters.
-        let params = Parameters {
-            method: self.method.clone(),
-            scid: self.scid.clone(),
-            update_keys: self.update_keys.0.clone(),
-            portable: self.portable,
-            next_key_hashes: self.next_key_hashes.clone(),
-            witness: self.witness.clone(),
-            deactivated: false,
-            ttl: self.ttl,
-        };
-
-        // Construct an initial log entry.
-        let initial_log_entry = DidLogEntry {
+        // initial log entry uses a placeholder (`{SCID}`) for the SCID value
+        let initial_entry = LogEntry {
             version_id: SCID.to_string(),
             version_time: document
                 .did_document_metadata
                 .as_ref()
                 .map_or_else(Utc::now, |m| m.created),
-            parameters: params.clone(),
+            parameters: Parameters {
+                method: format!("did:webvh:{VERSION}"),
+                scid: SCID.to_string(),
+                update_keys: self.update_keys.0,
+                portable: self.portable,
+                next_key_hashes: self.next_key_hashes,
+                witness: self.witness,
+                deactivated: false,
+                ttl: self.ttl,
+            },
             state: document,
             proof: vec![],
         };
 
-        // Create the SCID from the hash of the log entry with the `{SCID}`
-        // placeholder.
-        let initial_hash = initial_log_entry.hash()?;
+        // create the SCID hash from the initial log entry (using SCID
+        // placeholder) and then replace SCID placeholder with a computed SCID
+        let initial_hash = initial_entry.hash()?;
+        let initial_json = serde_json::to_string(&initial_entry)?;
+        let self_certified = initial_json.replace(SCID, &initial_hash);
 
-        // Make a log entry from the placeholder, replacing the placeholder SCID
-        // with the calculated SCID (content hash).
-        let initial_string = serde_json::to_string(&initial_log_entry)?;
-        let replaced = initial_string.replace(SCID, &initial_hash);
-        let mut entry = serde_json::from_str::<DidLogEntry>(&replaced)?;
-
-        // Construct a log entry version.
-        let entry_hash = entry.hash()?;
-        entry.version_id = format!("1-{entry_hash}");
-
-        // Sign (adds a proof to the log entry).
-        entry.sign(self.signer.0).await?;
+        // build the actual log entry
+        let mut log_entry = serde_json::from_str::<LogEntry>(&self_certified)?;
+        let entry_hash = log_entry.hash()?;
+        log_entry.version_id = format!("1-{entry_hash}");
+        log_entry.sign(self.signer.0).await?;
 
         Ok(CreateResult {
-            did: entry.state.id.clone(),
-            document: entry.state.clone(),
-            log: vec![entry],
+            did: log_entry.state.id.clone(),
+            document: log_entry.state.clone(),
+            log: vec![log_entry],
         })
     }
 }
@@ -259,5 +241,5 @@ pub struct CreateResult {
 
     /// Version history log with the single created entry suitable for writing
     /// to a `did.jsonl` log file.
-    pub log: Vec<DidLogEntry>,
+    pub log: Vec<LogEntry>,
 }

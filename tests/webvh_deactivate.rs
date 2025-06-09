@@ -13,7 +13,7 @@ use test_utils::Vault;
 // Test the happy path of creating then deactivating a `did:webvh` document and
 // log entries. Should just work without errors.
 #[tokio::test]
-async fn create_then_deactivate() {
+async fn create_deactivate() {
     let signer = Keyring::generate(&Vault, "wvhd", "signing", Curve::Ed25519)
         .await
         .expect("should generate");
@@ -73,7 +73,7 @@ async fn create_then_deactivate() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)
@@ -98,7 +98,7 @@ async fn create_then_deactivate() {
 // Test the happy path of updating then deactivating a `did:webvh` document and
 // log entries. Should just work without errors.
 #[tokio::test]
-async fn update_then_deactivate() {
+async fn update_deactivate() {
     let signer =
         Keyring::generate(&Vault, "utd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -157,7 +157,7 @@ async fn update_then_deactivate() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

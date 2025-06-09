@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
 use super::verify::validate_witness;
-use super::{DidLogEntry, Witness};
+use super::{LogEntry, Witness};
 use crate::Signature;
 use crate::did::Document;
 
@@ -20,7 +20,7 @@ pub struct DeactivateBuilder<S> {
     update_keys: Vec<String>,
     next_key_hashes: Option<Vec<String>>,
     witness: Option<Witness>,
-    log: Vec<DidLogEntry>,
+    log: Vec<LogEntry>,
     doc: Document,
 
     signer: S,
@@ -40,7 +40,7 @@ impl DeactivateBuilder<WithoutSigner> {
     ///
     /// # Errors
     /// Will fail if the log entries are not populated.
-    pub fn from(log: &[DidLogEntry]) -> anyhow::Result<Self> {
+    pub fn from(log: &[LogEntry]) -> anyhow::Result<Self> {
         let Some(last_entry) = log.last() else {
             bail!("log must not be empty.");
         };
@@ -184,7 +184,7 @@ impl<S: Signature> DeactivateBuilder<WithSigner<'_, S>> {
 
         if last_entry.parameters.next_key_hashes.is_some() {
             params.next_key_hashes = None;
-            let mut entry = DidLogEntry {
+            let mut entry = LogEntry {
                 version_id: last_entry.version_id.clone(),
                 version_time: Utc::now(),
                 parameters: params.clone(),
@@ -215,7 +215,7 @@ impl<S: Signature> DeactivateBuilder<WithSigner<'_, S>> {
         let mut doc = self.doc.clone();
         doc.did_document_metadata = Some(md);
 
-        let mut entry = DidLogEntry {
+        let mut entry = LogEntry {
             version_id: last_entry.version_id.clone(),
             version_time: Utc::now(),
             parameters: params.clone(),
@@ -254,5 +254,5 @@ pub struct DeactivateResult {
 
     /// Version history log consisting of the original log appended with the
     /// entry describing the update operation.
-    pub log: Vec<DidLogEntry>,
+    pub log: Vec<LogEntry>,
 }

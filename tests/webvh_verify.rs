@@ -103,7 +103,7 @@ async fn complex_proof() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
+        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

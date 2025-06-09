@@ -29,7 +29,6 @@ pub async fn update(
     Json(req): Json<UpdateRequest>,
 ) -> Result<AppJson<UpdateResult>, AppError> {
     let did_url = format!("http://{host}");
-
     tracing::debug!("updating DID log document for {did_url}, with request: {req:?}");
 
     let vault = state.vault;
@@ -80,7 +79,7 @@ pub async fn update(
     //     }
     // }
 
-    // Create an update log entry.
+    // create an update log entry
     let result = UpdateBuilder::new()
         .document(db)
         .log_entries(did_log)
@@ -89,7 +88,7 @@ pub async fn update(
         .build()
         .await?;
 
-    // Store the log in app state
+    // store the log in app state
     log.add_log(&did_url, result.log_entries.clone())?;
 
     Ok(AppJson(result))

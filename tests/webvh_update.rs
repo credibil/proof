@@ -11,7 +11,7 @@ use test_utils::Vault;
 // Test the happy path of creating then updating a `did:webvh` document and log
 // entries. Should just work without errors.
 #[tokio::test]
-async fn update_success() {
+async fn update_ok() {
     let signer =
         Keyring::generate(&Vault, "wu", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
@@ -70,7 +70,6 @@ async fn update_success() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

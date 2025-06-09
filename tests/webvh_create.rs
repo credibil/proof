@@ -11,7 +11,7 @@ use test_utils::Vault;
 // Test the happy path of creating a new `did:webvh` document and associated log
 // entry. Should just work without errors.
 #[tokio::test]
-async fn create_success() {
+async fn create_ok() {
     let signer = Keyring::generate(&Vault, "wvhc", "signing", Curve::Ed25519)
         .await
         .expect("should generate");
@@ -71,7 +71,6 @@ async fn create_success() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        .portable(false)
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

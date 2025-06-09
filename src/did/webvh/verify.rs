@@ -5,7 +5,7 @@ use anyhow::bail;
 use credibil_jose::PublicKeyJwk;
 use sha2::Digest;
 
-use super::{DidLogEntry, Witness, WitnessEntry};
+use super::{LogEntry, Witness, WitnessEntry};
 use crate::proof::w3c::Proof;
 
 /// Verify the controller's proofs in a log entry.
@@ -15,7 +15,7 @@ use crate::proof::w3c::Proof;
 ///
 /// # Errors
 /// Will return an error if any of the proofs on the log entry are invalid.
-pub async fn verify_proofs(log_entry: &DidLogEntry) -> anyhow::Result<()> {
+pub async fn verify_proofs(log_entry: &LogEntry) -> anyhow::Result<()> {
     if log_entry.proof.is_empty() {
         bail!("log entry has no proof");
     }
@@ -45,7 +45,7 @@ pub enum ProofSigner {
 /// # Errors
 /// Will return an error if the proof is invalid.
 pub fn verify_proof(
-    log_entry: &DidLogEntry, proof: &Proof, signer: &ProofSigner,
+    log_entry: &LogEntry, proof: &Proof, signer: &ProofSigner,
 ) -> anyhow::Result<()> {
     let mut unsigned_entry = log_entry.clone();
     if matches!(signer, ProofSigner::Controller) {
@@ -155,7 +155,7 @@ pub fn validate_witness(witness: &Witness) -> anyhow::Result<()> {
 /// Will fail if the total weight of witness proofs does not meet the threshold.
 /// Will also fail if called for a log entry that has no witness parameters.
 pub async fn verify_witness(
-    log_entry: &DidLogEntry, witnesses: &[WitnessEntry],
+    log_entry: &LogEntry, witnesses: &[WitnessEntry],
 ) -> anyhow::Result<u64> {
     let Some(witness_weights) = &log_entry.parameters.witness else {
         bail!("log entry has no witness parameters");
