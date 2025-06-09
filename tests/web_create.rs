@@ -12,8 +12,8 @@ use test_utils::Vault;
 async fn create_ok() {
     let signer =
         Keyring::generate(&Vault, "wc", "signing", Curve::Ed25519).await.expect("should generate");
-    let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let key_bytes = signer.verifying_key().await.expect("should get key");
+    let jwk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert");
 
     let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));
     let svc = Service::build()

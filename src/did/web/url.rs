@@ -5,19 +5,13 @@ use std::fmt::Write;
 use anyhow::{Result, bail};
 use url::Url;
 
-/// Construct a default `did:webv` DID from a URL.
-///
-/// The provided url should be a valid HTTP URL. See `parse_url` for more
-/// information.
-///
-/// The output is a `did:web` DID with the path converted from the provided HTTP
-/// URL.
+/// Construct a `did:web` DID from a valid HTTP URL.
 ///
 /// # Errors
 ///
-/// Will return an error if the url is not a valid URL or a host cannot be
+/// Will return an error if the url is not a valid HTTP URL or a host cannot be
 /// parsed.
-pub fn to_did(url: &str) -> Result<String> {
+pub fn create_did(url: &str) -> Result<String> {
     let host_and_path = parse_url(url)?;
     Ok(format!("did:web:{host_and_path}"))
 }

@@ -23,6 +23,7 @@ base64ct.workspace = true
 chrono = { version = "0.4.41", features = ["serde"] }
 credibil-ecc.workspace = true
 credibil-jose.workspace = true
+dashmap = "6.1.0"
 multibase.workspace = true
 nom = "8.0.0"
 serde.workspace = true

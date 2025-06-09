@@ -8,14 +8,16 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-mod document;
 pub mod key;
+pub mod web;
+pub mod webvh;
+
+mod provider;
+mod document;
 mod resolve;
 mod service;
 mod url;
 mod verification;
-pub mod web;
-pub mod webvh;
 
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;

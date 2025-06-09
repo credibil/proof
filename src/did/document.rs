@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::core::{Kind, OneMany};
+use crate::did::KeyFormat;
 use crate::did::service::{Service, ServiceBuilder};
 use crate::did::verification::{VerificationMethod, VerificationMethodBuilder};
 
@@ -143,7 +144,7 @@ pub struct DocumentBuilder<D> {
     capability_invocation: Option<Vec<Kind<VerificationMethodBuilder>>>,
     capability_delegation: Option<Vec<Kind<VerificationMethodBuilder>>>,
     verification_method: Option<Vec<VerificationMethodBuilder>>,
-    derive_key_agreement: Option<String>,
+    derive_key_agreement: Option<bool>,
     also_known_as: Option<Vec<String>>,
     controller: Option<OneMany<String>>,
     service: Option<Vec<ServiceBuilder>>,
@@ -379,8 +380,8 @@ impl<D> DocumentBuilder<D> {
     ///
     /// TODO: Consider returning an error if not `did:key`.
     #[must_use]
-    pub fn derive_key_agreement(mut self, ed25519_key: impl Into<String>) -> Self {
-        self.derive_key_agreement = Some(ed25519_key.into());
+    pub fn derive_key_agreement(mut self, derive: bool) -> Self {
+        self.derive_key_agreement = Some(derive);
         self
     }
 
@@ -443,7 +444,19 @@ impl<D> DocumentBuilder<D> {
         if let Some(builders) = self.verification_method {
             for b in builders {
                 let vm = b.build(&document.id)?;
-                document.verification_method.get_or_insert(vec![]).push(vm);
+                document.verification_method.get_or_insert(vec![]).push(vm.clone());
+
+                if self.derive_key_agreement.unwrap_or_default() {
+                    let multi_key = match vm.key {
+                        KeyFormat::Multikey { public_key_multibase } => public_key_multibase,
+                        KeyFormat::JsonWebKey { public_key_jwk } => {
+                            public_key_jwk.to_multibase()?
+                        }
+                    };
+
+                    let vm = x25519_key_agreement(&document.id, &multi_key)?;
+                    document.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
+                }
             }
         }
 
@@ -467,11 +480,6 @@ impl<D> DocumentBuilder<D> {
         let mut metadata = self.metadata.unwrap_or_default();
         metadata.updated = Some(chrono::Utc::now());
         document.did_document_metadata = Some(metadata);
-
-        if let Some(ed25519_key) = &self.derive_key_agreement {
-            let vm = x25519_key_agreement(&document.id, ed25519_key)?;
-            document.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
-        }
 
         if let Some(context) = self.context {
             document.context.extend(context);

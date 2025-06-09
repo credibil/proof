@@ -1,7 +1,30 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
-use crate::did::web::to_did;
+use crate::did::provider::{Docstore, Store};
+use crate::did::web::create_did;
 use crate::did::{Document, DocumentBuilder, FromScratch};
+
+/// Create a new `did:web` document and save.
+pub async fn create(url: &str, builder: DocumentBuilder<FromScratch>) -> Result<()> {
+    let document = CreateBuilder::new(url).document(builder).build()?;
+
+    // save to docstore
+    let did = create_did(url)?;
+    let doc_bytes = serde_json::to_vec(&document)?;
+    Docstore::put(&Store, &did, "DID", &did, &doc_bytes).await?;
+
+    Ok(())
+}
+
+/// Retrieve a `did:web` document by its URL.
+pub async fn document(url: &str) -> Result<Document> {
+    let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
+    let did = create_did(url)?;
+    let Some(doc_bytes) = Docstore::get(&Store, &did, "DID", &did).await? else {
+        return Err(anyhow!("document not found"));
+    };
+    serde_json::from_slice(&doc_bytes).map_err(Into::into)
+}
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///
@@ -39,14 +62,11 @@ impl CreateBuilder<NoDocument> {
 impl CreateBuilder<WithDocument> {
     /// Build the `CreateResult` with the provided parameters.
     ///
-    /// This will return an error if the document is not valid or if the
-    /// parameters are not set correctly.
-    ///
     /// # Errors
     ///
     /// Returns an error if the DID URL is invalid or if the document cannot
     /// be built.
     pub fn build(self) -> Result<Document> {
-        self.document.0.build(to_did(&self.url)?)
+        self.document.0.build(create_did(&self.url)?)
     }
 }
