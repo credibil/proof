@@ -1,14 +1,19 @@
-//! # Docstore
+//! # `DocStore`
 
-use std::sync::LazyLock;
-
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use credibil_core::datastore::Datastore;
 use credibil_ecc::Signer;
 use credibil_jose::{KeyBinding, PublicKeyJwk};
-use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::Document;
+
+/// DID Provider trait.
+pub trait Provider: DocStore + Clone {}
+
+/// A blanket implementation for `Provider` trait so that any type implementing
+/// the required super traits is considered a `Provider`.
+impl<T> Provider for T where T: DocStore + Clone {}
 
 /// [`Signature`] is used to provide public key material that can be used for
 /// signature verification.
@@ -92,62 +97,48 @@ impl TryInto<KeyBinding> for VerifyBy {
 
 /// `Datastore` is used by implementers to provide data storage
 /// capability.
-pub trait Docstore: Send + Sync {
+pub trait DocStore: Send + Sync {
     /// Store a data item in the underlying item store.
-    fn put(
-        &self, owner: &str, partition: &str, key: &str, data: &[u8],
-    ) -> impl Future<Output = Result<()>> + Send;
+    fn put(&self, owner: &str, document: &Document) -> impl Future<Output = Result<()>> + Send;
 
     /// Fetches a single item from the underlying store, returning `None` if
     /// no match was found.
-    fn get(
-        &self, owner: &str, partition: &str, key: &str,
-    ) -> impl Future<Output = Result<Option<Vec<u8>>>> + Send;
+    fn get(&self, owner: &str, key: &str) -> impl Future<Output = Result<Option<Document>>> + Send;
 
-    // /// Delete the specified data item.
-    // fn delete(
-    //     &self, owner: &str, partition: &str, key: &str,
-    // ) -> impl Future<Output = Result<()>> + Send;
+    /// Delete the specified data item.
+    fn delete(&self, owner: &str, key: &str) -> impl Future<Output = Result<()>> + Send;
 
-    // /// Fetches all matching items from the underlying store.
-    // fn get_all(
-    //     &self, owner: &str, partition: &str,
-    // ) -> impl Future<Output = Result<Vec<(String, Vec<u8>)>>> + Send;
+    /// Fetches all matching items from the underlying store.
+    fn get_all(&self, owner: &str) -> impl Future<Output = Result<Vec<(String, Document)>>> + Send;
 }
 
-static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
+const DOCSTORE: &str = "DOCSTORE";
 
-/// A simple in-memory document store that implements the `Docstore` trait.
-#[derive(Clone, Debug)]
-pub struct Store;
-
-impl Docstore for Store {
-    async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        let key = format!("{owner}-{partition}-{key}");
-        STORE.insert(key, data.to_vec());
-        Ok(())
+impl<T: Datastore> DocStore for T {
+    async fn put(&self, owner: &str, document: &Document) -> Result<()> {
+        let data = serde_json::to_vec(document)?;
+        Datastore::put(self, owner, DOCSTORE, &document.id, &data).await
     }
 
-    async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        let key = format!("{owner}-{partition}-{key}");
-        let Some(bytes) = STORE.get(&key) else {
-            return Ok(None);
+    async fn get(&self, owner: &str, did: &str) -> Result<Option<Document>> {
+        let Some(data) = Datastore::get(self, owner, DOCSTORE, did).await? else {
+            return Err(anyhow!("could not find client"));
         };
-        Ok(Some(bytes.to_vec()))
+        Ok(serde_json::from_slice(&data)?)
     }
 
-    // async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-    //     let key = format!("{owner}-{partition}-{key}");
-    //     STORE.remove(&key);
-    //     Ok(())
-    // }
+    async fn delete(&self, owner: &str, did: &str) -> Result<()> {
+        Datastore::delete(self, owner, DOCSTORE, did).await
+    }
 
-    // async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-    //     let all = STORE
-    //         .iter()
-    //         .filter(move |r| r.key().starts_with(&format!("{owner}-{partition}-")))
-    //         .map(|r| (r.key().to_string(), r.value().clone()))
-    //         .collect::<Vec<_>>();
-    //     Ok(all)
-    // }
+    async fn get_all(&self, owner: &str) -> Result<Vec<(String, Document)>> {
+        Datastore::get_all(self, owner, DOCSTORE)
+            .await?
+            .iter()
+            .map(|(key, data)| {
+                let document: Document = serde_json::from_slice(&data)?;
+                Ok((key.to_string(), document))
+            })
+            .collect::<Result<Vec<_>>>()
+    }
 }

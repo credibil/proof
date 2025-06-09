@@ -1,39 +1,39 @@
 use anyhow::{Result, anyhow};
 
-use crate::provider::{Docstore, Store};
+use crate::provider::{DocStore, Provider};
 use crate::web::create_did;
 use crate::{Document, DocumentBuilder, FromScratch};
 
 /// Create a new `did:web` document and save.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if the DID URL is invalid, if the document cannot be
 /// built, or saved to the docstore.
-pub async fn create(url: &str, builder: DocumentBuilder<FromScratch>) -> Result<()> {
+pub async fn create(
+    url: &str, builder: DocumentBuilder<FromScratch>, provider: &impl Provider,
+) -> Result<()> {
     let document = CreateBuilder::new(url).document(builder).build()?;
 
     // save to docstore
     let did = create_did(url)?;
-    let doc_bytes = serde_json::to_vec(&document)?;
-    Docstore::put(&Store, &did, "DID", &did, &doc_bytes).await?;
+    DocStore::put(provider, &did, &document).await?;
 
     Ok(())
 }
 
 /// Retrieve a `did:web` document by its URL.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if the DID URL is invalid, if the document cannot be
 /// found in the docstore, or if deserialization fails.
-pub async fn document(url: &str) -> Result<Document> {
+pub async fn document(url: &str, provider: &impl Provider) -> Result<Document> {
     let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
     let did = create_did(url)?;
-    let Some(doc_bytes) = Docstore::get(&Store, &did, "DID", &did).await? else {
-        return Err(anyhow!("document not found"));
-    };
-    serde_json::from_slice(&doc_bytes).map_err(Into::into)
+    DocStore::get(provider, &did, &did)
+        .await?
+        .ok_or_else(|| anyhow!("document not found for did: {did}"))
 }
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
