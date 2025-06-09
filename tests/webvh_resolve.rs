@@ -70,7 +70,6 @@ async fn resolve_single() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)
@@ -92,9 +91,10 @@ async fn resolve_single() {
     // The resolved document should *almost* match the result of the update
     // except for some of the metadata. So remove the metadata from each and
     // then compare.
-    let mut result_doc = result.document.clone();
+    let mut result_doc = result.document;
     result_doc.did_document_metadata = None;
-    let mut resolved_doc = resolved_doc.clone();
+
+    let mut resolved_doc = resolved_doc;
     resolved_doc.did_document_metadata = None;
 
     assert_eq!(result_doc, resolved_doc);
@@ -161,7 +161,6 @@ async fn resolve_multiple() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)
@@ -305,7 +304,6 @@ async fn resolve_deactivated() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

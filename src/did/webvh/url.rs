@@ -5,7 +5,24 @@ use std::fmt::Write;
 use anyhow::bail;
 use url::Url;
 
-use super::SCID;
+use crate::did::webvh::SCID;
+
+/// Construct a default `did:webvh` DID from a URL.
+///
+/// The provided url should be a valid HTTP URL. See `parse_url` for more
+/// information.
+///
+/// The output is a `did:webvh` DID with the `{SCID}` placeholder and path
+/// converted from the provided HTTP URL.
+///
+/// # Errors
+///
+/// Will return an error if the url is not a valid URL or a host cannot be
+/// parsed.
+pub fn create_did(url: &str) -> anyhow::Result<String> {
+    let host_and_path = parse_url(url)?;
+    Ok(format!("did:webvh:{SCID}:{host_and_path}"))
+}
 
 /// Convert an HTTP URL into a host and path separated by colons suitable
 /// for use in a `did:webvh` DID.
@@ -40,23 +57,6 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
         }
     }
     Ok(host)
-}
-
-/// Construct a default `did:webvh` DID from a URL.
-///
-/// The provided url should be a valid HTTP URL. See `parse_url` for more
-/// information.
-///
-/// The output is a `did:webvh` DID with the `{SCID}` placeholder and path
-/// converted from the provided HTTP URL.
-///
-/// # Errors
-///
-/// Will return an error if the url is not a valid URL or a host cannot be
-/// parsed.
-pub fn default_did(url: &str) -> anyhow::Result<String> {
-    let host_and_path = parse_url(url)?;
-    Ok(format!("did:webvh:{SCID}:{host_and_path}"))
 }
 
 #[cfg(test)]

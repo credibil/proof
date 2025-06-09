@@ -5,6 +5,23 @@ use std::fmt::Write;
 use anyhow::bail;
 use url::Url;
 
+/// Construct a default `did:webv` DID from a URL.
+///
+/// The provided url should be a valid HTTP URL. See `parse_url` for more
+/// information.
+///
+/// The output is a `did:web` DID with the path converted from the provided HTTP
+/// URL.
+///
+/// # Errors
+///
+/// Will return an error if the url is not a valid URL or a host cannot be
+/// parsed.
+pub fn create_did(url: &str) -> anyhow::Result<String> {
+    let host_and_path = parse_url(url)?;
+    Ok(format!("did:web:{host_and_path}"))
+}
+
 /// Convert an HTTP URL into a host and path separated by colons suitable
 /// for use in a `did:web` DID.
 ///
@@ -38,22 +55,7 @@ pub fn parse_url(url: &str) -> anyhow::Result<String> {
     Ok(host)
 }
 
-/// Construct a default `did:webv` DID from a URL.
-///
-/// The provided url should be a valid HTTP URL. See `parse_url` for more
-/// information.
-///
-/// The output is a `did:web` DID with the path converted from the provided HTTP
-/// URL.
-///
-/// # Errors
-///
-/// Will return an error if the url is not a valid URL or a host cannot be
-/// parsed.
-pub fn default_did(url: &str) -> anyhow::Result<String> {
-    let host_and_path = parse_url(url)?;
-    Ok(format!("did:web:{host_and_path}"))
-}
+
 
 #[cfg(test)]
 mod tests {

@@ -3,6 +3,8 @@
 //! A DID Document is a JSON-LD document that contains information related to a
 //! DID.
 
+use std::fmt::Display;
+
 use anyhow::Result;
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
@@ -131,7 +133,7 @@ impl From<String> for KeyFormat {
 #[derive(Default)]
 pub struct VerificationMethodBuilder {
     key: Option<KeyFormat>,
-    id_type: KeyId,
+    key_id: KeyId,
 }
 
 impl VerificationMethodBuilder {
@@ -150,8 +152,8 @@ impl VerificationMethodBuilder {
 
     /// Specify how to construct the key ID.
     #[must_use]
-    pub fn key_id(mut self, id_type: KeyId) -> Self {
-        self.id_type = id_type;
+    pub fn key_id(mut self, key_id: KeyId) -> Self {
+        self.key_id = key_id;
         self
     }
 
@@ -166,7 +168,7 @@ impl VerificationMethodBuilder {
             return Err(anyhow::anyhow!("Verification method key must be set"));
         };
 
-        let suffix = match self.id_type {
+        let suffix = match self.key_id {
             KeyId::Did => String::new(),
             KeyId::Authorization(auth_key) => format!("#{auth_key}"),
             KeyId::Verification => {
@@ -191,7 +193,7 @@ impl VerificationMethodBuilder {
 
 /// Instruction to the `VerificationMethodBuilder` on how to construct the key
 /// ID.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub enum KeyId {
     /// Use the DID as the identifier without any fragment.
     #[default]
@@ -213,6 +215,15 @@ pub enum KeyId {
     ///
     /// `did:<method>:<method-specific-identifier>#key-0`.
     Index(String),
+}
+
+impl Display for KeyId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Did | Self::Verification => write!(f, ""),
+            Self::Authorization(key_id) | Self::Index(key_id) => write!(f, "#{key_id}"),
+        }
+    }
 }
 
 /// The purpose key material will be used for.

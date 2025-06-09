@@ -137,11 +137,11 @@ impl Document {
 /// DID Document builder.
 pub struct DocumentBuilder<D> {
     document: D,
-    authentication: Option<Vec<Kind<VerificationMethod>>>,
-    assertion_method: Option<Vec<Kind<VerificationMethod>>>,
-    key_agreement: Option<Vec<Kind<VerificationMethod>>>,
-    capability_invocation: Option<Vec<Kind<VerificationMethod>>>,
-    capability_delegation: Option<Vec<Kind<VerificationMethod>>>,
+    authentication: Option<Vec<Kind<VerificationMethodBuilder>>>,
+    assertion_method: Option<Vec<Kind<VerificationMethodBuilder>>>,
+    key_agreement: Option<Vec<Kind<VerificationMethodBuilder>>>,
+    capability_invocation: Option<Vec<Kind<VerificationMethodBuilder>>>,
+    capability_delegation: Option<Vec<Kind<VerificationMethodBuilder>>>,
     verification_method: Option<Vec<VerificationMethodBuilder>>,
     derive_key_agreement: Option<String>,
     also_known_as: Option<Vec<String>>,
@@ -312,7 +312,7 @@ impl<D> DocumentBuilder<D> {
     /// Add a verification method to the `assertion_method` relationship.
     #[must_use]
     pub fn assertion_method(
-        mut self, assertion_method: impl Into<Kind<VerificationMethod>>,
+        mut self, assertion_method: impl Into<Kind<VerificationMethodBuilder>>,
     ) -> Self {
         self.assertion_method.get_or_insert(vec![]).push(assertion_method.into());
         self
@@ -320,14 +320,16 @@ impl<D> DocumentBuilder<D> {
 
     /// Add a verification method to the `authentication` relationship.
     #[must_use]
-    pub fn authentication(mut self, authentication: impl Into<Kind<VerificationMethod>>) -> Self {
+    pub fn authentication(
+        mut self, authentication: impl Into<Kind<VerificationMethodBuilder>>,
+    ) -> Self {
         self.authentication.get_or_insert(vec![]).push(authentication.into());
         self
     }
 
     /// Add a verification method to the `key_agreement` relationship.
     #[must_use]
-    pub fn key_agreement(mut self, key_agreement: VerificationMethod) -> Self {
+    pub fn key_agreement(mut self, key_agreement: VerificationMethodBuilder) -> Self {
         self.key_agreement.get_or_insert(vec![]).push(Kind::Object(key_agreement));
         self
     }
@@ -335,7 +337,7 @@ impl<D> DocumentBuilder<D> {
     /// Add a verification method to the `capability_invocation` relationship.
     #[must_use]
     pub fn capability_invocation(
-        mut self, capability_invocation: impl Into<Kind<VerificationMethod>>,
+        mut self, capability_invocation: impl Into<Kind<VerificationMethodBuilder>>,
     ) -> Self {
         self.capability_invocation.get_or_insert(vec![]).push(capability_invocation.into());
         self
@@ -344,7 +346,7 @@ impl<D> DocumentBuilder<D> {
     /// Add a verification method to the `capability_delegation` relationship.
     #[must_use]
     pub fn capability_delegation(
-        mut self, capability_delegation: impl Into<Kind<VerificationMethod>>,
+        mut self, capability_delegation: impl Into<Kind<VerificationMethodBuilder>>,
     ) -> Self {
         self.capability_delegation.get_or_insert(vec![]).push(capability_delegation.into());
         self
@@ -411,49 +413,11 @@ impl DocumentBuilder<FromScratch> {
     /// Will fail if the document is missing required fields or if
     /// verification methods are not properly set up.
     pub(in crate::did) fn build(self, did: impl Into<String>) -> Result<Document> {
-        let mut document = Document {
+        let document = Document {
             id: did.into(),
             ..Document::default()
         };
-
-        // verification methods
-        if let Some(builders) = self.verification_method {
-            for b in builders {
-                let vm = b.build(&document.id)?;
-                document.verification_method.get_or_insert(vec![]).push(vm);
-            }
-        }
-
-        // services
-        if let Some(builders) = self.service {
-            for b in builders {
-                let svc = b.build(&document.id)?;
-                document.service.get_or_insert(vec![]).push(svc);
-            }
-        }
-
-        document.assertion_method = self.assertion_method;
-        document.authentication = self.authentication;
-        document.key_agreement = self.key_agreement;
-        document.capability_invocation = self.capability_invocation;
-        document.capability_delegation = self.capability_delegation;
-        document.also_known_as = self.also_known_as;
-        document.controller = self.controller;
-
-        let mut metadata = self.metadata.unwrap_or_default();
-        metadata.created = chrono::Utc::now();
-        document.did_document_metadata = Some(metadata);
-
-        if let Some(ed25519_key) = &self.derive_key_agreement {
-            let vm = x25519_key_agreement(&document.id, ed25519_key)?;
-            document.key_agreement.get_or_insert(vec![]).push(Kind::Object(vm));
-        }
-
-        if let Some(context) = self.context {
-            document.context.extend(context);
-        }
-
-        Ok(document)
+        self.inner_build(document)
     }
 }
 
@@ -466,7 +430,14 @@ impl DocumentBuilder<FromDocument> {
     /// Will fail if the document is missing required fields or if
     /// verification methods are not properly set up.
     pub(in crate::did) fn build(self) -> Result<Document> {
-        let mut document = self.document.0;
+        let document = self.document.0.clone();
+        self.inner_build(document)
+    }
+}
+
+impl<D> DocumentBuilder<D> {
+    fn inner_build(self, mut document: Document) -> Result<Document> {
+        let did = document.id.clone();
 
         // verification methods
         if let Some(builders) = self.verification_method {
@@ -476,6 +447,12 @@ impl DocumentBuilder<FromDocument> {
             }
         }
 
+        document.assertion_method = to_vm(&did, self.assertion_method)?;
+        document.authentication = to_vm(&did, self.authentication)?;
+        document.key_agreement = to_vm(&did, self.key_agreement)?;
+        document.capability_invocation = to_vm(&did, self.capability_invocation)?;
+        document.capability_delegation = to_vm(&did, self.capability_delegation)?;
+
         // services
         if let Some(builders) = self.service {
             for b in builders {
@@ -484,11 +461,6 @@ impl DocumentBuilder<FromDocument> {
             }
         }
 
-        document.assertion_method = self.assertion_method;
-        document.authentication = self.authentication;
-        document.key_agreement = self.key_agreement;
-        document.capability_invocation = self.capability_invocation;
-        document.capability_delegation = self.capability_delegation;
         document.also_known_as = self.also_known_as;
         document.controller = self.controller;
 
@@ -507,6 +479,28 @@ impl DocumentBuilder<FromDocument> {
 
         Ok(document)
     }
+}
+
+fn to_vm(
+    did: &str, vms: Option<Vec<Kind<VerificationMethodBuilder>>>,
+) -> Result<Option<Vec<Kind<VerificationMethod>>>> {
+    let Some(verification_methods) = vms else {
+        return Ok(None);
+    };
+
+    let mut fixed = vec![];
+    for vm in verification_methods {
+        match vm {
+            Kind::Object(b) => {
+                fixed.push(Kind::Object(b.build(did)?));
+            }
+            Kind::String(key_id) => {
+                fixed.push(Kind::String(format!("{did}#{key_id}")));
+            }
+        }
+    }
+
+    Ok(Some(fixed))
 }
 
 // Derive and X25519-based Key Agreement from an Ed25519 public key.

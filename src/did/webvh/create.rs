@@ -6,10 +6,9 @@ use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use super::verify::validate_witness;
-use super::{LogEntry, Parameters, SCID, VERSION, Witness};
 use crate::Signature;
-use crate::did::webvh::default_did;
+use crate::did::webvh::verify::validate_witness;
+use crate::did::webvh::{LogEntry, Parameters, SCID, VERSION, Witness, create_did};
 use crate::did::{Document, DocumentBuilder, FromScratch};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
@@ -178,8 +177,8 @@ impl<S: Signature> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument
     /// the placeholder `SCID` with the calculated one. Will also fail if the
     /// provided signer fails to sign the log entry.
     pub async fn build(self) -> Result<CreateResult> {
-        let did = default_did(&self.url)?;
-        let document = self.document.0.build(did)?;
+        let did = create_did(&self.url)?;
+        let document = self.document.0.build(&did)?;
 
         //  update keys cannot be empty.
         if self.update_keys.0.is_empty() {
@@ -223,7 +222,7 @@ impl<S: Signature> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument
         log_entry.sign(self.signer.0).await?;
 
         Ok(CreateResult {
-            did: log_entry.state.id.clone(),
+            did,
             document: log_entry.state.clone(),
             log: vec![log_entry],
         })

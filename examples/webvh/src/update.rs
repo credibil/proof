@@ -60,28 +60,32 @@ pub async fn update(
         ));
     };
     let current_doc = resolve_log(&did_log, None, None).await?;
-    let mut db = DocumentBuilder::from(current_doc.clone());
+    let mut builder = DocumentBuilder::from(current_doc.clone());
 
     // Create a new verification method.
-    let vm = VerificationMethod::build()
-        .key(update_multi.clone())
-        .key_id(KeyId::Authorization(id_multi));
-    db = db.verification_method(vm);
+    let key_id = KeyId::Authorization(id_multi);
+    let vm = VerificationMethod::build().key(update_multi.clone()).key_id(key_id.clone());
 
-    // Add a reference-based verification method if requested.
-    // if let Some(purpose) = req.add {
-    //     match purpose {
-    //         KeyPurpose::AssertionMethod => db = db.assertion_method(vm.id.clone()),
-    //         KeyPurpose::Authentication => db = db.authentication(vm.id.clone()),
-    //         KeyPurpose::CapabilityInvocation => db = db.capability_invocation(vm.id.clone()),
-    //         KeyPurpose::CapabilityDelegation => db = db.capability_delegation(vm.id.clone()),
-    //         KeyPurpose::VerificationMethod | KeyPurpose::KeyAgreement => {}
-    //     }
-    // }
+    // Add a reference-based verification method, if requested.
+    if let Some(purpose) = req.add {
+        match purpose {
+            KeyPurpose::AssertionMethod => builder = builder.assertion_method(key_id.to_string()),
+            KeyPurpose::Authentication => builder = builder.authentication(key_id.to_string()),
+            KeyPurpose::CapabilityInvocation => {
+                builder = builder.capability_invocation(key_id.to_string())
+            }
+            KeyPurpose::CapabilityDelegation => {
+                builder = builder.capability_delegation(key_id.to_string())
+            }
+            KeyPurpose::VerificationMethod | KeyPurpose::KeyAgreement => {}
+        }
+    }
+
+    builder = builder.verification_method(vm);
 
     // create an update log entry
     let result = UpdateBuilder::new()
-        .document(db)
+        .document(builder)
         .log_entries(did_log)
         .rotate_keys(&vec![update_multi], &vec![next_multi])
         .signer(&signer)

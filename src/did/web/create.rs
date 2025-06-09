@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::did::web::default_did;
+use crate::did::web::create_did;
 use crate::did::{Document, DocumentBuilder, FromScratch};
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
@@ -47,7 +47,6 @@ impl CreateBuilder<WithDocument> {
     /// Returns an error if the DID URL is invalid or if the document cannot
     /// be built.
     pub fn build(self) -> Result<Document> {
-        let did = default_did(&self.url)?;
-        self.document.0.build(did)
+        self.document.0.build(create_did(&self.url)?)
     }
 }
