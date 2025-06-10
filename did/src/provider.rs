@@ -136,7 +136,7 @@ impl<T: Datastore> DocStore for T {
             .await?
             .iter()
             .map(|(key, data)| {
-                let document: Document = serde_json::from_slice(&data)?;
+                let document: Document = serde_json::from_slice(data)?;
                 Ok((key.to_string(), document))
             })
             .collect::<Result<Vec<_>>>()

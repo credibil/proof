@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::provider::{DocStore, Provider};
 use crate::web::create_did;
@@ -20,20 +20,6 @@ pub async fn create(
     DocStore::put(provider, &did, &document).await?;
 
     Ok(())
-}
-
-/// Retrieve a `did:web` document by its URL.
-///
-/// # Errors
-///
-/// Returns an error if the DID URL is invalid, if the document cannot be
-/// found in the docstore, or if deserialization fails.
-pub async fn document(url: &str, provider: &impl Provider) -> Result<Document> {
-    let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
-    let did = create_did(url)?;
-    DocStore::get(provider, &did, &did)
-        .await?
-        .ok_or_else(|| anyhow!("document not found for did: {did}"))
 }
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.

@@ -13,6 +13,7 @@ pub mod web;
 pub mod webvh;
 
 mod document;
+mod handlers;
 mod proof;
 mod provider;
 mod resolve;
@@ -23,17 +24,17 @@ mod verification;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use credibil_ecc::{Entry, Signer};
 use credibil_jose::PublicKeyJwk;
 
 pub use self::document::*;
+pub use self::handlers::*;
 pub use self::provider::*;
 pub use self::resolve::{Resource, deref_url, dereference, document_resource};
 pub use self::service::*;
 pub use self::url::{QueryParams, Url};
 pub use self::verification::*;
-// use crate::provider::{IdentityResolver, Signature, VerifyBy};
 
 /// Retrieve the JWK specified by the provided DID URL.
 ///
