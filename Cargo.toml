@@ -1,5 +1,5 @@
 [workspace]
-members = ["did", "identity"]
+members = ["did", "proof"]
 resolver = "3"
 
 [workspace.package]
@@ -14,7 +14,7 @@ homepage = "https://credibil.io"
 keywords = ["decentralized", "identity", "did"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/credibil/identity"
+repository = "https://github.com/credibil/proof"
 rust-version = "1.87"
 version = "0.1.2"
 
@@ -31,12 +31,12 @@ nursery = "warn"
 anyhow = "1.0.98"
 credibil-core = { git = "https://github.com/credibil/core.git" }
 credibil-did = { path = "did" }
-credibil-ecc = { git = "https://github.com/credibil/se.git" }
-credibil-jose = { git = "https://github.com/credibil/se.git" }
+credibil-ecc = { git = "https://github.com/credibil/key.git" }
+credibil-jose = { git = "https://github.com/credibil/key.git" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 test-utils = { path = "crates/test-utils" }
 
-# [patch."https://github.com/credibil/se"]
-# credibil-ecc = { path = "../se/ecc" }
-# credibil-jose = { path = "../se/jose" }
+# [patch."https://github.com/credibil/key"]
+# credibil-ecc = { path = "../key/ecc" }
+# credibil-jose = { path = "../key/jose" }

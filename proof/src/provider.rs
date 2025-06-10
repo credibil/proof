@@ -1,19 +1,18 @@
-//! # `DocStore`
+//! # `Proof`
 
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
+use credibil_did::Document;
 use credibil_ecc::Signer;
 use credibil_jose::{KeyBinding, PublicKeyJwk};
 use serde::{Deserialize, Serialize};
 
-use crate::Document;
-
 /// DID Provider trait.
-pub trait Provider: DocStore + Clone {}
+pub trait Provider: Proof + Clone {}
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
-impl<T> Provider for T where T: DocStore + Clone {}
+impl<T> Provider for T where T: Proof + Clone {}
 
 /// [`Signature`] is used to provide public key material that can be used for
 /// signature verification.
@@ -28,7 +27,7 @@ pub trait Signature: Signer + Send + Sync {
     fn verification_method(&self) -> impl Future<Output = Result<VerifyBy>> + Send;
 }
 
-/// [`JwkResolver`] is used to proxy the resolution of an identity.
+/// [`ProofResolver`] is used to proxy the resolution of a a proof.
 ///
 /// Implementers need only return the identity specified by the url. This
 /// may be by directly dereferencing the URL, looking up a local cache, or
@@ -38,7 +37,7 @@ pub trait Signature: Signer + Send + Sync {
 /// For example, a DID resolver for `did:webvh` would fetch the DID log from the
 /// the specified URL and use any query parameters (if any) to derefence the
 /// specific DID document and return that.
-pub trait IdentityResolver: Send + Sync + Clone {
+pub trait ProofResolver: Send + Sync + Clone {
     /// Resolve the URL to identity information such as a DID Document or
     /// certificate.
     ///
@@ -49,12 +48,12 @@ pub trait IdentityResolver: Send + Sync + Clone {
     /// # Errors
     ///
     /// Returns an error if the URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = Result<Identity>> + Send;
+    fn resolve(&self, url: &str) -> impl Future<Output = Result<ProofType>> + Send;
 }
 
 /// Return value from an identity resolver.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq)]
-pub enum Identity {
+pub enum ProofType {
     /// A decentralized identifier.
     DidDocument(Document),
 }
@@ -95,9 +94,8 @@ impl TryInto<KeyBinding> for VerifyBy {
     }
 }
 
-/// `Datastore` is used by implementers to provide data storage
-/// capability.
-pub trait DocStore: Send + Sync {
+/// `Proof` is used by implementers to provide data storage capability.
+pub trait Proof: Send + Sync {
     /// Store a data item in the underlying item store.
     fn put(&self, owner: &str, document: &Document) -> impl Future<Output = Result<()>> + Send;
 
@@ -112,27 +110,27 @@ pub trait DocStore: Send + Sync {
     fn get_all(&self, owner: &str) -> impl Future<Output = Result<Vec<(String, Document)>>> + Send;
 }
 
-const DOCSTORE: &str = "DOCSTORE";
+const PROOF: &str = "PROOF";
 
-impl<T: Datastore> DocStore for T {
+impl<T: Datastore> Proof for T {
     async fn put(&self, owner: &str, document: &Document) -> Result<()> {
         let data = serde_json::to_vec(document)?;
-        Datastore::put(self, owner, DOCSTORE, &document.id, &data).await
+        Datastore::put(self, owner, PROOF, &document.id, &data).await
     }
 
     async fn get(&self, owner: &str, did: &str) -> Result<Option<Document>> {
-        let Some(data) = Datastore::get(self, owner, DOCSTORE, did).await? else {
+        let Some(data) = Datastore::get(self, owner, PROOF, did).await? else {
             return Err(anyhow!("could not find client"));
         };
         Ok(serde_json::from_slice(&data)?)
     }
 
     async fn delete(&self, owner: &str, did: &str) -> Result<()> {
-        Datastore::delete(self, owner, DOCSTORE, did).await
+        Datastore::delete(self, owner, PROOF, did).await
     }
 
     async fn get_all(&self, owner: &str) -> Result<Vec<(String, Document)>> {
-        Datastore::get_all(self, owner, DOCSTORE)
+        Datastore::get_all(self, owner, PROOF)
             .await?
             .iter()
             .map(|(key, data)| {

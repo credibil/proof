@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Document;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::provider::{DocStore, Provider};
+use crate::provider::{Proof, Provider};
 use crate::web::create_did;
 
 /// Used to query the document endpoint in order to return a DID document.
@@ -31,7 +31,7 @@ async fn document(
     let url = request.url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
     let did = create_did(url)?;
 
-    let document = DocStore::get(provider, &did, &did)
+    let document = Proof::get(provider, &did, &did)
         .await?
         .ok_or_else(|| anyhow!("document not found for did: {did}"))?;
 

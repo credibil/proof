@@ -10,7 +10,7 @@ use std::str::FromStr;
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::provider::IdentityResolver;
+use crate::provider::ProofResolver;
 use crate::url::Url;
 use crate::{Document, Method, Service, VerificationMethod, key, web, webvh};
 
@@ -25,7 +25,7 @@ use crate::{Document, Method, Service, VerificationMethod, key, web, webvh};
 ///
 /// Note that only URLs implying DID methods supported by this crate will
 /// survive parsing.
-pub async fn dereference(did_url: &str, resolver: &impl IdentityResolver) -> Result<Resource> {
+pub async fn dereference(did_url: &str, resolver: &impl ProofResolver) -> Result<Resource> {
     let url = Url::from_str(did_url)?;
     deref_url(&url, resolver).await
 }
@@ -52,7 +52,7 @@ pub async fn dereference(did_url: &str, resolver: &impl IdentityResolver) -> Res
 /// Will also return an error if the resource is not found in the document. This
 /// includes cases that don't make sense, like asking a `did:key` for a service
 /// endpoint.
-pub async fn deref_url(url: &Url, resolver: &impl IdentityResolver) -> Result<Resource> {
+pub async fn deref_url(url: &Url, resolver: &impl ProofResolver) -> Result<Resource> {
     match url.method {
         Method::Key => key::resolve(url),
         Method::Web => {

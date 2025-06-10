@@ -2,8 +2,8 @@
 
 use anyhow::Result;
 
+use crate::provider::{ProofType, ProofResolver};
 use crate::{Document, Url};
-use crate::provider::{Identity, IdentityResolver};
 
 impl Url {
     /// Convert a `did:web` URL to an HTTP URL pointing to the location of the
@@ -37,10 +37,10 @@ impl Url {
 /// # Errors
 /// If the URL cannot be converted to an HTTP format or if the resolver fails an
 /// error is returned.
-pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Document> {
+pub async fn resolve(url: &Url, resolver: &impl ProofResolver) -> Result<Document> {
     let http_url = url.to_web_http();
     let id = resolver.resolve(&http_url).await?;
     match id {
-        Identity::DidDocument(doc) => Ok(doc),
+        ProofType::DidDocument(doc) => Ok(doc),
     }
 }

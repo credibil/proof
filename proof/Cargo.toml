@@ -1,6 +1,6 @@
 [package]
-name = "credibil-identity"
-description = "Credibil identity management utilities"
+name = "credibil-proof"
+description = "Credibil proof utilities"
 readme = "README.md"
 authors.workspace = true
 edition.workspace = true
@@ -19,6 +19,10 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
+anyhow.workspace = true
 credibil-did.workspace = true
 credibil-ecc.workspace = true
 credibil-jose.workspace = true
+serde.workspace = true
+credibil-core.workspace = true
+serde_json.workspace = true

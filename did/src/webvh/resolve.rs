@@ -13,8 +13,8 @@ use sha2::Digest;
 
 use super::verify::{verify_proofs, verify_witness};
 use super::{LogEntry, SCID, WitnessEntry};
+use crate::provider::{ProofType, ProofResolver};
 use crate::{Document, DocumentMetadataBuilder, QueryParams, Url};
-use crate::provider::{Identity, IdentityResolver};
 
 impl Url {
     /// Convert a `did:webvh` URL to an HTTP URL pointing to the location of the
@@ -74,7 +74,7 @@ impl Url {
 /// # Errors
 ///
 /// Will fail if the DID URL is invalid or the provider returns an error.
-pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Document> {
+pub async fn resolve(url: &Url, resolver: &impl ProofResolver) -> Result<Document> {
     // Generate the URL to fetch the DID list (log) document.
     let http_url = url.to_webvh_http()?;
 
@@ -84,7 +84,7 @@ pub async fn resolve(url: &Url, resolver: &impl IdentityResolver) -> Result<Docu
     // the DID document.
     let identity = resolver.resolve(&http_url).await?;
     match identity {
-        Identity::DidDocument(doc) => Ok(doc),
+        ProofType::DidDocument(doc) => Ok(doc),
     }
 }
 

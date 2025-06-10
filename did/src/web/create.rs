@@ -1,26 +1,7 @@
 use anyhow::Result;
 
-use crate::provider::{DocStore, Provider};
 use crate::web::create_did;
 use crate::{Document, DocumentBuilder, FromScratch};
-
-/// Create a new `did:web` document and save.
-///
-/// # Errors
-///
-/// Returns an error if the DID URL is invalid, if the document cannot be
-/// built, or saved to the docstore.
-pub async fn create(
-    url: &str, builder: DocumentBuilder<FromScratch>, provider: &impl Provider,
-) -> Result<()> {
-    let document = CreateBuilder::new(url).document(builder).build()?;
-
-    // save to docstore
-    let did = create_did(url)?;
-    DocStore::put(provider, &did, &document).await?;
-
-    Ok(())
-}
 
 /// Builder to create a new `did:webvh` document and associated DID url and log.
 ///

@@ -8,9 +8,9 @@ use dashmap::DashMap;
 static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
 
 #[derive(Clone, Debug)]
-pub struct DocStore;
+pub struct Proof;
 
-impl DocStore {
+impl Proof {
     pub fn open() -> Self {
         Self {}
     }
