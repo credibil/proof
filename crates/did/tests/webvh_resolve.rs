@@ -306,11 +306,11 @@ async fn resolve_deactivated() {
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
-    let new_update_multi = jwk.to_multibase().expect("should get multibase");
+    let update_multi = jwk.to_multibase().expect("should get multibase");
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
-    let new_next_multi = jwk.to_multibase().expect("should get multibase");
+    let next_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
@@ -319,7 +319,7 @@ async fn resolve_deactivated() {
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
-        .key(new_update_multi.clone())
+        .key(update_multi.clone())
         .key_id(KeyId::Authorization(id_multi));
 
     // Add a reference-based verification method as a for-instance.
@@ -335,7 +335,7 @@ async fn resolve_deactivated() {
     let update_result = UpdateBuilder::new()
         .document(builder)
         .log_entries(create_result.log)
-        .rotate_keys(&vec![new_update_multi], &vec![new_next_multi])
+        .rotate_keys(&vec![update_multi], &vec![next_multi])
         .signer(&signer)
         .build()
         .await
@@ -346,21 +346,21 @@ async fn resolve_deactivated() {
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
     let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
-    let new_update_multi = jwk.to_multibase().expect("should get multibase");
+    let update_multi = jwk.to_multibase().expect("should get multibase");
 
-    let new_update_keys = vec![new_update_multi.clone()];
-    let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
+    let update_keys = vec![update_multi.clone()];
+    let update_keys: Vec<&str> = update_keys.iter().map(|s| s.as_str()).collect();
 
     let next_key = signer.next_key().await.expect("should get next key");
     let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
-    let new_next_multi = jwk.to_multibase().expect("should get multibase");
+    let next_multi = jwk.to_multibase().expect("should get multibase");
 
-    let new_next_keys = vec![new_next_multi.clone()];
-    let new_next_keys: Vec<&str> = new_next_keys.iter().map(|s| s.as_str()).collect();
+    let next_keys = vec![next_multi];
+    let next_keys: Vec<&str> = next_keys.iter().map(|s| s.as_str()).collect();
 
     let deactivate_result = DeactivateBuilder::from(&update_result.log_entries)
         .expect("should create builder")
-        .rotate_keys(&new_update_keys, &new_next_keys)
+        .rotate_keys(&update_keys, &next_keys)
         .expect("should rotate keys on builder")
         .signer(&signer)
         .build()
