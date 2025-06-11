@@ -16,7 +16,7 @@ async fn dereference() {
     let signer =
         Keyring::generate(&Vault, "wd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
 
     let vm = VerificationMethod::build().key(jwk.clone()).key_id(KeyId::Index("key-0".to_string()));
     let svc = Service::build()

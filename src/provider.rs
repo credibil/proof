@@ -31,7 +31,7 @@ pub trait Signature: Signer + Send + Sync {
 impl Signature for Entry {
     async fn verification_method(&self) -> Result<VerifyBy> {
         let vk = self.verifying_key().await?;
-        let jwk = PublicKeyJwk::from_bytes(&vk)?;
+        let jwk = PublicKeyJwk::from_bytes(&vk.to_bytes())?;
         Ok(VerifyBy::Jwk(jwk))
     }
 }

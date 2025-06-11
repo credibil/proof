@@ -136,7 +136,7 @@ impl LogEntry {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
         let vk = signer.verifying_key().await?;
-        let multi = PublicKeyJwk::from_bytes(&vk)?.to_multibase()?;
+        let multi = PublicKeyJwk::from_bytes(&vk.to_bytes())?.to_multibase()?;
 
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),

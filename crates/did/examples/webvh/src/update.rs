@@ -37,17 +37,17 @@ pub async fn update(
     // Rotate keys
     let signer = Keyring::rotate(&vault, signer).await?;
     let verifying_key = signer.verifying_key().await?;
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes())?;
     let update_multi = jwk.to_multibase()?;
 
     let next_key = signer.next_key().await?;
-    let jwk = PublicKeyJwk::from_bytes(&next_key)?;
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes())?;
     let next_multi = jwk.to_multibase()?;
 
     // Get a new ID key for the new verification method.
     let id_entry = Keyring::generate(&vault, "issuer", "id", Curve::Ed25519).await?;
     let verifying_key = id_entry.verifying_key().await?;
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key)?;
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes())?;
     let id_multi = jwk.to_multibase()?;
 
     // Resolve the latest DID document from the log and start building the

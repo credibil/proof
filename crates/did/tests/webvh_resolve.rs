@@ -14,13 +14,13 @@ async fn resolve_single() {
     let signer =
         Keyring::generate(&Vault, "wrs", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let update_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "wrs", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
@@ -33,17 +33,19 @@ async fn resolve_single() {
     let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let next_multi = jwk.to_multibase().expect("should get multibase");
 
     let witness_1 =
         Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_1.verifying_key().await.expect("should get key");
-    let multi_1 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_1 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
     let witness_2 =
         Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_2.verifying_key().await.expect("should get key");
-    let multi_2 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_2 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
 
     let witnesses = Witness {
         threshold: 60,
@@ -99,13 +101,13 @@ async fn resolve_multiple() {
     let signer =
         Keyring::generate(&Vault, "wrm", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let update_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "wrm", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
@@ -118,17 +120,19 @@ async fn resolve_multiple() {
     let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let next_multi = jwk.to_multibase().expect("should get multibase");
 
     let witness_1 =
         Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_1.verifying_key().await.expect("should get key");
-    let multi_1 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_1 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
     let witness_2 =
         Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_2.verifying_key().await.expect("should get key");
-    let multi_2 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_2 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
 
     let witnesses = Witness {
         threshold: 60,
@@ -162,17 +166,17 @@ async fn resolve_multiple() {
     // Rotate the signing key.
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let new_update_multi = jwk.to_multibase().expect("should get multibase");
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let new_next_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
@@ -236,13 +240,13 @@ async fn resolve_deactivated() {
     let signer =
         Keyring::generate(&Vault, "wrd", "signing", Curve::Ed25519).await.expect("should generate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let update_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
@@ -255,17 +259,19 @@ async fn resolve_deactivated() {
     let builder = DocumentBuilder::new().verification_method(vm).service(svc);
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let next_multi = jwk.to_multibase().expect("should get multibase");
 
     let witness_1 =
         Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_1.verifying_key().await.expect("should get key");
-    let multi_1 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_1 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
     let witness_2 =
         Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
     let vk = witness_2.verifying_key().await.expect("should get key");
-    let multi_2 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
+    let multi_2 =
+        PublicKeyJwk::from_bytes(&vk.to_bytes()).unwrap().to_multibase().expect("should convert");
 
     let witnesses = Witness {
         threshold: 60,
@@ -299,17 +305,17 @@ async fn resolve_deactivated() {
     // Rotate the signing key.
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let new_update_multi = jwk.to_multibase().expect("should get multibase");
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let new_next_multi = jwk.to_multibase().expect("should get multibase");
 
     let id_entry =
         Keyring::generate(&Vault, "utd", "id", Curve::Ed25519).await.expect("should generate");
     let verifying_key = id_entry.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let id_multi = jwk.to_multibase().expect("should get key");
 
     let vm = VerificationMethod::build()
@@ -339,14 +345,14 @@ async fn resolve_deactivated() {
 
     let signer = Keyring::rotate(&Vault, signer).await.expect("should rotate");
     let verifying_key = signer.verifying_key().await.expect("should get key");
-    let jwk = PublicKeyJwk::from_bytes(&verifying_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes()).expect("should convert");
     let new_update_multi = jwk.to_multibase().expect("should get multibase");
 
     let new_update_keys = vec![new_update_multi.clone()];
     let new_update_keys: Vec<&str> = new_update_keys.iter().map(|s| s.as_str()).collect();
 
     let next_key = signer.next_key().await.expect("should get next key");
-    let jwk = PublicKeyJwk::from_bytes(&next_key).expect("should convert");
+    let jwk = PublicKeyJwk::from_bytes(&next_key.to_bytes()).expect("should convert");
     let new_next_multi = jwk.to_multibase().expect("should get multibase");
 
     let new_next_keys = vec![new_next_multi.clone()];

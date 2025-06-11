@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use credibil_core::{Kind, OneMany};
-use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC, derive_x25519_public};
+use credibil_ecc::{ED25519_CODEC, PublicKey, X25519_CODEC}; // derive_x25519_public};
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -524,7 +524,7 @@ fn x25519_key_agreement(did: impl Into<String>, ed25519_key: &str) -> Result<Ver
 
     let key_bytes = multi_bytes[ED25519_CODEC.len()..].to_vec();
     let pub_key = PublicKey::from_slice(&key_bytes)?;
-    let x25519_key = derive_x25519_public(&pub_key)?;
+    let x25519_key = pub_key.derive_x25519()?;
 
     // base58B encode the raw key
     let mut multi_bytes = vec![];
