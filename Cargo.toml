@@ -1,50 +1,36 @@
 [package]
-name = "credibil-identity"
+name = "credibil-proof"
+description = "Credibil proof utilities"
+readme = "README.md"
 authors.workspace = true
-description.workspace = true
 edition.workspace = true
 exclude.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 license.workspace = true
-readme = "README.md"
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [lints]
 workspace = true
 
-[features]
-
 [dependencies]
 anyhow.workspace = true
-base64ct.workspace = true
-chrono = { version = "0.4.40", features = ["serde"] }
+credibil-core.workspace = true
+credibil-did.workspace = true
+credibil-ecc.workspace = true
 credibil-jose.workspace = true
-credibil-se.workspace = true
-multibase.workspace = true
-nom = "8.0.0"
 serde.workspace = true
 serde_json.workspace = true
-serde_json_canonicalizer = "0.3.0"
-sha2.workspace = true
-url = "2.5.4"
-uuid = { version = "1.15.1", features = ["v4"] }
-
-[dev-dependencies]
-axum = "0.8.1"
-kms.workspace = true
-tokio = { version = "1.44.1", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["fs"] }
-serde-jsonlines = "0.7.0"
+tracing.workspace = true
 
 [workspace]
-members = [
-    "crates/kms",
-    "examples/webvh",
-]
-resolver = "2"
+members = ["crates/*"]
+resolver = "3"
 
 [workspace.package]
 authors = ["Credibil"]
@@ -55,10 +41,10 @@ management or use core functionality to implement your own.
 edition = "2024"
 exclude = [".*", "/docs", "snapshots/"]
 homepage = "https://credibil.io"
-keywords = ["decentralized", "identity","did"]
+keywords = ["decentralized", "identity", "did"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/credibil/identity"
+repository = "https://github.com/credibil/proof"
 rust-version = "1.87"
 version = "0.1.2"
 
@@ -72,19 +58,16 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-anyhow = "1.0.96"
-base64ct = { version = "1.6.0", features = ["std"] }
-credibil-identity = { path = "." } 
-credibil-jose = { git = "https://github.com/credibil/se.git" }
-credibil-se = { git = "https://github.com/credibil/se.git" }
+anyhow = "1.0.98"
+credibil-core = { git = "https://github.com/credibil/core.git" }
+credibil-did = { path = "crates/did" }
+credibil-ecc = { git = "https://github.com/credibil/key.git" }
+credibil-jose = { git = "https://github.com/credibil/key.git" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140", features = ["alloc"] }
+test-utils = { path = "crates/test-utils" }
+tracing = "0.1.41"
 
-kms = { path = "crates/kms" }
-multibase = "0.9.1"
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", features = ["alloc"] }
-sha2 = "0.10.8"
-test-kms = { git = "https://github.com/credibil/se.git" }
-
-[patch.crates-io]
-# credibil-jose = { path = "../se" }
-
+# [patch."https://github.com/credibil/key"]
+# credibil-ecc = { path = "../key/ecc" }
+# credibil-jose = { path = "../key/jose" }

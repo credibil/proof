@@ -1,98 +1,73 @@
-//! # DID Operations and Resolver
-//!
-//! This crate provides common utilities for the Credibil project and is not
-//! intended to be used directly.
-//!
-//! The crate provides a DID Resolver trait and a set of default implementations
-//! for resolving DIDs.
-//!
-//! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
+//! # Proof
 
-pub mod core;
-pub mod did;
-pub mod proof;
+mod create;
+mod handlers;
+mod provider;
 
-use std::future::Future;
+use std::str::FromStr;
 
-pub use credibil_jose as jose;
-pub use credibil_se as se;
-use serde::{Deserialize, Serialize};
+use anyhow::{Result, anyhow};
+use credibil_did::{Method, Resource};
+use credibil_jose::PublicKeyJwk;
+pub use {credibil_did as did, credibil_ecc as ecc, credibil_jose as jose};
 
-/// Types of public key material supported by this crate.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum Key {
-    /// Contains a key ID that a verifier can use to dereference a key.
-    ///
-    /// For example, if the identity is bound to a DID, the key ID refers
-    /// to a DID URL which identifies a particular key in the DID Document
-    /// that describes the identity.
-    ///
-    /// Alternatively, the ID may refer to a key inside a JWKS.
-    #[serde(rename = "kid")]
-    KeyId(String),
+pub use self::create::*;
+pub use self::handlers::*;
+pub use self::provider::*;
 
-    /// Contains the key material the new Credential shall be bound to.
-    #[serde(rename = "jwk")]
-    Jwk(jose::PublicKeyJwk),
-}
+/// Retrieve the JWK specified by the provided DID URL.
+///
+/// # Errors
+///
+/// TODO: Document errors
+pub async fn resolve_jwk<'a>(
+    url: impl Into<UrlType<'a>>, resolver: &impl Resolver,
+) -> Result<PublicKeyJwk> {
+    let jwk = match url.into() {
+        UrlType::Did(url) => {
+            let did_url = credibil_did::Url::from_str(url)?;
 
-impl Default for Key {
-    fn default() -> Self {
-        Self::KeyId(String::new())
-    }
-}
+            let resource = match did_url.method {
+                Method::Key => credibil_did::key::resolve(&did_url)?,
+                Method::Web => {
+                    let web_url = did_url.to_web_http();
+                    let body = resolver.resolve(&web_url).await?;
+                    let doc = serde_json::from_slice(&body)
+                        .map_err(|e| anyhow!("failed to deserialize DID document: {e}"))?;
+                    credibil_did::resource(&did_url, &doc)?
+                }
+                Method::WebVh => unimplemented!(),
+            };
 
-impl TryInto<credibil_jose::KeyBinding> for Key {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<credibil_jose::KeyBinding, Self::Error> {
-        match self {
-            Self::KeyId(kid) => Ok(credibil_jose::KeyBinding::Kid(kid)),
-            Self::Jwk(jwk) => Ok(credibil_jose::KeyBinding::Jwk(jwk)),
+            let Resource::VerificationMethod(vm) = resource else {
+                return Err(anyhow!("ProofType method not found"));
+            };
+            vm.key.jwk()?
         }
+        UrlType::Url(_) => unimplemented!(),
+    };
+
+    Ok(jwk)
+}
+
+/// Represents a URL type that can either be a DID or a regular URL.
+#[derive(Debug)]
+pub enum UrlType<'a> {
+    /// A DID URL, which is a string representation of a Decentralized Identifier.
+    Did(&'a str),
+
+    /// A regular URL, which is a string representation of a web address.
+    Url(&'a str),
+}
+
+impl<'a> From<&'a str> for UrlType<'a> {
+    fn from(url: &'a str) -> Self {
+        if url.starts_with("did:") { Self::Did(url) } else { Self::Url(url) }
     }
 }
 
-/// [`SignerExt`] is used to provide public key material that can be used for
-/// signature verification.
-///
-/// Extends the `credibil_infosec::Signer` trait.
-pub trait SignerExt: se::Signer + Send + Sync {
-    /// The verification method the verifier should use to verify the signer's
-    /// signature. This is typically a DID URL + # + verification key ID.
-    ///
-    /// Async and fallible because the implementer may need to access key
-    /// information to construct the method reference.
-    fn verification_method(&self) -> impl Future<Output = anyhow::Result<Key>> + Send;
-}
-
-/// Return value from an identity resolver.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq)]
-pub enum Identity {
-    /// A DID document.
-    DidDocument(did::Document),
-}
-
-/// [`IdentityResolver`] is used to proxy the resolution of an identity.
-///
-/// Implementers need only return the identity specified by the url. This
-/// may be by directly dereferencing the URL, looking up a local cache, or
-/// fetching from a remote resolver, or using a ledger or log that contains
-/// identity material.
-///
-/// For example, a DID resolver for `did:webvh` would fetch the DID log from the
-/// the specified URL and use any query parameters (if any) to derefence the
-/// specific DID document and return that.
-pub trait IdentityResolver: Send + Sync + Clone {
-    /// Resolve the URL to identity information such as a DID Document or
-    /// certificate.
-    ///
-    /// The default implementation is a no-op since for some methods, such as
-    /// `did:key`, the URL contains sufficient information to verify the
-    /// signature of an identity.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = anyhow::Result<Identity>> + Send;
+impl<'a> From<&'a String> for UrlType<'a> {
+    fn from(url: &'a String) -> Self {
+        url.as_str().into()
+    }
 }
