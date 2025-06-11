@@ -1,5 +1,35 @@
+[package]
+name = "credibil-proof"
+description = "Credibil proof utilities"
+readme = "README.md"
+authors.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow.workspace = true
+credibil-core.workspace = true
+credibil-did.workspace = true
+credibil-ecc.workspace = true
+credibil-jose.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
 [workspace]
-members = ["did", "proof"]
+members = ["crates/*"]
 resolver = "3"
 
 [workspace.package]
@@ -30,7 +60,7 @@ nursery = "warn"
 [workspace.dependencies]
 anyhow = "1.0.98"
 credibil-core = { git = "https://github.com/credibil/core.git" }
-credibil-did = { path = "did" }
+credibil-did = { path = "crates/did" }
 credibil-ecc = { git = "https://github.com/credibil/key.git" }
 credibil-jose = { git = "https://github.com/credibil/key.git" }
 serde = { version = "1.0.219", features = ["derive"] }
