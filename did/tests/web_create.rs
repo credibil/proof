@@ -1,8 +1,8 @@
 //! Tests for the creation of a new `did:web` document.
 
-use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_did::web::CreateBuilder;
 use credibil_did::{DocumentBuilder, KeyId, Service, VerificationMethod};
+use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 

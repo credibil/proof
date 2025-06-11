@@ -1,9 +1,8 @@
 //! Tests to verify log entries.
 
-use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_did::webvh::{self, CreateBuilder, Witness, WitnessWeight};
-use credibil_did::{DocumentBuilder, KeyId, Service, VerificationMethod};
-use credibil_did::{Signature, VerifyBy};
+use credibil_did::{DocumentBuilder, KeyId, Service, Signature, VerificationMethod, VerifyBy};
+use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 
@@ -103,7 +102,6 @@ async fn complex_proof() {
         .document(builder)
         .update_keys(vec![update_multi])
         .next_key(&next_multi)
-        
         .witness(&witnesses)
         .ttl(60)
         .signer(&signer)

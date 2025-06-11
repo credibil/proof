@@ -3,9 +3,8 @@
 use credibil_did::webvh::{
     self, CreateBuilder, DeactivateBuilder, UpdateBuilder, Witness, WitnessEntry, WitnessWeight,
 };
-use credibil_did::{DocumentBuilder, KeyId, Service, VerificationMethod};
+use credibil_did::{DocumentBuilder, KeyId, Service, Signature, VerificationMethod, VerifyBy};
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
-use credibil_did::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 

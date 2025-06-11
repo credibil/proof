@@ -24,14 +24,12 @@ chrono = { version = "0.4.41", features = ["serde"] }
 credibil-core.workspace = true
 credibil-ecc.workspace = true
 credibil-jose.workspace = true
-dashmap = "6.1.0"
 multibase = "0.9.1"
 nom = "8.0.0"
 serde.workspace = true
 serde_json.workspace = true
 serde_json_canonicalizer = "0.3.0"
 sha2 = "0.10.9"
-tracing.workspace = true
 url = "2.5.4"
 uuid = { version = "1.17.0", features = ["v4"] }
 
@@ -43,4 +41,3 @@ test-utils.workspace = true
 tokio = { version = "1.45.1", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["fs"] }
 
-# [examples]

@@ -1,7 +1,6 @@
 //! Resolve a DID URL to a DID Document for the `did:web` method.
 
-
-use crate::{ Url};
+use crate::Url;
 
 impl Url {
     /// Convert a `did:web` URL to an HTTP URL pointing to the location of the
@@ -28,4 +27,3 @@ impl Url {
         format!("{url}/did.json")
     }
 }
-

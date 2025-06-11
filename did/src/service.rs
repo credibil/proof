@@ -16,10 +16,9 @@
 //! discouraged.
 
 use anyhow::{Result, anyhow};
+use credibil_core::{Kind, OneMany};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use credibil_core::{Kind, OneMany};
 
 /// A Service is used to express a way of communicating with the DID subject or
 /// associated entities.
