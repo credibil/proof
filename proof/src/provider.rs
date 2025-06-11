@@ -3,9 +3,6 @@
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 use credibil_did::Document;
-use credibil_ecc::Signer;
-use credibil_jose::{KeyBinding, PublicKeyJwk};
-use serde::{Deserialize, Serialize};
 
 /// DID Provider trait.
 pub trait Provider: Proof + Clone {}
@@ -14,18 +11,27 @@ pub trait Provider: Proof + Clone {}
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where T: Proof + Clone {}
 
-/// [`Signature`] is used to provide public key material that can be used for
-/// signature verification.
-///
-/// Extends the `credibil_infosec::Signer` trait.
-pub trait Signature: Signer + Send + Sync {
-    /// The verification method the verifier should use to verify the signer's
-    /// signature. This is typically a DID URL + # + verification key ID.
-    ///
-    /// Async and fallible because the implementer may need to access key
-    /// information to construct the method reference.
-    fn verification_method(&self) -> impl Future<Output = Result<VerifyBy>> + Send;
-}
+// /// [`Signature`] is used to provide public key material that can be used for
+// /// signature verification.
+// ///
+// /// Extends the `credibil_infosec::Signer` trait.
+// pub trait Signature: Signer + Send + Sync {
+//     /// The verification method the verifier should use to verify the signer's
+//     /// signature. This is typically a DID URL + # + verification key ID.
+//     ///
+//     /// Async and fallible because the implementer may need to access key
+//     /// information to construct the method reference.
+//     fn verification_method(&self) -> impl Future<Output = Result<VerifyBy>> + Send;
+// }
+
+// impl Signature for Entry {
+//     async fn verification_method(&self) -> Result<VerifyBy> {
+//         let vk = self.verifying_key().await?;
+//         let jwk = PublicKeyJwk::from_bytes(&vk)?;
+//         let vm = key::did_from_jwk(&jwk)?;
+//         Ok(VerifyBy::KeyId(vm))
+//     }
+// }
 
 /// [`ProofResolver`] is used to proxy the resolution of a a proof.
 ///
@@ -37,9 +43,9 @@ pub trait Signature: Signer + Send + Sync {
 /// For example, a DID resolver for `did:webvh` would fetch the DID log from the
 /// the specified URL and use any query parameters (if any) to derefence the
 /// specific DID document and return that.
-pub trait ProofResolver: Send + Sync + Clone {
-    /// Resolve the URL to identity information such as a DID Document or
-    /// certificate.
+pub trait Resolver: Send + Sync {
+    /// Resolve the URL to public material key such as a DID Document or
+    /// X509 certificate.
     ///
     /// The default implementation is a no-op since for some methods, such as
     /// `did:key`, the URL contains sufficient information to verify the
@@ -48,51 +54,44 @@ pub trait ProofResolver: Send + Sync + Clone {
     /// # Errors
     ///
     /// Returns an error if the URL cannot be resolved.
-    fn resolve(&self, url: &str) -> impl Future<Output = Result<ProofType>> + Send;
+    fn resolve(&self, url: &str) -> impl Future<Output = Result<Vec<u8>>> + Send;
 }
 
-/// Return value from an identity resolver.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Eq)]
-pub enum ProofType {
-    /// A decentralized identifier.
-    DidDocument(Document),
-}
+// /// Sources of public key material supported.
+// #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+// pub enum VerifyBy {
+//     /// The ID of the public key used for verifying the associated signature.
+//     ///
+//     /// If the identity is bound to a DID, the key ID refers to a DID URL
+//     /// which identifies a particular key in the DID Document describing
+//     /// the identity.
+//     ///
+//     /// Alternatively, the ID may refer to a key inside a JWKS.
+//     #[serde(rename = "kid")]
+//     KeyId(String),
 
-/// Sources of public key material supported.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum VerifyBy {
-    /// The ID of the public key used for verifying the associated signature.
-    ///
-    /// If the identity is bound to a DID, the key ID refers to a DID URL
-    /// which identifies a particular key in the DID Document describing
-    /// the identity.
-    ///
-    /// Alternatively, the ID may refer to a key inside a JWKS.
-    #[serde(rename = "kid")]
-    KeyId(String),
+//     /// Contains the public key material required to verify the associated
+//     /// signature.
+//     #[serde(rename = "jwk")]
+//     Jwk(PublicKeyJwk),
+// }
 
-    /// Contains the public key material required to verify the associated
-    /// signature.
-    #[serde(rename = "jwk")]
-    Jwk(PublicKeyJwk),
-}
+// impl Default for VerifyBy {
+//     fn default() -> Self {
+//         Self::KeyId(String::new())
+//     }
+// }
 
-impl Default for VerifyBy {
-    fn default() -> Self {
-        Self::KeyId(String::new())
-    }
-}
+// impl TryInto<KeyBinding> for VerifyBy {
+//     type Error = anyhow::Error;
 
-impl TryInto<KeyBinding> for VerifyBy {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<KeyBinding, Self::Error> {
-        match self {
-            Self::KeyId(kid) => Ok(KeyBinding::Kid(kid)),
-            Self::Jwk(jwk) => Ok(KeyBinding::Jwk(jwk)),
-        }
-    }
-}
+//     fn try_into(self) -> Result<KeyBinding, Self::Error> {
+//         match self {
+//             Self::KeyId(kid) => Ok(KeyBinding::Kid(kid)),
+//             Self::Jwk(jwk) => Ok(KeyBinding::Jwk(jwk)),
+//         }
+//     }
+// }
 
 /// `Proof` is used by implementers to provide data storage capability.
 pub trait Proof: Send + Sync {

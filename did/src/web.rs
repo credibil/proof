@@ -12,6 +12,5 @@ mod resolve;
 mod url;
 
 pub use self::create::*;
-pub use self::resolve::*;
 pub use self::url::*;
 

@@ -5,66 +5,11 @@
 //!
 //! See [DID resolution](https://www.w3.org/TR/did-core/#did-resolution) fpr more.
 
-use std::str::FromStr;
-
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::provider::ProofResolver;
 use crate::url::Url;
-use crate::{Document, Method, Service, VerificationMethod, key, web, webvh};
-
-/// Dereference a DID URL into a resource.
-///
-/// If you have destructured DID URL already, you can bypass this function and
-/// call `deref_url` directly. See [`deref_url`] for more information.
-///
-/// # Errors
-/// Will return an error if the DID URL cannot be parsed or the provided
-/// resolver fails to resolve the source DID document.
-///
-/// Note that only URLs implying DID methods supported by this crate will
-/// survive parsing.
-pub async fn dereference(did_url: &str, resolver: &impl ProofResolver) -> Result<Resource> {
-    let url = Url::from_str(did_url)?;
-    deref_url(&url, resolver).await
-}
-
-/// Dereference a structured DID URL into a resource.
-///
-/// Construct a structured DID URL using the `Url` struct for the `url`
-/// parameter or call `dereference_url` with a string to do the same.
-///
-/// For DID documents that are hosted (on a web server, in a ledger, etc.), you
-/// will need to implement the `DidResolver` trait for your resolver. to resolve
-/// the DID document from the `Url`. This crate will then do its best to find
-/// the requested resource in the document.
-///
-/// For self-describing DIDs a full document is never resolved. The
-/// `DidResolver` can be a no-op because it's `resolve` method is not called.
-/// For example, the `did:key` method can return a public key from the DID URL
-/// fragment.
-///
-/// # Errors
-/// Will return an error if the provided resolver fails to resolve the source
-/// DID document.
-///
-/// Will also return an error if the resource is not found in the document. This
-/// includes cases that don't make sense, like asking a `did:key` for a service
-/// endpoint.
-pub async fn deref_url(url: &Url, resolver: &impl ProofResolver) -> Result<Resource> {
-    match url.method {
-        Method::Key => key::resolve(url),
-        Method::Web => {
-            let doc = web::resolve(url, resolver).await?;
-            document_resource(url, &doc)
-        }
-        Method::WebVh => {
-            let doc = webvh::resolve(url, resolver).await?;
-            document_resource(url, &doc)
-        }
-    }
-}
+use crate::{Document, Service, VerificationMethod};
 
 /// Get a resource from a DID document.
 ///
@@ -72,7 +17,7 @@ pub async fn deref_url(url: &Url, resolver: &impl ProofResolver) -> Result<Resou
 ///
 /// # Errors
 /// Will return an error if the resource is not found in the document.
-pub fn document_resource(url: &Url, doc: &Document) -> Result<Resource> {
+pub fn resource(url: &Url, doc: &Document) -> Result<Resource> {
     if let Some(query) = &url.query {
         if let Some(service_id) = &query.service {
             if let Some(service) = doc.service(service_id) {

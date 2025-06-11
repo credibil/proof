@@ -2,11 +2,11 @@
 
 use std::str::FromStr;
 
-use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_did::web::CreateBuilder;
 use credibil_did::{
     self, DocumentBuilder, KeyFormat, KeyId, Resource, Service, Url, VerificationMethod,
 };
+use credibil_ecc::{Curve, Keyring, Signer};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
 
@@ -37,7 +37,7 @@ async fn dereference() {
     let vm_url = &vm_list.first().expect("should have at least one VM").id;
     let url = Url::from_str(vm_url).expect("should parse DID");
 
-    let resource = credibil_did::document_resource(&url, &document).expect("should dereference VM");
+    let resource = credibil_did::resource(&url, &document).expect("should dereference VM");
     let Resource::VerificationMethod(vm) = resource else {
         panic!("should be a verification method");
     };

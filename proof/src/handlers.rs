@@ -16,7 +16,7 @@ pub use self::document::{DocumentRequest, DocumentResponse};
 use crate::provider::Provider;
 
 /// Result type for Token Status endpoints.
-pub type Result<T, E = Error> = anyhow::Result<T, E>;
+type Result<T, E = Error> = anyhow::Result<T, E>;
 
 /// Handle incoming requests.
 ///

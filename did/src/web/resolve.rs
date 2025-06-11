@@ -1,9 +1,7 @@
 //! Resolve a DID URL to a DID Document for the `did:web` method.
 
-use anyhow::Result;
 
-use crate::provider::{ProofType, ProofResolver};
-use crate::{Document, Url};
+use crate::{ Url};
 
 impl Url {
     /// Convert a `did:web` URL to an HTTP URL pointing to the location of the
@@ -31,16 +29,3 @@ impl Url {
     }
 }
 
-/// Convert the structured URL to HTTP format and use the provided resolver to
-/// fetch a DID document.
-///
-/// # Errors
-/// If the URL cannot be converted to an HTTP format or if the resolver fails an
-/// error is returned.
-pub async fn resolve(url: &Url, resolver: &impl ProofResolver) -> Result<Document> {
-    let http_url = url.to_web_http();
-    let id = resolver.resolve(&http_url).await?;
-    match id {
-        ProofType::DidDocument(doc) => Ok(doc),
-    }
-}

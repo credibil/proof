@@ -13,7 +13,6 @@ use sha2::Digest;
 
 use super::verify::{verify_proofs, verify_witness};
 use super::{LogEntry, SCID, WitnessEntry};
-use crate::provider::{ProofType, ProofResolver};
 use crate::{Document, DocumentMetadataBuilder, QueryParams, Url};
 
 impl Url {
@@ -62,29 +61,6 @@ impl Url {
         let url = format!("{url}{fp}");
 
         Ok(url)
-    }
-}
-
-/// Resolve a `did:webvh` DID URL to a DID document.
-///
-/// The first step of the resolution is to retrieve and parse the DID list
-/// document. See further functions in this implementation to help with
-/// resolution steps.
-///
-/// # Errors
-///
-/// Will fail if the DID URL is invalid or the provider returns an error.
-pub async fn resolve(url: &Url, resolver: &impl ProofResolver) -> Result<Document> {
-    // Generate the URL to fetch the DID list (log) document.
-    let http_url = url.to_webvh_http()?;
-
-    // Perform an HTTP GET request to the URL for the DID log document.
-    //
-    // The client can use helper methods to unpack the `JSONL` file and extract
-    // the DID document.
-    let identity = resolver.resolve(&http_url).await?;
-    match identity {
-        ProofType::DidDocument(doc) => Ok(doc),
     }
 }
 

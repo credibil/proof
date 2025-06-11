@@ -1,12 +1,12 @@
 //! # Status List Endpoint
 
 use anyhow::anyhow;
+use credibil_did::Document;
+use credibil_did::web::create_did;
 use serde::{Deserialize, Serialize};
 
-use crate::Document;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Proof, Provider};
-use crate::web::create_did;
 
 /// Used to query the document endpoint in order to return a DID document.
 #[derive(Clone, Debug, Serialize, Deserialize)]
