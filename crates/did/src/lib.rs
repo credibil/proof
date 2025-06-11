@@ -14,7 +14,6 @@ pub mod webvh;
 
 mod document;
 mod proof;
-mod provider;
 mod resolve;
 mod service;
 mod url;
@@ -26,7 +25,6 @@ use std::str::FromStr;
 use anyhow::anyhow;
 
 pub use self::document::*;
-pub use self::provider::*;
 pub use self::resolve::{Resource, resource};
 pub use self::service::*;
 pub use self::url::{QueryParams, Url};

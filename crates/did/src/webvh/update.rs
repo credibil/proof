@@ -2,6 +2,7 @@
 
 use anyhow::{Result, bail};
 use chrono::Utc;
+use credibil_ecc::Signer;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -9,7 +10,6 @@ use sha2::Digest;
 use super::resolve::resolve_log;
 use super::verify::validate_witness;
 use super::{LogEntry, Witness, WitnessEntry};
-use crate::provider::Signature;
 use crate::{Document, DocumentBuilder, FromDocument};
 
 /// Builder to update a DID document and associated log entry.
@@ -49,7 +49,7 @@ pub struct WithLog(Vec<LogEntry>);
 pub struct NoSigner;
 
 /// Builder has a signer (can build).
-pub struct WithSigner<'a, S: Signature>(pub &'a S);
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
 
 impl UpdateBuilder<NoDocument, NoLog, NoSigner> {
     /// Create a new update builder.
@@ -199,7 +199,7 @@ impl<D, L, S> UpdateBuilder<D, L, S> {
 impl<D, L> UpdateBuilder<D, L, NoSigner> {
     /// Add a signer to the builder.
     #[must_use]
-    pub fn signer<S: Signature>(self, signer: &S) -> UpdateBuilder<D, L, WithSigner<'_, S>> {
+    pub fn signer<S: Signer>(self, signer: &S) -> UpdateBuilder<D, L, WithSigner<'_, S>> {
         UpdateBuilder {
             document: self.document,
             log_entries: self.log_entries,
@@ -214,10 +214,10 @@ impl<D, L> UpdateBuilder<D, L, NoSigner> {
     }
 }
 
-impl<S: Signature> UpdateBuilder<WithDocument, WithLog, WithSigner<'_, S>> {
+impl<S: Signer> UpdateBuilder<WithDocument, WithLog, WithSigner<'_, S>> {
     /// Build the new log entry.
     ///
-    /// Provide a `Provable` `Signature` to construct a data integrity proof. To
+    /// Provide a `Provable` `Signer` to construct a data integrity proof. To
     /// add more proofs, call the `sign` method on the log entry after building.
     ///
     /// # Errors

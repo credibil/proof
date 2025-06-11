@@ -12,7 +12,6 @@ use sha2::Digest;
 use super::verify::validate_witness;
 use super::{LogEntry, Witness};
 use crate::Document;
-use crate::provider::Signature;
 
 /// Builder for deactivating a DID document and associated log entry (or 2
 /// entries if there is key rotation).
@@ -156,7 +155,7 @@ impl DeactivateBuilder<WithoutSigner> {
     }
 }
 
-impl<S: Signature> DeactivateBuilder<WithSigner<'_, S>> {
+impl<S: Signer> DeactivateBuilder<WithSigner<'_, S>> {
     /// Build the new log entry/entries.
     ///
     /// If the last log entry has a non-empty `next_key_hashes`, two log entries

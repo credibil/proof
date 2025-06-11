@@ -2,11 +2,11 @@
 
 use anyhow::{Result, bail};
 use chrono::Utc;
+use credibil_ecc::Signer;
 use multibase::Base;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
-use crate::provider::Signature;
 use crate::webvh::verify::validate_witness;
 use crate::webvh::{LogEntry, Parameters, SCID, VERSION, Witness, create_did};
 use crate::{Document, DocumentBuilder, FromScratch};
@@ -35,7 +35,7 @@ pub struct WithUpdateKeys(Vec<String>);
 pub struct NoSigner;
 
 /// Builder has a signer (can build).
-pub struct WithSigner<'a, S: Signature>(pub &'a S);
+pub struct WithSigner<'a, S: Signer>(pub &'a S);
 
 /// Builder does not have a document (can't build).
 pub struct NoDocument;
@@ -105,7 +105,7 @@ impl CreateBuilder<NoUpdateKeys, NoSigner, WithDocument> {
 impl CreateBuilder<WithUpdateKeys, NoSigner, WithDocument> {
     /// Add a signer to the builder.
     #[must_use]
-    pub fn signer<S: Signature>(
+    pub fn signer<S: Signer>(
         self, signer: &S,
     ) -> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
         CreateBuilder {
@@ -164,7 +164,7 @@ impl<U, S, D> CreateBuilder<U, S, D> {
     }
 }
 
-impl<S: Signature> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
+impl<S: Signer> CreateBuilder<WithUpdateKeys, WithSigner<'_, S>, WithDocument> {
     /// Build the new log entry.
     ///
     /// Provide a `Provable` `Signer` to construct a data integrity proof. To

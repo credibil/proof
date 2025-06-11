@@ -8,7 +8,6 @@ use std::str::FromStr;
 
 use anyhow::{Result, anyhow};
 use credibil_did::{Method, Resource};
-pub use credibil_did::{Signature, VerifyBy};
 use credibil_jose::PublicKeyJwk;
 pub use {credibil_did as did, credibil_ecc as ecc, credibil_jose as jose};
 

@@ -4,7 +4,7 @@
 use credibil_did::webvh::{
     CreateBuilder, DeactivateBuilder, UpdateBuilder, Witness, WitnessWeight,
 };
-use credibil_did::{DocumentBuilder, KeyId, Service, Signature, VerificationMethod, VerifyBy};
+use credibil_did::{DocumentBuilder, KeyId, Service, VerificationMethod};
 use credibil_ecc::{Curve, Keyring, NextKey, Signer};
 use credibil_jose::PublicKeyJwk;
 use test_utils::Vault;
@@ -41,28 +41,22 @@ async fn create_deactivate() {
 
     let witness_1 =
         Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
-    let VerifyBy::KeyId(key_id1) =
-        witness_1.verification_method().await.expect("should get key id")
-    else {
-        panic!("should get key id");
-    };
+    let vk = witness_1.verifying_key().await.expect("should get key");
+    let multi_1 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
     let witness_2 =
         Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
-    let VerifyBy::KeyId(key_id2) =
-        witness_2.verification_method().await.expect("should get key id for witness2")
-    else {
-        panic!("should get key id");
-    };
+    let vk = witness_2.verifying_key().await.expect("should get key");
+    let multi_2 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
 
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: key_id1,
+                id: format!("did:key:{multi_1}#{multi_1}"),
                 weight: 50,
             },
             WitnessWeight {
-                id: key_id2,
+                id: format!("did:key:{multi_2}#{multi_2}"),
                 weight: 40,
             },
         ],
@@ -124,28 +118,22 @@ async fn update_deactivate() {
 
     let witness_1 =
         Keyring::generate(&Vault, "w1", "signing", Curve::Ed25519).await.expect("should generate");
-    let VerifyBy::KeyId(key_id1) =
-        witness_1.verification_method().await.expect("should get key id")
-    else {
-        panic!("should get key id");
-    };
+    let vk = witness_1.verifying_key().await.expect("should get key");
+    let multi_1 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
     let witness_2 =
         Keyring::generate(&Vault, "w2", "signing", Curve::Ed25519).await.expect("should generate");
-    let VerifyBy::KeyId(key_id2) =
-        witness_2.verification_method().await.expect("should get key id for witness2")
-    else {
-        panic!("should get key id");
-    };
+    let vk = witness_2.verifying_key().await.expect("should get key");
+    let multi_2 = PublicKeyJwk::from_bytes(&vk).unwrap().to_multibase().expect("should convert");
 
     let witnesses = Witness {
         threshold: 60,
         witnesses: vec![
             WitnessWeight {
-                id: key_id1,
+                id: format!("did:key:{multi_1}#{multi_1}"),
                 weight: 50,
             },
             WitnessWeight {
-                id: key_id2,
+                id: format!("did:key:{multi_2}#{multi_2}"),
                 weight: 40,
             },
         ],

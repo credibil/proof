@@ -9,16 +9,30 @@
 //! - <https://w3c-ccg.github.io/did-method-key>
 //! - <https://w3c.github.io/did-resolution>
 
-mod resolve;
+use anyhow::{Result, bail};
 
-use credibil_jose::PublicKeyJwk;
-pub use resolve::*;
+use crate::{KeyFormat, Method, Resource, Url, VerificationMethod};
 
-/// Construct a `did:key` from a public key.
+/// Convert a `did:key` URL into a [`VerificationMethod`] object.
 ///
 /// # Errors
-/// Will fail if the public key cannot be converted to multibase form.
-pub fn did_from_jwk(jwk: &PublicKeyJwk) -> anyhow::Result<String> {
-    let multi = jwk.to_multibase()?;
-    Ok(format!("did:key:{multi}#{multi}"))
+/// If the URL is not a valid `did:key` URL, an error is returned.
+pub fn resolve(url: &Url) -> Result<Resource> {
+    if url.method != Method::Key {
+        bail!("DID is not a valid did:key: {url}");
+    }
+    // For did:key, the fragment is the key already multibase encoded. There is
+    // no need to use a builder.
+    let Some(fragment) = &url.fragment else {
+        bail!("DID is not a valid did:key - there is no fragment");
+    };
+    let vm = VerificationMethod {
+        context: None,
+        id: url.resource_id(),
+        controller: url.did(),
+        key: KeyFormat::Multikey {
+            public_key_multibase: fragment.to_string(),
+        },
+    };
+    Ok(Resource::VerificationMethod(vm))
 }

@@ -8,28 +8,30 @@
 
 mod create;
 mod deactivate;
+mod did;
 mod resolve;
 mod update;
-mod url;
 mod verify;
 
 use chrono::{DateTime, Utc};
 pub use create::{CreateBuilder, CreateResult};
 use credibil_ecc::Algorithm;
+// use crate::provider::{Signer, VerifyBy};
+use credibil_ecc::Signer;
+use credibil_jose::PublicKeyJwk;
 pub use deactivate::{DeactivateBuilder, DeactivateResult};
+pub use did::*;
 use multibase::Base;
 pub use resolve::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
 pub use update::{UpdateBuilder, UpdateResult};
-pub use url::*;
 use uuid::Uuid;
 pub use verify::*;
 
 use crate::Document;
 use crate::proof::Proof;
-use crate::provider::{Signature, VerifyBy};
 
 /// Placeholder for the self-certifying identifier (SCID) in a DID URL.
 ///
@@ -111,7 +113,7 @@ impl LogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn sign(&mut self, signer: &impl Signature) -> anyhow::Result<()> {
+    pub async fn sign(&mut self, signer: &impl Signer) -> anyhow::Result<()> {
         let proof = self.proof(signer).await?;
         self.proof.push(proof);
         Ok(())
@@ -128,21 +130,19 @@ impl LogEntry {
     ///
     /// Will return an error if the signer algorithm is not `EdDSA` or if the
     /// proof structure cannot be serialized.
-    pub async fn proof(&self, signer: &impl Signature) -> anyhow::Result<Proof> {
+    pub async fn proof(&self, signer: &impl Signer) -> anyhow::Result<Proof> {
         let alg = signer.algorithm().await?;
         if alg != Algorithm::EdDSA {
             return Err(anyhow::anyhow!("signing algorithm must be Ed25519 (pure EdDSA)"));
         }
-        let vm = signer.verification_method().await?;
-        let VerifyBy::KeyId(key_id) = &vm else {
-            return Err(anyhow::anyhow!("verification method must be a key id"));
-        };
+        let vk = signer.verifying_key().await?;
+        let multi = PublicKeyJwk::from_bytes(&vk)?.to_multibase()?;
 
         let config = Proof {
             id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
             type_: "DataIntegrityProof".to_string(),
             cryptosuite: Some("eddsa-jcs-2022".to_string()),
-            verification_method: key_id.to_string(),
+            verification_method: format!("did:key:{multi}#{multi}"),
             created: Some(Utc::now()),
             proof_purpose: "assertionMethod".to_string(),
             ..Proof::default()
@@ -154,8 +154,8 @@ impl LogEntry {
         let data_hash = sha2::Sha256::digest(data.as_bytes());
 
         let payload_bytes = [config_hash.as_slice(), data_hash.as_slice()].concat();
-        let signature = signer.sign(&payload_bytes).await;
-        let value = multibase::encode(Base::Base58Btc, signature);
+        let signer = signer.sign(&payload_bytes).await;
+        let value = multibase::encode(Base::Base58Btc, signer);
 
         let mut proof = config.clone();
         proof.proof_value = Some(value);
