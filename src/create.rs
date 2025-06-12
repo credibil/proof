@@ -1,10 +1,10 @@
 use anyhow::Result;
-use credibil_did::web::{CreateBuilder, create_did};
-use credibil_did::{DocumentBuilder, FromScratch};
+use credibil_did::web::CreateBuilder;
+use credibil_did::{Document, DocumentBuilder, FromScratch};
 
 use crate::provider::{Proof, Provider};
 
-/// Create a new `did:web` document and save.
+/// Create a new `did:web` document and save to document store.
 ///
 /// # Errors
 ///
@@ -12,12 +12,8 @@ use crate::provider::{Proof, Provider};
 /// built, or saved to the docstore.
 pub async fn create(
     url: &str, builder: DocumentBuilder<FromScratch>, provider: &impl Provider,
-) -> Result<()> {
+) -> Result<Document> {
     let document = CreateBuilder::new(url).document(builder).build()?;
-
-    // save to docstore
-    let did = create_did(url)?;
-    Proof::put(provider, &did, &document).await?;
-
-    Ok(())
+    Proof::put(provider, &document.id, &document).await?;
+    Ok(document)
 }
