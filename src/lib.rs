@@ -44,7 +44,9 @@ pub async fn resolve_jwk<'a>(
             };
             vm.key.jwk()?
         }
-        UrlType::Url(_) => unimplemented!(),
+        UrlType::Url(_) => {
+            return Err(anyhow!("Only DID URLs are supported for JWK resolution"));
+        }
     };
 
     Ok(jwk)
