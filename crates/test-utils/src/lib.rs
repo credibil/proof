@@ -1,7 +1,5 @@
 //! Key management
 
-mod docstore;
-mod vault;
+mod store;
 
-pub use crate::docstore::Proof;
-pub use crate::vault::KeyVault as Vault;
+pub use crate::store::{Store as Vault, Store as Proof};

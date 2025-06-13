@@ -14,5 +14,6 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+credibil-core.workspace = true
 credibil-ecc.workspace = true
 dashmap = "6.1.0"
