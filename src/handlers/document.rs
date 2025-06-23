@@ -6,7 +6,7 @@ use credibil_did::web::create_did;
 use serde::{Deserialize, Serialize};
 
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::provider::{Proof, Provider};
+use crate::provider::Proof;
 
 /// Used to query the document endpoint in order to return a DID document.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -40,9 +40,7 @@ async fn document(
 impl<P: Proof> Handler<DocumentResponse, P> for Request<DocumentRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, owner: &str, proof: &P,
-    ) -> Result<impl Into<Response<DocumentResponse>>, Self::Error> {
+    async fn handle(self, owner: &str, proof: &P) -> Result<impl Into<Response<DocumentResponse>>> {
         document(owner, proof, self.body).await
     }
 }
