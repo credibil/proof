@@ -7,7 +7,6 @@
 mod document;
 
 use anyhow::Error;
-pub use credibil_core::api::{Body, Client, Handler, Headers, Request, RequestBuilder, Response};
 
 pub use self::document::{DocumentRequest, DocumentResponse};
 

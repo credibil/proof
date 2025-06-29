@@ -68,6 +68,9 @@ serde_json = { version = "1.0.140", features = ["alloc"] }
 test-utils = { path = "crates/test-utils" }
 tracing = "0.1.41"
 
+# [patch."https://github.com/credibil/core"]
+# credibil-core = { path = "../core" }
+
 # [patch."https://github.com/credibil/key"]
 # credibil-ecc = { path = "../key/ecc" }
 # credibil-jose = { path = "../key/jose" }

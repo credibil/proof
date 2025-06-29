@@ -1,11 +1,12 @@
 //! # Status List Endpoint
 
 use anyhow::anyhow;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_did::Document;
 use credibil_did::web::create_did;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::Proof;
 
 /// Used to query the document endpoint in order to return a DID document.
@@ -40,8 +41,8 @@ async fn document(
 impl<P: Proof> Handler<DocumentResponse, P> for Request<DocumentRequest> {
     type Error = Error;
 
-    async fn handle(self, owner: &str, proof: &P) -> Result<impl Into<Response<DocumentResponse>>> {
-        document(owner, proof, self.body).await
+    async fn handle(self, owner: &str, proof: &P) -> Result<Response<DocumentResponse>> {
+        Ok(document(owner, proof, self.body).await?.into())
     }
 }
 
