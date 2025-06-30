@@ -112,7 +112,7 @@ pub trait Proof: Send + Sync {
     fn get_all(&self, owner: &str) -> impl Future<Output = Result<Vec<(String, Document)>>> + Send;
 }
 
-const PROOF: &str = "PROOF";
+const PROOF: &str = "proof";
 
 impl<T: Datastore> Proof for T {
     async fn put(&self, owner: &str, document: &Document) -> Result<()> {
